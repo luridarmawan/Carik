@@ -1,4 +1,4 @@
-cd source/ai123
+cd source/carik
 mkdir lib
-fpc ai123.lpr @extra.cfg
+fpc carik.lpr @extra.cfg
 

@@ -1,23 +1,25 @@
 
 
-# AI 123
+# Carik - Pencatat Diskusi Online
 
 ## What is it?
 
-AI 123 merupakan bot sederhana yang digunakan unt melakukan stemming terhadap input user sehingga menghasilkan result search sesuai suggestion.
- 
-Memiliki fitur menjawab otomatis, dan belajar suatu definisi kata sederhana.
-Kecerdasan Bot ini tergantung dari data entity dan intent yang Anda miliki, serta logic handler yang Anda buat.
+**Carik** merupakan bot sederhana yang digunakan unt merekam pembicaraan di suatu group telegram.
 
-Contoh penggunaan bot sederhana dengan SimpleBOT ini bisa anda coba dari situs [ai.fastplaz.com](http://ai.fastplaz.com) atau bisa melalu aplikasi chat **Telegram**, silahkan hubungi contact *'Fastplaz Bot'*.
+Carik juga memiliki fitur sebagai penjawab pesan sederhana, menanyakan hal-hal yang telah didefinisikan sebelumnya oleh system.
+Walaupun emiliki fitur menjawab otomatis, dan belajar suatu definisi kata sederhana.
+Kecerdasan Bot ini tergantung dari data *entity* dan *intent* yang Anda miliki, serta logic handler yang Anda buat.
 
-Aplikasi AI 123 ini sudah kompatibel dengan Telegram API, sehingga anda bisa menggunakannya sebagai Telegram Bot.
+Contoh penggunaan bot sederhana dengan SimpleBOT ini bisa anda coba dari situs [bot.fastplaz.com](http://bot.fastplaz.com) atau bisa melalu aplikasi chat **Telegram**, silahkan hubungi contact *'Fastplaz Bot'*.
+
 
 ## Why use it?
 
 **Ringan Tanpa Beban**
 
-AI123 merupakan turunan dari SimpleBOT, dan SimpleBOT sendiri dibuat dengan sederhana, simple dan ringan. SimpleBOT adalah _binary application_ sehingga diharapkan akan lebih cepat dan ringan. 
+**Carik** merupakan turunan dari [SimpleBOT](https://github.com/luridarmawan/SimpleBOT), yang menggunakan kecerdasan buatan yang sederhana dari [SimpleAI](https://github.com/luridarmawan/SimpleAI).
+
+Dibuat dengan sederhana, simple dan ringan. SimpleBOT sendiri adalah _binary application_ sehingga diharapkan akan lebih cepat dan ringan. 
 
 Kompatibel dengan shared hosting umumnya.
 
@@ -37,9 +39,9 @@ Untuk penggunaan custom, cukup dibutuhkan instalasi Apache Web Server regular.
 **install requirement**
 
 ```bash
-$ mkdir -p AI123/source/vendors
-$ cd AI123/source
-$ git clone git@git.realestate.com.au:rumah123/ai123.git
+$ mkdir -p Carik/source/vendors
+$ cd Carik/source
+$ git clone https://github.com/luridarmawan/Carik.git
 
 # change to branch development
 
@@ -55,22 +57,22 @@ $ git clone https://github.com/luridarmawan/SimpleAI.git
 
 **Compile dari IDE**
 
-Jika menggunakan Lazarus, buka file "ai123.lpi" dan *compile* file tersebut.
+Jika menggunakan Lazarus, buka file "carik.lpi" dan *compile* file tersebut.
 
-Akan terbentuk file binary di 'public_html/ai123.bin'
+Akan terbentuk file binary di 'public_html/carik.bin'
 
 **Compile dari Command-Line**
 
 ```bash
-cd ai123
+cd Carik
 ./clean.sh
 ./build.sh
 .
 .
 ai123.lpr(13,124)
-Assembling (pipe) lib/ai123.s
-Compiling resource lib/ai123.or
-Linking ../../public_html/ai123.bin
+Assembling (pipe) lib/carik.s
+Compiling resource lib/carik.or
+Linking ../../public_html/carik/carik.bin
 .
 .
 source$ _
@@ -81,93 +83,33 @@ source$ _
 
 untuk konfigurasi custom, misal untuk perubahan path tempat library berada, bisa dilakukan dengan melakukan modifikasi di file **extra.cfg**.
 
+**Telegram Bot Installation**
 
-### SimpleBOT USAGE
-
-```delphi
-  SimpleBOT := TSimpleBotModule.Create;
-  SimpleBOT.OnError := @OnErrorHandler;  // Your Custom Message
-  SimpleBOT.Handler['isipulsa'] := @customHandler; // Custom Handler
-  SimpleBOT.Handler['property_search'] := @propertySearchHandler; // another custom Handler
-  text_response := SimpleBOT.Exec(Text);
-  SimpleBOT.Free;
-
-```
-
-Fungsi 'OnErrorHandler' bisa digunakan untuk melakukan trapping terhadap kata/kalimat yang belum diakomodir oleh data SimpleAI
-
-```delphi
-function TMainModule.OnErrorHandler(const Message: string): string;
-begin
-  .
-  .
-  .
-  // save to log file
-  LogUtil.Add(Message, 'AI');
-  
-  // or save to database
-  .
-  .
-  Result := 'Your custom messages';
-end;
-```
+Cara instalasi bot telegram bisa anda ikuti dari situs offisial dari telegram.
 
 
-### Input
 
-method: POST
+## Carik USAGE
 
-data disematkan di dalam body post, dengan format berikut
+Pada dasarnya, Carik bertindak seperti bot pada umumnya, fitur yang ada di SimpleBot ada pula di Carik. Cukup tanyakan kepadanya hal2 tertentu, dia akan menjawabnya, tentu saja selama data-2 pertanyaan sudah dia miliki sebelumnya.
+
+Beberapa hal yang bisa ditanyakan:
+
+- greeting
+- jam/hari/bulan saat ini
+- jadwal sholat
+- whois domain
+- perhitungan angka
+
+Khusus untuk merekam diskusi, Anda cukup memberikan perintah:
 
 ```
-{"message":{"message_id":0,"text":"Your Message","chat":{"id":0}}}
+@bot catat diskusi
 ```
+beberapa kalimat yang bisa digunakan:
 
-format ini mengikuti pola message dari Telegram.
+- @bot catat notulen
+- @CarikBot rekam obrolan
+- @CarikBot mulai rekaman
 
-
-### Format JSON Output
-
-```
-{
-	"code": 0,
-	"request": {
-		"text": ""
-	},
-	"response": {
-		"intents": {
-			"action": "",
-			"name": "",
-			"parameters": {}
-		},
-		"text": []
-	}
-}
-```
-
-
-
-### Pengujian
-
-Pengujian dari command-line bisa dilakukan dengan syntax berikut:
-
-```
-curl "http://local-bot.rumah123.com/folder/" -X POST -d '{"message":{"message_id":0,"chat":{"id":0},"text":"Hi"}}'
-```
-
-atau bisa dengan menggunakan aplikasi RESTClient lainnya.
-
-
-![Format](img/format_01.png "Format")
-
-
-### Web Folder Structure
-
-![Folder Structure](img/folder-structure.png "Folder Structure")
-
-
-### Video Tutorial
-
-![Video Tutorial](img/video-tutorial.gif "Video Tutorial")
-
-
+bisa langsung dimention, atau dengan me-reply comment bot sebelumnya.
