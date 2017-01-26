@@ -29,13 +29,19 @@
         <FormatVersion Value="1"/>
       </local>
     </RunParams>
-    <RequiredPackages Count="2">
+    <RequiredPackages Count="4">
       <Item1>
-        <PackageName Value="LCL"/>
+        <PackageName Value="simplebot_package"/>
       </Item1>
       <Item2>
-        <PackageName Value="fastplaz_runtime"/>
+        <PackageName Value="fastplaz_integration"/>
       </Item2>
+      <Item3>
+        <PackageName Value="LCL"/>
+      </Item3>
+      <Item4>
+        <PackageName Value="fastplaz_runtime"/>
+      </Item4>
     </RequiredPackages>
     <Units Count="3">
       <Unit0>
