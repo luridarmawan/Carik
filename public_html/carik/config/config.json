@@ -1,0 +1,90 @@
+{
+  "systems": {
+    "sitename": "SimpleBOT",
+    "slogan": "SimpleBOT with SimpleAI and FastPlaz",
+    "baseurl": "",
+    "admin_email": "webmaster@coba.com",
+    "development": true,
+    "debug": true,
+    "module_default": "main",
+    "language_default": "id",
+    "theme_enable": false,
+    "theme": "default",
+    "cache": "none",
+    "temp": "ztemp",
+    "error_url": "\/",
+    "session_timeout": 0,
+    "error_redirect": false
+  },
+  "ai": {
+    "default": {
+      "name": "JarWo",
+      "datasource": "file",
+      "debug": false,
+      "basedir": "files/ai/",
+      "entities": [
+        "property-entities.txt",
+        "dokter-entities.txt",
+        "ai-entities.txt"
+        ],
+      "intents": [
+        "cs-intent.txt",
+        "property-intents.txt",
+        "dokter-intents.txt",
+        "ai-intents.txt"
+        ],
+      "response": [
+        "cs-response.txt",
+        "property-response.txt",
+        "dokter-response.txt",
+        "ai-response.txt",
+        "ai-questions.txt"
+        ]
+    }
+  },
+  "telegram": {
+    "token": ""
+  },
+  "ibacor": {
+    "token": ""
+  },
+  "carik": {
+    "path": "files/carik/",
+    "groups" : {
+      "PascalIndonesia" : {
+        "admin": "luridarmawan,paklebah,tigor"
+      },
+      "PaUd-PascalUnderware-" : {
+        "admin": "luridarmawan,paklebah,tigor"
+      },
+      "SuperGroupTest" : {
+        "admin": "luridarmawan,seseorang"
+      },
+      "GroupTest" : {
+        "admin": "luridarmawan,seseorang"
+      }
+    }
+  },
+  "database": {
+    "default": {
+      "driver": "MySQL 5.5",
+      "hostname": "localhost",
+      "port": "",
+      "username": "your_username",
+      "password": "your_password",
+      "database_name": "your_database",
+      "prefix": "",
+      "library": "..\/libs\/win\/libmysql.dll"
+    }
+  },
+  "mailer": {
+    "default": {
+      "hostname": "your.smtp.server",
+      "username": "your_username",
+      "password": "the_password",
+      "smtp_port": "465",
+      "ssl": true,
+      "tls": true
+    }
+  }
+}
