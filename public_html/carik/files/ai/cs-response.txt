@@ -1,0 +1,20 @@
+
+[R123CSUploadListing]
+say=Anda harus login terlebih dahulu di Costomer-Dashboard,\nkemudian ikuti langkah2 di halaman tersebut.\nInformasi selangkapnya bisa anda jumpai di\nhttps://www.rumah123.com/faq
+
+[R123CSKantorLokasi]
+say=Menara DEA II\nJln Mega Kuningan Barat Kav. E-4 no 1 Lt. 7. Kuningan Timur, Setiabudi, Jakarta Selatan.\n\nInformasi lengkap kantor kami cantumkan di:\nhttps://www.rumah123.com/kontak-kami
+
+[R123CSRekening]
+say=BCA 123456789\nMandiri 2423424332534\n\nJangan lupa melakukan konfirmasi setelah melakukan transfer dana.
+
+[R123CSNoTelepon]
+say=Kami bisa dihubungi di (021) 576.1001
+
+
+
+[HRDGajian]
+say=sepertinya belum
+
+[HRDGajiKapan]
+say=ntar kalau sudah ditransfer
