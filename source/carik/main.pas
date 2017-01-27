@@ -177,11 +177,12 @@ begin
   SimpleBOT.Handler['define'] := @defineHandler;
   SimpleBOT.Handler['carik_start'] := @Carik.StartHandler;
   SimpleBOT.Handler['carik_stop'] := @Carik.StopHandler;
+  SimpleBOT.Handler['carik_check'] := @Carik.CheckHandler;
   SimpleBOT.Handler['resi_paket'] := @resiHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
 
-
+  //TODO
   //- rekam pembicaraan dia sendiri
   //- pilihan abaikan session
 
