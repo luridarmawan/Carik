@@ -60,85 +60,6 @@ procedure TMainModule.BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
 begin
 end;
 
-function TMainModule.defineHandler(const IntentName: string; Params: TStrings): string;
-var
-  keyName, keyValue: string;
-begin
-
-  // global define
-  keyName := Params.Values['Key'];
-  if keyName <> '' then
-  begin
-    keyName := Params.Values['Key'];
-    keyValue := Params.Values['Value'];
-    Result := keyName + ' = ' + keyValue;
-    Result := SimpleBOT.GetResponse('HalBaru');
-    Result := StringReplace(Result, '%word%', UpperCase(keyName), [rfReplaceAll]);
-  end;
-
-  Result := SimpleBOT.StringReplacement(Result);
-
-  // Example Set & Get temporer user data
-  {
-  SimpleBOT.UserData[ 'name'] := 'Luri Darmawan';
-  varstring :=   SimpleBOT.UserData[ 'name'];
-  }
-
-  // Save to database
-  //   keyName & keyValue
-end;
-
-function TMainModule.isTelegram: boolean;
-begin
-  Result := False;
-  if _GET['telegram'] = '1' then
-    Result := True;
-end;
-
-function TMainModule.isTelegramGroup: boolean;
-var
-  json: TJSONUtil;
-  chatType: string;
-begin
-  Result := False;
-  json := TJSONUtil.Create;
-  try
-    json.LoadFromJsonString(Request.Content);
-    chatType := json['message/chat/type'];
-    if chatType = 'group' then
-      Result := True;
-    if chatType = 'supergroup' then
-      Result := True;
-  except
-  end;
-  json.Free;
-end;
-
-function TMainModule.isMentioned(Text: string): boolean;
-begin
-  Result := False;
-  if pos('@' + BOTNAME_DEFAULT, Text) > 0 then
-    Result := True;
-  if pos('Bot', Text) > 0 then    // force dectect as Bot  (____Bot)
-    Result := True;
-end;
-
-function TMainModule.isReply: boolean;
-var
-  json: TJSONUtil;
-  s: string;
-begin
-  Result := False;
-  json := TJSONUtil.Create;
-  try
-    json.LoadFromJsonString(Request.Content);
-    s := json['message/reply_to_message/from/username'];
-    if pos('Bot', s) > 0 then
-      Result := True;
-  except
-  end;
-end;
-
 // GET Method Handler
 procedure TMainModule.Get;
 begin
@@ -232,6 +153,16 @@ begin
   if Text = '' then
     Exit;
 
+  // remove mention from text
+  Text := LowerCase(Text);
+  if Pos('@' + BOTNAME_DEFAULT, Text) = 1 then
+    Text := StringReplace(Text, '@' + BOTNAME_DEFAULT, '', [rfReplaceAll, rfIgnoreCase]);
+  s := '@' + Config[_AI_CONFIG_NAME] + 'bot';
+  s := LowerCase( s);
+  if Pos(s, Text) = 1 then
+    Text := StringReplace(Text, s, '', [rfReplaceAll, rfIgnoreCase]);
+  Text := Trim(Text);
+
   // Main AI BOT
   SimpleBOT := TSimpleBotModule.Create;
   SimpleBOT.chatID := chatID;
@@ -283,6 +214,85 @@ begin
   //---
   SimpleBOT.Free;
   Response.ContentType := 'application/json';
+end;
+
+function TMainModule.defineHandler(const IntentName: string; Params: TStrings): string;
+var
+  keyName, keyValue: string;
+begin
+
+  // global define
+  keyName := Params.Values['Key'];
+  if keyName <> '' then
+  begin
+    keyName := Params.Values['Key'];
+    keyValue := Params.Values['Value'];
+    Result := keyName + ' = ' + keyValue;
+    Result := SimpleBOT.GetResponse('HalBaru');
+    Result := StringReplace(Result, '%word%', UpperCase(keyName), [rfReplaceAll]);
+  end;
+
+  Result := SimpleBOT.StringReplacement(Result);
+
+  // Example Set & Get temporer user data
+  {
+  SimpleBOT.UserData[ 'name'] := 'Luri Darmawan';
+  varstring :=   SimpleBOT.UserData[ 'name'];
+  }
+
+  // Save to database
+  //   keyName & keyValue
+end;
+
+function TMainModule.isTelegram: boolean;
+begin
+  Result := False;
+  if _GET['telegram'] = '1' then
+    Result := True;
+end;
+
+function TMainModule.isTelegramGroup: boolean;
+var
+  json: TJSONUtil;
+  chatType: string;
+begin
+  Result := False;
+  json := TJSONUtil.Create;
+  try
+    json.LoadFromJsonString(Request.Content);
+    chatType := json['message/chat/type'];
+    if chatType = 'group' then
+      Result := True;
+    if chatType = 'supergroup' then
+      Result := True;
+  except
+  end;
+  json.Free;
+end;
+
+function TMainModule.isMentioned(Text: string): boolean;
+begin
+  Result := False;
+  if pos('@' + BOTNAME_DEFAULT, Text) > 0 then
+    Result := True;
+  if pos('Bot', Text) > 0 then    // force dectect as Bot  (____Bot)
+    Result := True;
+end;
+
+function TMainModule.isReply: boolean;
+var
+  json: TJSONUtil;
+  s: string;
+begin
+  Result := False;
+  json := TJSONUtil.Create;
+  try
+    json.LoadFromJsonString(Request.Content);
+    s := json['message/reply_to_message/from/username'];
+    if pos('Bot', s) > 0 then
+      Result := True;
+  except
+  end;
 end;
 
 function TMainModule.OnErrorHandler(const Message: string): string;
