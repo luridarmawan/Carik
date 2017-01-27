@@ -5,7 +5,7 @@ unit main;
 interface
 
 uses
-  notulen_controller, simplebot_controller, logutil_lib,
+  notulen_controller, simplebot_controller, logutil_lib, resiibacor_integration,
   fpjson,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
@@ -21,6 +21,7 @@ type
     jsonData: TJSONData;
     procedure BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
     function defineHandler(const IntentName: string; Params: TStrings): string;
+    function resiHandler(const IntentName: string; Params: TStrings): string;
 
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
@@ -175,6 +176,7 @@ begin
   SimpleBOT.Handler['define'] := @defineHandler;
   SimpleBOT.Handler['carik_start'] := @Carik.StartHandler;
   SimpleBOT.Handler['carik_stop'] := @Carik.StopHandler;
+  SimpleBOT.Handler['resi_paket'] := @resiHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
 
@@ -242,6 +244,21 @@ begin
 
   // Save to database
   //   keyName & keyValue
+end;
+
+function TMainModule.resiHandler(const IntentName: string; Params: TStrings
+  ): string;
+begin
+  with TResiIbacorController.Create do
+  begin
+    Token := Config['ibacor/token'];
+    Vendor := Params.Values['vendor_value'];
+    AirwayBill := Params.Values['nomor_value'];
+    Result := Find();
+    Free;
+  end;
+  if Result = '' then
+    Result := 'Maaf, gagal mencari kode pengiriman ini.';
 end;
 
 function TMainModule.isTelegram: boolean;
