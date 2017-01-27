@@ -167,7 +167,11 @@ begin
 
   // Main AI BOT
   SimpleBOT := TSimpleBotModule.Create;
-  SimpleBOT.SecondSessionResponse := False;
+  if not isTelegramGroup then
+  begin
+    SimpleBOT.FirstSessionResponse := True;
+    SimpleBOT.SecondSessionResponse := True;
+  end;
   SimpleBOT.chatID := chatID;
   if userName <> '' then
   begin
@@ -179,6 +183,7 @@ begin
   SimpleBOT.Handler['carik_start'] := @Carik.StartHandler;
   SimpleBOT.Handler['carik_stop'] := @Carik.StopHandler;
   SimpleBOT.Handler['carik_check'] := @Carik.CheckHandler;
+  SimpleBOT.Handler['carik_topic'] := @Carik.TopicHandler;
   SimpleBOT.Handler['resi_paket'] := @resiHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
