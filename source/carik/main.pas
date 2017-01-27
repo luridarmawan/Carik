@@ -264,9 +264,11 @@ begin
         s := SimpleBOT.SimpleAI.ResponseText[j];
         if s <> '' then
         begin
+          {
           if isTelegramGroup then;
             if j = 0 then
               s := fullName + ', ' + s;
+          }
           SimpleBOT.TelegramSend(telegramToken, chatID, messageID, s);
         end;
         //Delay(200);
