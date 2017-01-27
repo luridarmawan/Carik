@@ -116,6 +116,7 @@ begin
   begin
     if ((chatType = 'group') or (chatType = 'supergroup')) then
     begin
+      Carik.IsGroup := True;
       if Carik.Recording then
       begin
         Carik.RecordTelegramMessage(Request.Content);
