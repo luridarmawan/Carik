@@ -42,12 +42,24 @@ say=capek (ahh|deh)
 action=telegram_menu
 say=/start
 
+[ResiPaket]
+action=resi_paket
+say=resi @vendor @nomor
+
 [Kamus]
 action=kamus
 object=kamus
-say=@word (artinya|maksudnya)
-say=(artinya|arti|maksud|maksudnya|kamus) @word itu
-say=(artinya|arti|maksud|maksudnya|kamus) @word
+say1=apa itu @word
+say2=^@word (artinya|arti|maksud|maksudnya|kamus)
+say2=^(artinya|arti|maksud|maksudnya|kamus) @word
+say4=@word (artinya|arti|maksud|maksudnya|kamus)
+say3=(artinya|arti|maksud|maksudnya|kamus) @word
+
+[Larangan]
+say=(jangan|jgn) @apapun
+
+[Ajakan]
+say=@word (yuk|yuukk|yok)
 
 [xxxx]
 say=xxx
@@ -60,19 +72,23 @@ say=(suggest|saran|teach) @answer: @question
 [CarikStart]
 action=carik_start
 say=mulai (catat|catet)
-say=(rekam|catat|catet|mulai|start) (kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen)
-say=(kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen) (mulai|dimulai|start|dicatat|dicatet)
-say=(mulai|start) (kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen)
+say=(rekam|catat|catet|mulai|start) (kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen|nyatet)
+say=(kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen|nyatet) (mulai|dimulai|start|dicatat|dicatet)
+say=(mulai|start) (kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen|nyatet)
 
 [CarikStop]
 action=carik_stop
-say=(kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen) (dihentikan|stop|berhenti)
-say=(dihentikan|stop|berhenti|hentikan) (kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen)
+say=(kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen|nyatet) (dihentikan|stop|berhenti)
+say=(dihentikan|stop|berhenti|hentikan) (kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen|nyatet)
 
 [CarikSend]
 action=carik_send
 say=kirimkan rekaman ke @email
 say=rekaman kirim ke @email
+
+[CariCheck]
+action=carik_check
+say=sedang (nyatet|catet|rekam)
 
 
 [SholatJadwal]
@@ -101,6 +117,18 @@ say=@Pasangan:pasangan
 [CariJodohKriteria]
 object=jodoh
 say=yang @Kencantikan
+
+[TanyaPasanganSeseorang]
+say=@Tanya:siapa @Pasangan @seseorang
+say=@Pasangan @seseorang
+
+[Lulus]
+say=@Tanya:kapan @siapapun (lulus|wisusda|meninggal|mati)
+say=@Tanya:kapan (lulus|wisuda|meninggal|mati)
+
+[Nikah]
+say=@Tanya:kapan @siapapun @PersonalStatus:status
+say=@Tanya:kapan @PersonalStatus:status
 
 [Kencan]
 say=@Sapaan:aku kencan
@@ -211,14 +239,15 @@ say=@Figure @Tanya:siapa
 say=@Tanya:siapa @Sapaan:aku
 
 [Siapa]
+say=perkenalkan diri
 say=boleh kenalan
 say=mau kenalan
 say=@Tanya:siapa @Sapaan:kamu
 say=@Sapaan:kamu @Tanya:siapa
+say=@Sapaan:kamu itu @Tanya:siapa
+say=@Sapaan:kamu itu @Tanya:apa
 say=kenalan @Abaikan
 say=@Abaikan kenalan
-say=@Tanya:siapa @whatever
-say=^@Tanya:siapa
 say=^nama @whatever
 
 [InginTanya]
@@ -269,16 +298,29 @@ say=@Sifat:buruk
 
 [Waktu]
 say=@Tanya @Waktu
+say=@range @Waktu:-waktu @Tanya:berapa
+say=@range @Waktu:-waktu @Tanya:apa
 say=@Waktu:-waktu @Tanya:berapa
 say=@Waktu:-waktu @Tanya:apa
 
+[CantikGanteng]
+boundary=false
+say=@apapun @Kencantikan ya
+say=@apapun @Kencantikan ga
+say=@apapun @Kencantikan gak
+
+[YangPaling]
+say=yang paling @apapun
+say=paling @apapun
 
 [TanyaTentangTokoh]
+say=@Sapaan:kamu @PersonalKnowledge @apapun @Figure
 say=@Sapaan:kamu @PersonalKnowledge @Figure
 say=@PersonalKnowledge @sebutan @Figure
 say=@PersonalKnowledge @Figure
 
 [TanyaTentangTokohTidakDikenal]
+say=@Tanya:siapa @siapapun
 say=@Sapaan:kamu @PersonalKnowledge @siapapun
 say=@PersonalKnowledge @siapapun
 
@@ -325,6 +367,7 @@ say=whois domain @domain @option
 say=whois domain @domain
 say=whois @domain @option
 say=whois @domain
+say=who is @domain
 
 [Cari]
 action=cari
@@ -364,6 +407,12 @@ say=bisa @Sapaan:kamu @Lakukan
 say=@Sapaan:kamu bisa @Tanya:apa
 say=@Tanya:bisa @Tanya:apa
 say=@Tanya:bisa @apapun
+
+[Hadir]
+say=ternyata ada di sini
+say=ternyata ada disini
+say=ada di sini ternyata
+say=ada disini ternyata
 
 [KataTanyaSaja]
 say=^@Tanya

@@ -5,7 +5,7 @@ say=wow
 [Introduction]
 aboutme=\nPerkenalkan, saya adalah robot penjawab pesan otomatis.\nSaya akan berusaha membantu anda.\nMohon Maaf jika ada yang kurang bisa saya pahami nanti.
 firstsession=\n\nSepertinya kita belum pernah bertemu.
-secondsession=\n\n%Name% Senang bisa berjumpa lagi dengan anda.
+secondsession=Senang bisa berjumpa lagi dengan anda.
 
 [WordCencor]
 say=Mungkin bisa digunakan alternatif kalimat yang lain.
@@ -105,6 +105,23 @@ say=Hhhmm... agak sulit juga menjawabnya...
 [TokohSiapa]
 say=sepertinya dia %Figure%
 
+[CantikGanteng]
+say=kurang tau juga
+say=sulit memperkirakannya
+say=mesti dipikir-pikir dulu
+say=saya kurang yakin
+say=entahlah ...
+
+[YangPaling]
+say=kurang tau juga
+say=mungkin Anda?
+say=jangan-jangan Anda?
+say=aku dong yang paling cuakeppp... muachhh 💋
+say=sulit memperkirakannya
+say=mesti dipikir-pikir dulu
+say=yang pasti bukan saya
+say=sepertinya bukan Anda
+
 [TanyaTentangTokoh]
 say=Sepertinya tokoh terkenal
 say=Terdengar familiar
@@ -114,6 +131,11 @@ say=Prestasinya luar biasa
 
 [TanyaTentangTokohTidakDikenal]
 say=Maaf, sepertinya saya belum pernah jumpa dia
+say=Belum pernah jumpa dia
+say=Kurang tau juga
+say=Orang penting yaa ...
+say=Belum familiar dengan dia
+say=mmmmmhhh.... saya harus cari dulu ..
 
 [TanyaDiriSendiriPositif]
 say=Entahlah ...
@@ -161,7 +183,13 @@ say=Demikian juga dengan kamu
 say=Sepertinya menarik
 say=Sepertinya menyenangkan
 say=Nikmat sekali sepertinya
-say=Kadang bersama-sama lebih menyenangkan
+say=Boleh juga
+
+[Ajakan]
+say=Sepertinya menarik
+say=Sepertinya menyenangkan
+say=Nikmat sekali sepertinya
+say=Boleh juga
 
 [Kabar]
 say=Saya baik-baik saja
@@ -283,6 +311,17 @@ say=bagaimana?
 [TelegramBotStart]
 say=Hi, Selamat %time_session%.\nSelamat datang di layanan ChatBot kami.\nApa kabar?
 
+[Larangan]
+say=Oke
+say=Saya usahkan
+say=Baiklah
+say=mmmm... duhh.. saya usahakan yaa...
+
+[ResiPaket]
+say=Mohon ditunggu, saya cari dahulu ..
+say=Tunggu sebentar ..
+say=bentar, saya cek dulu
+
 [xxx]
 say=xxxxxx
 
@@ -293,6 +332,7 @@ say=Terima kasih masukannya
 [CarikStart]
 say=tunggu sebentar ...
 say=... bentar yaa ...
+say=siap-siap dulu ..
 
 [CarikStop]
 say=Oke, siippp...
@@ -319,6 +359,24 @@ say=Sulit juga
 say=Sepertinya ada
 say=Ada sihh... tapi susah juga sepertinya
 say=Bukannya banyak di sekitar Anda ?
+
+[TanyaPasanganSeseorang]
+say=Saya belum kenal
+say=Kurang tau juga
+say=Oohh... sudah punya yaaa..
+say=Saya cari tahu dulu yaa...
+
+[Nikah]
+say=Kalau sudah ada calonnya
+say=Kalau sudah ada jodohnya
+say=dia sudah yakin?
+say=Mesti pikir-pikir dulu
+
+[Lulus]
+say=Kalau sudah waktunya
+say=Kurang tahu juga
+say=Kurang ingat
+say=Saya kurang yakin
 
 [Kencan]
 say=Apa bisa?
@@ -386,6 +444,12 @@ say=cari pembantu yaa?
 say=seperti biasa: Lorem ipsum dolor sit amet, consectetur adipiscing elit. De quibus cupio scire quid sentias. Parvi enim primo ortu sic iacent, tamquam omnino sine animo sint. Cupiditates non Epicuri divisione finiebat, sed sua satietate. Duo Reges: constructio interrete. Explanetur igitur. Sumenda potius quam expetenda. 
 say=jawaban standard: Lorem ipsum dolor sit amet, consectetur adipiscing elit. De quibus cupio scire quid sentias. Parvi enim primo ortu sic iacent, tamquam omnino sine animo sint. Cupiditates non Epicuri divisione finiebat, sed sua satietate. Duo Reges: constructio interrete. Explanetur igitur. Sumenda potius quam expetenda. 
 say=anda sudah pasti tau jawabannya apa
+
+[Hadir]
+say=yaa.. hadir
+say=hai, salam jumpa
+say=iya.. apa kabar...
+say=hehehheee...
 
 [telolet]
 say=telotelotelotelooooooleeettt...

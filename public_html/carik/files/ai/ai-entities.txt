@@ -35,8 +35,9 @@ mabuk=mabuk|mabok
 sex=kentu|ngentot|ml|sex|homo|lesbian|lesbi
 
 [Keadaan]
-baik=baik|sehat|alhamdulillah
-buruk=buruk|sakit|demam|capek|lelah
+baik=baik|sehat|alhamdulillah|kuat|semangat|sembuh
+buruk=buruk|sakit|demam|capek|lelah|sepi|pusing|pusing2|mual|mual2
+
 
 [Pasangan]
 pasangan=jodoh|pasangan
@@ -123,10 +124,6 @@ perempuan=perempuan|gadis|ibu
 [PersonalKnowledge]
 tahu=kenal|tau|tahu|ngerti|ngertiin
 
-[Keadaan]
-baik=sehat|kuat|semangat|sembuh
-buruk=sakit|demam|pusing|capek|lelah
-
 [HargaLevel]
 mahal=paling mahal|termahal|mahal|mhal
 murah=paling murah|termurah|murah|mrah
@@ -158,7 +155,7 @@ tidak=benci|jijay|ga suka|ga seneng
 baik=suka|demen|seneng|kesengsem|trisna|love
 
 [Ekspresi]
-baik=haha|hehe|hihi|hoho|wkwk
+baik=haha|hehe|hihi|hoho|wkwk|muachhh|muatih
 kaget=eehh|ehh|wow
 
 [Keraguan]
@@ -174,7 +171,7 @@ pahlawan=pattimura|diponegoro|kartini
 jagoan123=ansori|encang|ihdi|oka|abi|ines
 dev=peter|bams|bambang|anne|deroh|ratu|yudi|joko
 devpascal=indra|tigor|derit|kofa|maskofa
-CafeStartup=temmy|gisela|gisel|bontot
+CafeStartup=temmy|gisela|gisel|bontot|wiwin
 
 [Profesi]
 pembantu=pembantu
@@ -188,6 +185,7 @@ pns=pegawai negeri|pgw negeri|pegawai negri|pgw negri
 [MelakukanSesuatu]
 hubungi=menghubungi|hubungi|ngubungin|kontak
 belajar=belajar
+ngopi=ngopi
 
 [Sedang]
 sudah=sdh|sudah|sdah|udah
