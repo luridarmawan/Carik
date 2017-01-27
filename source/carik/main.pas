@@ -166,6 +166,7 @@ begin
 
   // Main AI BOT
   SimpleBOT := TSimpleBotModule.Create;
+  SimpleBOT.SecondSessionResponse := False;
   SimpleBOT.chatID := chatID;
   if userName <> '' then
   begin
@@ -179,6 +180,10 @@ begin
   SimpleBOT.Handler['resi_paket'] := @resiHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
+
+
+  //- rekam pembicaraan dia sendiri
+  //- pilihan abaikan session
 
   // Send To Telegram
   // add paramater 'telegram=1' to your telegram url

@@ -100,6 +100,8 @@ Beberapa hal yang bisa ditanyakan:
 - jadwal sholat
 - whois domain
 - perhitungan angka
+- arti kata
+- cek resi pengiriman paket
 
 Khusus untuk merekam diskusi, Anda cukup memberikan perintah:
 
