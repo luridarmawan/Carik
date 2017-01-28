@@ -5,8 +5,8 @@ unit main;
 interface
 
 uses
-  notulen_controller, simplebot_controller, logutil_lib, resiibacor_integration,
   fpjson, RegExpr,
+  notulen_controller, simplebot_controller, logutil_lib, resiibacor_integration, movie_controller,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
 const
@@ -24,6 +24,7 @@ type
     function resiHandler(const IntentName: string; Params: TStrings): string;
     function voucherConvensionalHandler(const IntentName: string; Params: TStrings): string;
     function voucherHandler(const IntentName: string; Params: TStrings): string;
+    function movieHandler(const IntentName: string; Params: TStrings): string;
 
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
@@ -208,6 +209,7 @@ begin
   SimpleBOT.Handler['resi_paket'] := @resiHandler;
   SimpleBOT.Handler['voucher_konvensional'] := @voucherConvensionalHandler;
   SimpleBOT.Handler['voucher'] := @voucherHandler;
+  SimpleBOT.Handler['movie_info'] := @movieHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
 
@@ -334,6 +336,16 @@ begin
   s := StringReplace( s, '%nomor%', _nomor, [rfReplaceAll]);
   s := StringReplace( s, '%nominal%', _nominal, [rfReplaceAll]);
   result := s;
+end;
+
+function TMainModule.movieHandler(const IntentName: string; Params: TStrings
+  ): string;
+begin
+  Result := '';
+  with TMovieController.Create do
+  begin
+    Result := Find( Params.Values['judul_value']);
+  end;
 end;
 
 function TMainModule.isTelegram: boolean;
