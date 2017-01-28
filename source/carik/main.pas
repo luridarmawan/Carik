@@ -367,8 +367,12 @@ begin
   with TCurrencyIbacorIntegration.Create do
   begin
     Token := Config['ibacor/token'];
-    Result := Converter(Params.Values['dari_value'], Params.Values['ke_value'],
-      s2i(Params.Values['nominal_value']));
+    if Token <> '' then
+    begin
+      Result := Converter(Params.Values['dari_value'], Params.Values['ke_value'],
+        s2i(Params.Values['nominal_value']));
+    end;
+    Free;
   end;
 end;
 
