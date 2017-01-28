@@ -6,7 +6,7 @@ interface
 
 uses
   notulen_controller, simplebot_controller, logutil_lib, resiibacor_integration,
-  fpjson,
+  fpjson, RegExpr,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
 const
@@ -76,6 +76,7 @@ var
   Text, chatID, chatType, messageID, fullName, userName, telegramToken: string;
   i, j: integer;
   x, updateID, lastUpdateID: longint;
+  _regex: TRegExpr;
 begin
   updateID := 0;
 
