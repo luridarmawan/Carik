@@ -371,6 +371,8 @@ begin
     begin
       Result := Converter(Params.Values['dari_value'], Params.Values['ke_value'],
         s2i(Params.Values['nominal_value']));
+      if Result = '' then
+        Result := 'Maaf, konversi tidak bisa dilakukan.';
     end;
     Free;
   end;
