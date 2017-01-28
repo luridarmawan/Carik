@@ -103,16 +103,17 @@ begin
   except
   end;
 
-  // jika ada emoticon, hilang
+  // jika ada emoticon, hilang - force with regex
   // "\ud83d\ude2d"
-  if Text = '' then
+  //if Text = '' then
   begin
     _regex := TRegExpr.Create;
     try
-      _regex.Expression := '(\\u(\w+))(\\u(\w+))';
+      //_regex.Expression := '(\\u(\w+))(\\u(\w+))';
+      _regex.Expression := '"text":"([\\.\$\@A-Za-z0-9=_ :;\-"]+)"';
       if _regex.Exec(Request.Content) then
       begin
-        Text := _regex.Match[0];
+        Text := _regex.Match[1];
       end;
     except
     end;
