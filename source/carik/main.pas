@@ -29,6 +29,8 @@ type
     function movieInfoHandler(const IntentName: string; Params: TStrings): string;
     function moviePlayHandler(const IntentName: string; Params: TStrings): string;
     function currencyHandler(const IntentName: string; Params: TStrings): string;
+    function botEnableHandler(const IntentName: string; Params: TStrings): string;
+    function botDisableHandler(const IntentName: string; Params: TStrings): string;
 
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
@@ -216,12 +218,24 @@ begin
   SimpleBOT.Handler['movie_play'] := @moviePlayHandler;
   SimpleBOT.Handler['movie_info'] := @movieInfoHandler;
   SimpleBOT.Handler['currency'] := @currencyHandler;
+  SimpleBOT.Handler['bot_enable'] := @botEnableHandler;
+  SimpleBOT.Handler['bot_disable'] := @botDisableHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
 
   //TODO
   //- rekam pembicaraan dia sendiri
   //- pilihan abaikan session
+
+  // Carik diem ?
+  if Carik.IsGroup then
+  begin
+    if Carik.IsDisabled then
+    begin
+      Response.Content := 'silent';
+      Exit;
+    end;
+  end;
 
   // Send To Telegram
   // add paramater 'telegram=1' to your telegram url
@@ -322,8 +336,7 @@ begin
   Result := s;
 end;
 
-function TMainModule.voucherHandler(const IntentName: string;
-  Params: TStrings): string;
+function TMainModule.voucherHandler(const IntentName: string; Params: TStrings): string;
 var
   s, _nominal, _nomor: string;
   _nominalFloat: double;
@@ -360,8 +373,8 @@ begin
     UrlEncode(Params.Values['title_value']);
 end;
 
-function TMainModule.currencyHandler(const IntentName: string; Params: TStrings
-  ): string;
+function TMainModule.currencyHandler(const IntentName: string;
+  Params: TStrings): string;
 begin
   Result := '';
   with TCurrencyIbacorIntegration.Create do
@@ -376,6 +389,22 @@ begin
     end;
     Free;
   end;
+end;
+
+function TMainModule.botEnableHandler(const IntentName: string;
+  Params: TStrings): string;
+begin
+  Result := '';
+  if Carik.EnableBot then
+    Result := SimpleBOT.GetResponse(IntentName + 'Response');
+end;
+
+function TMainModule.botDisableHandler(const IntentName: string;
+  Params: TStrings): string;
+begin
+  Result := '';
+  if Carik.DisableBot then
+    Result := 'disable';
 end;
 
 function TMainModule.isTelegram: boolean;
