@@ -6,7 +6,8 @@ interface
 
 uses
   fpjson, RegExpr,
-  notulen_controller, simplebot_controller, logutil_lib, resiibacor_integration, movie_controller,
+  notulen_controller, simplebot_controller, logutil_lib, resiibacor_integration,
+  movie_controller,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
 const
@@ -22,9 +23,11 @@ type
     procedure BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
     function defineHandler(const IntentName: string; Params: TStrings): string;
     function resiHandler(const IntentName: string; Params: TStrings): string;
-    function voucherConvensionalHandler(const IntentName: string; Params: TStrings): string;
+    function voucherConvensionalHandler(const IntentName: string;
+      Params: TStrings): string;
     function voucherHandler(const IntentName: string; Params: TStrings): string;
-    function movieHandler(const IntentName: string; Params: TStrings): string;
+    function movieInfoHandler(const IntentName: string; Params: TStrings): string;
+    function moviePlayHandler(const IntentName: string; Params: TStrings): string;
 
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
@@ -182,7 +185,7 @@ begin
   if Pos('@' + BOTNAME_DEFAULT, Text) = 1 then
     Text := StringReplace(Text, '@' + BOTNAME_DEFAULT, '', [rfReplaceAll, rfIgnoreCase]);
   s := '@' + Config[_AI_CONFIG_NAME] + 'bot';
-  s := LowerCase( s);
+  s := LowerCase(s);
   if Pos(s, Text) = 1 then
     Text := StringReplace(Text, s, '', [rfReplaceAll, rfIgnoreCase]);
   Text := Trim(Text);
@@ -209,7 +212,7 @@ begin
   SimpleBOT.Handler['resi_paket'] := @resiHandler;
   SimpleBOT.Handler['voucher_konvensional'] := @voucherConvensionalHandler;
   SimpleBOT.Handler['voucher'] := @voucherHandler;
-  SimpleBOT.Handler['movie_info'] := @movieHandler;
+  SimpleBOT.Handler['movie_info'] := @movieInfoHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
 
@@ -283,8 +286,7 @@ begin
   //   keyName & keyValue
 end;
 
-function TMainModule.resiHandler(const IntentName: string; Params: TStrings
-  ): string;
+function TMainModule.resiHandler(const IntentName: string; Params: TStrings): string;
 begin
   with TResiIbacorController.Create do
   begin
@@ -305,20 +307,20 @@ var
   lst: TStrings;
 begin
   Result := '';
-  lst := Explode( Text, '.');
+  lst := Explode(Text, '.');
   _nominal := lst[0];
   _nomor := lst[1];
   _pin := lst[2];
 
-  s := SimpleBOT.SimpleAI.GetResponse( IntentName + 'Response');
-  s := StringReplace( s, '%nomor%', _nomor, [rfReplaceAll]);
-  s := StringReplace( s, '%nominal%', _nominal, [rfReplaceAll]);
-  s := StringReplace( s, '%pin%', _pin, [rfReplaceAll]);
-  result := s;
+  s := SimpleBOT.SimpleAI.GetResponse(IntentName + 'Response');
+  s := StringReplace(s, '%nomor%', _nomor, [rfReplaceAll]);
+  s := StringReplace(s, '%nominal%', _nominal, [rfReplaceAll]);
+  s := StringReplace(s, '%pin%', _pin, [rfReplaceAll]);
+  Result := s;
 end;
 
-function TMainModule.voucherHandler(const IntentName: string; Params: TStrings
-  ): string;
+function TMainModule.voucherHandler(const IntentName: string;
+  Params: TStrings): string;
 var
   s, _nominal, _nomor: string;
   _nominalFloat: double;
@@ -326,26 +328,33 @@ begin
   Result := '';
   _nomor := Params.Values['nomorponsel_value'];
   _nominal := Params.Values['nominalpulsa_value'] + Params.Values['satuan'];
-  _nominal := StringHumanToNominal( _nominal);
-  _nominalFloat := StringHumanToFloat( _nominal);
+  _nominal := StringHumanToNominal(_nominal);
+  _nominalFloat := StringHumanToFloat(_nominal);
   ThousandSeparator := '.';
-  _nominal:= FormatFloat( '###,##0', _nominalFloat);
+  _nominal := FormatFloat('###,##0', _nominalFloat);
 
 
-  s := SimpleBOT.SimpleAI.GetResponse( IntentName + 'Response');
-  s := StringReplace( s, '%nomor%', _nomor, [rfReplaceAll]);
-  s := StringReplace( s, '%nominal%', _nominal, [rfReplaceAll]);
-  result := s;
+  s := SimpleBOT.SimpleAI.GetResponse(IntentName + 'Response');
+  s := StringReplace(s, '%nomor%', _nomor, [rfReplaceAll]);
+  s := StringReplace(s, '%nominal%', _nominal, [rfReplaceAll]);
+  Result := s;
 end;
 
-function TMainModule.movieHandler(const IntentName: string; Params: TStrings
-  ): string;
+function TMainModule.movieInfoHandler(const IntentName: string;
+  Params: TStrings): string;
 begin
   Result := '';
   with TMovieController.Create do
   begin
-    Result := Find( Params.Values['judul_value']);
+    Result := Find(Params.Values['judul_value']);
   end;
+end;
+
+function TMainModule.moviePlayHandler(const IntentName: string;
+  Params: TStrings): string;
+begin
+  Result := 'https://www.youtube.com/results?search\_query=' +
+    UrlEncode(Params.Values['title_value']);
 end;
 
 function TMainModule.isTelegram: boolean;
@@ -416,5 +425,3 @@ end;
 
 
 end.
-
-
