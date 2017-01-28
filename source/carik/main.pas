@@ -22,12 +22,15 @@ type
     procedure BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
     function defineHandler(const IntentName: string; Params: TStrings): string;
     function resiHandler(const IntentName: string; Params: TStrings): string;
+    function voucherConvensionalHandler(const IntentName: string; Params: TStrings): string;
+    function voucherHandler(const IntentName: string; Params: TStrings): string;
 
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
     function isMentioned(Text: string): boolean;
     function isReply: boolean;
   public
+    Text: string;
     Carik: TNotulenController;
     SimpleBOT: TSimpleBotModule;
     constructor CreateNew(AOwner: TComponent; CreateMode: integer); override;
@@ -73,7 +76,7 @@ end;
 procedure TMainModule.Post;
 var
   s, text_response: string;
-  Text, chatID, chatType, messageID, fullName, userName, telegramToken: string;
+  chatID, chatType, messageID, fullName, userName, telegramToken: string;
   i, j: integer;
   x, updateID, lastUpdateID: longint;
   _regex: TRegExpr;
@@ -203,6 +206,8 @@ begin
   SimpleBOT.Handler['carik_check'] := @Carik.CheckHandler;
   SimpleBOT.Handler['carik_topic'] := @Carik.TopicHandler;
   SimpleBOT.Handler['resi_paket'] := @resiHandler;
+  SimpleBOT.Handler['voucher_konvensional'] := @voucherConvensionalHandler;
+  SimpleBOT.Handler['voucher'] := @voucherHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
 
@@ -289,6 +294,46 @@ begin
   end;
   if Result = '' then
     Result := 'Maaf, gagal mencari kode pengiriman ini.';
+end;
+
+function TMainModule.voucherConvensionalHandler(const IntentName: string;
+  Params: TStrings): string;
+var
+  s, _nominal, _nomor, _pin: string;
+  lst: TStrings;
+begin
+  Result := '';
+  lst := Explode( Text, '.');
+  _nominal := lst[0];
+  _nomor := lst[1];
+  _pin := lst[2];
+
+  s := SimpleBOT.SimpleAI.GetResponse( IntentName + 'Response');
+  s := StringReplace( s, '%nomor%', _nomor, [rfReplaceAll]);
+  s := StringReplace( s, '%nominal%', _nominal, [rfReplaceAll]);
+  s := StringReplace( s, '%pin%', _pin, [rfReplaceAll]);
+  result := s;
+end;
+
+function TMainModule.voucherHandler(const IntentName: string; Params: TStrings
+  ): string;
+var
+  s, _nominal, _nomor: string;
+  _nominalFloat: double;
+begin
+  Result := '';
+  _nomor := Params.Values['nomorponsel_value'];
+  _nominal := Params.Values['nominalpulsa_value'] + Params.Values['satuan'];
+  _nominal := StringHumanToNominal( _nominal);
+  _nominalFloat := StringHumanToFloat( _nominal);
+  ThousandSeparator := '.';
+  _nominal:= FormatFloat( '###,##0', _nominalFloat);
+
+
+  s := SimpleBOT.SimpleAI.GetResponse( IntentName + 'Response');
+  s := StringReplace( s, '%nomor%', _nomor, [rfReplaceAll]);
+  s := StringReplace( s, '%nominal%', _nominal, [rfReplaceAll]);
+  result := s;
 end;
 
 function TMainModule.isTelegram: boolean;
