@@ -212,6 +212,7 @@ begin
   SimpleBOT.Handler['resi_paket'] := @resiHandler;
   SimpleBOT.Handler['voucher_konvensional'] := @voucherConvensionalHandler;
   SimpleBOT.Handler['voucher'] := @voucherHandler;
+  SimpleBOT.Handler['movie_play'] := @moviePlayHandler;
   SimpleBOT.Handler['movie_info'] := @movieInfoHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
