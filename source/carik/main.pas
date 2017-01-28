@@ -7,7 +7,7 @@ interface
 uses
   fpjson, RegExpr,
   notulen_controller, simplebot_controller, logutil_lib, resiibacor_integration,
-  movie_controller,
+  movie_controller, currencyibacor_integration,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
 const
@@ -28,6 +28,7 @@ type
     function voucherHandler(const IntentName: string; Params: TStrings): string;
     function movieInfoHandler(const IntentName: string; Params: TStrings): string;
     function moviePlayHandler(const IntentName: string; Params: TStrings): string;
+    function currencyHandler(const IntentName: string; Params: TStrings): string;
 
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
@@ -214,6 +215,7 @@ begin
   SimpleBOT.Handler['voucher'] := @voucherHandler;
   SimpleBOT.Handler['movie_play'] := @moviePlayHandler;
   SimpleBOT.Handler['movie_info'] := @movieInfoHandler;
+  SimpleBOT.Handler['currency'] := @currencyHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
 
@@ -356,6 +358,18 @@ function TMainModule.moviePlayHandler(const IntentName: string;
 begin
   Result := 'https://www.youtube.com/results?search\_query=' +
     UrlEncode(Params.Values['title_value']);
+end;
+
+function TMainModule.currencyHandler(const IntentName: string; Params: TStrings
+  ): string;
+begin
+  Result := '';
+  with TCurrencyIbacorIntegration.Create do
+  begin
+    Token := Config['ibacor/token'];
+    Result := Converter(Params.Values['dari_value'], Params.Values['ke_value'],
+      s2i(Params.Values['nominal_value']));
+  end;
 end;
 
 function TMainModule.isTelegram: boolean;
