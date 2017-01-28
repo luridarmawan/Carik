@@ -102,6 +102,22 @@ begin
   except
   end;
 
+  // jika ada emoticon, hilang
+  // "\ud83d\ude2d"
+  if Text = '' then
+  begin
+    _regex := TRegExpr.Create;
+    try
+      _regex.Expression := '(\\u(\w+))(\\u(\w+))';
+      if _regex.Exec(Request.Content) then
+      begin
+        Text := _regex.Match[0];
+      end;
+    except
+    end;
+    _regex.Free;
+  end;
+
   // maybe submitted from post data
   if Text = '' then
     Text := _POST['text'];
