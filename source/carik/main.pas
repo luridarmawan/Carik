@@ -411,7 +411,6 @@ begin
   if Carik.DisableBot then
   begin
     forceRespond := True;
-    Result := 'disable';
   end;
 end;
 
