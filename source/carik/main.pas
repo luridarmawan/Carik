@@ -19,6 +19,7 @@ type
 
   TMainModule = class(TMyCustomWebModule)
   private
+    forceRespond: boolean;
     jsonData: TJSONData;
     procedure BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
     function defineHandler(const IntentName: string; Params: TStrings): string;
@@ -89,6 +90,7 @@ var
   _regex: TRegExpr;
 begin
   updateID := 0;
+  forceRespond := False;
 
   // telegram style
   //   {"message":{"message_id":0,"text":"Hi","chat":{"id":0}}}
@@ -232,8 +234,11 @@ begin
   begin
     if Carik.IsDisabled then
     begin
-      Response.Content := 'silent';
-      Exit;
+      if not forceRespond then
+      begin
+        Response.Content := 'silent';
+        Exit;
+      end;
     end;
   end;
 
@@ -404,7 +409,10 @@ function TMainModule.botDisableHandler(const IntentName: string;
 begin
   Result := '';
   if Carik.DisableBot then
+  begin
+    forceRespond := True;
     Result := 'disable';
+  end;
 end;
 
 function TMainModule.isTelegram: boolean;
