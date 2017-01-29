@@ -11,7 +11,7 @@ uses
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
 const
-  BOTNAME_DEFAULT = 'bot';
+  BOTNAME_DEFAULT = 'Carik';
 
 type
 
@@ -265,6 +265,9 @@ begin
               s := fullName + ', ' + s;
           }
           SimpleBOT.TelegramSend(telegramToken, chatID, messageID, s);
+
+          // TODO: rekam percakapan si BOT
+
         end;
         //Delay(200);
       except
