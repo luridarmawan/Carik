@@ -11,7 +11,7 @@ uses
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
 const
-  BOTNAME_DEFAULT = 'Carik';
+  BOTNAME_DEFAULT = 'carik'; // always lowercase
 
 type
 
