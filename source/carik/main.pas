@@ -197,6 +197,7 @@ begin
 
   // Main AI BOT
   SimpleBOT := TSimpleBotModule.Create;
+  SimpleBOT.TrimMessage := True;
   if not isTelegramGroup then
   begin
     SimpleBOT.FirstSessionResponse := True;
