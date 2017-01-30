@@ -108,8 +108,10 @@ begin
     chatType := jsonData.GetPath('message.chat.type').AsString;
     try
       userName := jsonData.GetPath('message.from.username').AsString;
-      fullName := jsonData.GetPath('message.from.first_name').AsString +
-        ' ' + jsonData.GetPath('message.from.last_name').AsString;
+      fullName := trim(jsonData.GetPath('message.from.first_name').AsString +
+        ' ' + jsonData.GetPath('message.from.last_name').AsString);
+      if fullName = '' then
+        fullName := userName;
     except
     end;
   except
@@ -138,6 +140,7 @@ begin
 
   // CarikBOT isRecording
   Carik.UserName := userName;
+  Carik.FullName := fullName;
   try
     Carik.GroupName := jsonData.GetPath('message.chat.title').AsString;
   except
