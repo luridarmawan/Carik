@@ -7,11 +7,14 @@ interface
 uses
   fpjson, RegExpr,
   notulen_controller, simplebot_controller, logutil_lib, resiibacor_integration,
+  clarifai_integration, telegram_integration,
   movie_controller, currencyibacor_integration,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
 const
   BOTNAME_DEFAULT = 'carik'; // always lowercase
+  CLARIFAI_TOKEN = 'clarifai/token';
+  TELEGRAM_TOKEN = 'telegram/token';
 
 type
 
@@ -32,9 +35,12 @@ type
     function currencyHandler(const IntentName: string; Params: TStrings): string;
     function botEnableHandler(const IntentName: string; Params: TStrings): string;
     function botDisableHandler(const IntentName: string; Params: TStrings): string;
+    function tebakGambarHandler(const IntentName: string; Params: TStrings): string;
 
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
+    function getTelegramImageID: string;
+    function getTelegramImageCaption: string;
     function isMentioned(Text: string): boolean;
     function isReply: boolean;
   public
@@ -135,8 +141,8 @@ begin
   end;
 
   // maybe submitted from post data
-  if Text = '' then
-    Text := _POST['text'];
+  //if Text = '' then
+  //  Text := _POST['text'];
 
   // CarikBOT isRecording
   Carik.UserName := userName;
@@ -172,6 +178,10 @@ begin
     //if isTelegramGroup then
     if ((chatType = 'group') or (chatType = 'supergroup')) then
     begin
+      if Text = '' then
+      begin
+        Text := getTelegramImageCaption;
+      end;
       if not isReply then
       begin
         if (not isMentioned(Text)) then
@@ -182,7 +192,6 @@ begin
         end;
       end;
     end;
-
   end;// isTelegram
 
   if Text = '' then
@@ -218,16 +227,20 @@ begin
   SimpleBOT.Handler['carik_stop'] := @Carik.StopHandler;
   SimpleBOT.Handler['carik_check'] := @Carik.CheckHandler;
   SimpleBOT.Handler['carik_topic'] := @Carik.TopicHandler;
+  SimpleBOT.Handler['carik_send'] := @Carik.SendHandler;
   SimpleBOT.Handler['resi_paket'] := @resiHandler;
   SimpleBOT.Handler['voucher_konvensional'] := @voucherConvensionalHandler;
   SimpleBOT.Handler['voucher'] := @voucherHandler;
   SimpleBOT.Handler['movie_play'] := @moviePlayHandler;
   SimpleBOT.Handler['movie_info'] := @movieInfoHandler;
   SimpleBOT.Handler['currency'] := @currencyHandler;
+  SimpleBOT.Handler['tebak_gambar'] := @tebakGambarHandler;
   SimpleBOT.Handler['bot_enable'] := @botEnableHandler;
   SimpleBOT.Handler['bot_disable'] := @botDisableHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
+
+  Exit;//ulil
 
   //TODO
   //- rekam pembicaraan dia sendiri
@@ -250,7 +263,7 @@ begin
   // add paramater 'telegram=1' to your telegram url
   if isTelegram then
   begin
-    telegramToken := Config['telegram/token'];
+    telegramToken := Config[TELEGRAM_TOKEN];
     if SimpleBOT.SimpleAI.Action = '' then // no mention reply, if no 'action'
       messageID := '';
     if SimpleBOT.SimpleAI.Action = 'telegram_menu' then
@@ -421,6 +434,52 @@ begin
   end;
 end;
 
+function TMainModule.tebakGambarHandler(const IntentName: string;
+  Params: TStrings): string;
+var
+  s, _url: string;
+  _img: TClarifai;
+begin
+  Result := '';
+  if Carik.IsDisabled then
+    Exit;
+  if Config[CLARIFAI_TOKEN] = '' then
+    Exit;
+  if Config[TELEGRAM_TOKEN] = '' then
+    Exit;
+  if not isTelegramGroup then
+    Exit;
+  if Carik.IsImageRecognitionDisabled then
+    Exit;
+  s := getTelegramImageID;
+  if s = '' then
+    Exit;
+
+  _url := '';
+  with TTelegramIntegration.Create do
+  begin
+    Token := Config[TELEGRAM_TOKEN];
+    s := GetFileURL(s);
+    if s <> '' then
+    begin
+      _url := format(TELEGRAM_FILEURL, [Token]) + s;
+    end;
+  end;
+
+  if _url = '' then
+    Exit;
+
+  _img := TClarifai.Create;
+  _img.Token := Config[CLARIFAI_TOKEN];
+  _img.ImageURL := _url;
+  Result := _img.GetTagsAsString;
+  _img.Free;
+
+  s := SimpleBOT.GetResponse(IntentName + 'Response');
+  Result := Format(s, [Result]);
+  Carik.ImageRecognitionCounting;
+end;
+
 function TMainModule.isTelegram: boolean;
 begin
   Result := False;
@@ -445,6 +504,33 @@ begin
   except
   end;
   json.Free;
+end;
+
+function TMainModule.getTelegramImageID: string;
+var
+  _photo, _caption: string;
+  _json: TJSONData;
+begin
+  Result := '';
+  _json := GetJSON(Request.Content);
+  try
+    Result := jsonData.GetPath('message.photo[2].file_id').AsString;
+  except
+  end;
+  _json.Free;
+end;
+
+function TMainModule.getTelegramImageCaption: string;
+var
+  _json: TJSONData;
+begin
+  Result := '';
+  _json := GetJSON(Request.Content);
+  try
+    Result := jsonData.GetPath('message.caption').AsString;
+  except
+  end;
+  _json.Free;
 end;
 
 function TMainModule.isMentioned(Text: string): boolean;
