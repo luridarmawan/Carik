@@ -246,7 +246,7 @@ begin
   // add paramater 'telegram=1' to your telegram url
   if isTelegram then
   begin
-    telegramToken := Config[_TELEGRAM_CONFIG_TOKEN];
+    telegramToken := Config['telegram/token'];
     if SimpleBOT.SimpleAI.Action = '' then // no mention reply, if no 'action'
       messageID := '';
     if SimpleBOT.SimpleAI.Action = 'telegram_menu' then

@@ -102,6 +102,13 @@ Beberapa hal yang bisa ditanyakan:
 - perhitungan angka
 - arti kata
 - cek resi pengiriman paket
+- info film
+
+
+beberapa fitur becanda:
+
+- cek jadwal
+- kirim pulsa
 
 Khusus untuk merekam diskusi, Anda cukup memberikan perintah:
 
@@ -115,3 +122,8 @@ beberapa kalimat yang bisa digunakan:
 - @CarikBot mulai rekaman
 
 bisa langsung dimention, atau dengan me-reply comment bot sebelumnya.
+
+## Video Compilasi Source
+
+[![Video to Compiling Carik](img/compiling.png)](https://www.youtube.com/watch?v=m8n4qijbcGM)
+
