@@ -240,8 +240,6 @@ begin
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
 
-  Exit;//ulil
-
   //TODO
   //- rekam pembicaraan dia sendiri
   //- pilihan abaikan session
@@ -516,6 +514,17 @@ begin
   try
     Result := jsonData.GetPath('message.photo[2].file_id').AsString;
   except
+    try
+      Result := jsonData.GetPath('message.photo[1].file_id').AsString;
+    except
+      try
+        Result := jsonData.GetPath('message.photo[0].file_id').AsString;
+      except
+        on e:Exception do
+        begin
+        end;
+      end;
+    end;
   end;
   _json.Free;
 end;

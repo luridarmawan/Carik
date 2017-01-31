@@ -97,18 +97,32 @@ Beberapa hal yang bisa ditanyakan:
 
 - greeting
 - jam/hari/bulan saat ini
+   * ```sekarang jam berapa```
+   * ```hari apa sekarang```
 - jadwal sholat
+   * ```jadwal sholat```
+   * ```jadwal sholat semarang```
 - whois domain
+   * ```whois fastplaz.com```
+   * ```whois pandi.id lengkap```
 - perhitungan angka
+   * ```berapa 1+1*5```
+   * ```hitung sin(10)/2```
 - arti kata
+   * ```artinya kehidupan```
 - cek resi pengiriman paket
+   * ```format: resi [kurir] [koderesi]```
+   * ```cek resi jno 12345678```
 - info film
+   * ```cari info film ada dengan cinta```
+- kurs
+   * ```1 usd berapa idr```
 
 
-beberapa fitur becanda:
+**beberapa fitur becanda:**
 
 - cek jadwal
-- kirim pulsa
+- beli pulsa
 
 Khusus untuk merekam diskusi, Anda cukup memberikan perintah:
 
