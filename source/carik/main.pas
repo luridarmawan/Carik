@@ -37,6 +37,9 @@ type
     function botDisableHandler(const IntentName: string; Params: TStrings): string;
     function tebakGambarHandler(const IntentName: string; Params: TStrings): string;
 
+    function carikAdminTambahHandler(const IntentName: string; Params: TStrings): string;
+    function carikAdminHapusHandler(const IntentName: string; Params: TStrings): string;
+
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
     function getTelegramImageID: string;
@@ -187,7 +190,7 @@ begin
         if (not isMentioned(Text)) then
         begin
           _SESSION['UPDATE_ID'] := updateID;
-          Response.Content := 'nop';
+          Response.Content := 'nomention';
           Exit;
         end;
       end;
@@ -237,6 +240,8 @@ begin
   SimpleBOT.Handler['tebak_gambar'] := @tebakGambarHandler;
   SimpleBOT.Handler['bot_enable'] := @botEnableHandler;
   SimpleBOT.Handler['bot_disable'] := @botDisableHandler;
+  SimpleBOT.Handler['carik_admin_tambah'] := @carikAdminTambahHandler;
+  SimpleBOT.Handler['carik_admin_hapus'] := @carikAdminHapusHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
 
@@ -258,11 +263,13 @@ begin
   end;
 
   //Exec Command
-  if Carik.IsCommand( SimpleBOT.SimpleAI.ResponseText.Text) then
+  if Carik.IsCommand(SimpleBOT.SimpleAI.ResponseText.Text) then
   begin
-    SimpleBOT.SimpleAI.ResponseText.Text := Carik.ExecCommand( SimpleBOT.SimpleAI.ResponseText.Text);
+    SimpleBOT.SimpleAI.ResponseText.Text :=
+      Carik.ExecCommand(SimpleBOT.SimpleAI.ResponseText.Text);
     if SimpleBOT.SimpleAI.ResponseText.Text = '' then
-      SimpleBOT.SimpleAI.ResponseText.Text:= SimpleBOT.GetResponse('DataTidakAdaResponse');
+      SimpleBOT.SimpleAI.ResponseText.Text :=
+        SimpleBOT.GetResponse('DataTidakAdaResponse');
     //TODO: generate user data and object
     Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end;
@@ -488,6 +495,30 @@ begin
   Carik.ImageRecognitionCounting;
 end;
 
+function TMainModule.carikAdminTambahHandler(const IntentName: string;
+  Params: TStrings): string;
+begin
+  if not isTelegramGroup then
+    Exit;
+  if Carik.AdminAdd( Params.Values['username_value']) then
+  begin
+    Result := SimpleBOT.GetResponse( IntentName + 'Response');
+    Result := StringReplace( Result, '%username_value%', Params.Values['username_value'], [rfReplaceAll]);
+  end;
+end;
+
+function TMainModule.carikAdminHapusHandler(const IntentName: string;
+  Params: TStrings): string;
+begin
+  if not isTelegramGroup then
+    Exit;
+  if Carik.AdminDel( Params.Values['username_value']) then
+  begin
+    Result := SimpleBOT.GetResponse( IntentName + 'Response');
+    Result := StringReplace( Result, '%username_value%', Params.Values['username_value'], [rfReplaceAll]);
+  end;
+end;
+
 function TMainModule.isTelegram: boolean;
 begin
   Result := False;
@@ -530,7 +561,7 @@ begin
       try
         Result := jsonData.GetPath('message.photo[0].file_id').AsString;
       except
-        on e:Exception do
+        on e: Exception do
         begin
         end;
       end;
