@@ -257,6 +257,16 @@ begin
     end;
   end;
 
+  //Exec Command
+  if Carik.IsCommand( SimpleBOT.SimpleAI.ResponseText.Text) then
+  begin
+    SimpleBOT.SimpleAI.ResponseText.Text := Carik.ExecCommand( SimpleBOT.SimpleAI.ResponseText.Text);
+    if SimpleBOT.SimpleAI.ResponseText.Text = '' then
+      SimpleBOT.SimpleAI.ResponseText.Text:= SimpleBOT.GetResponse('DataTidakAdaResponse');
+    //TODO: generate user data and object
+    Response.Content := SimpleBOT.SimpleAI.ResponseJson;
+  end;
+
   // Send To Telegram
   // add paramater 'telegram=1' to your telegram url
   if isTelegram then

@@ -110,7 +110,7 @@ Beberapa hal yang bisa ditanyakan:
    * ```hitung sin(10)/2```
 - arti kata
    * ```artinya kehidupan```
-- cek resi pengiriman paket
+- cek resi pengiriman paket dari kurir: jne, tiki, pos, pandu, jnt, sicepat dan wahana
    * ```format: resi [kurir] [koderesi]```
    * ```cek resi jno 12345678```
 - info film
