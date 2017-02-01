@@ -41,6 +41,7 @@ type
 
     function carikAdminTambahHandler(const IntentName: string; Params: TStrings): string;
     function carikAdminHapusHandler(const IntentName: string; Params: TStrings): string;
+    function carikGroupInfoHandler(const IntentName: string; Params: TStrings): string;
 
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
@@ -221,7 +222,8 @@ begin
   if Pos(s, Text) = 1 then
     Text := StringReplace(Text, s, '', [rfReplaceAll, rfIgnoreCase]);
   }
-  Text := StringReplace(Text, '@' + BOTNAME_DEFAULT + 'Bot', '', [rfReplaceAll, rfIgnoreCase]);
+  Text := StringReplace(Text, '@' + BOTNAME_DEFAULT + 'Bot', '',
+    [rfReplaceAll, rfIgnoreCase]);
   Text := Trim(Text);
   if Text = '' then
     Exit;
@@ -258,6 +260,7 @@ begin
   SimpleBOT.Handler['bot_disable'] := @botDisableHandler;
   SimpleBOT.Handler['carik_admin_tambah'] := @carikAdminTambahHandler;
   SimpleBOT.Handler['carik_admin_hapus'] := @carikAdminHapusHandler;
+  SimpleBOT.Handler['carik_group_info'] := @carikGroupInfoHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
 
@@ -497,7 +500,8 @@ begin
     end;
   end;
 
-  if _url = '' then                                // TODO: !!! kalau text kosong "@CarikBot" bingung dia
+  if _url = '' then
+    // TODO: !!! kalau text kosong "@CarikBot" bingung dia
     Exit;
 
   _img := TClarifai.Create;
@@ -516,10 +520,11 @@ function TMainModule.carikAdminTambahHandler(const IntentName: string;
 begin
   if not isTelegramGroup then
     Exit;
-  if Carik.AdminAdd( Params.Values['username_value']) then
+  if Carik.AdminAdd(Params.Values['username_value']) then
   begin
-    Result := SimpleBOT.GetResponse( IntentName + 'Response');
-    Result := StringReplace( Result, '%username_value%', Params.Values['username_value'], [rfReplaceAll]);
+    Result := SimpleBOT.GetResponse(IntentName + 'Response');
+    Result := StringReplace(Result, '%username_value%',
+      Params.Values['username_value'], [rfReplaceAll]);
   end;
 end;
 
@@ -528,11 +533,18 @@ function TMainModule.carikAdminHapusHandler(const IntentName: string;
 begin
   if not isTelegramGroup then
     Exit;
-  if Carik.AdminDel( Params.Values['username_value']) then
+  if Carik.AdminDel(Params.Values['username_value']) then
   begin
-    Result := SimpleBOT.GetResponse( IntentName + 'Response');
-    Result := StringReplace( Result, '%username_value%', Params.Values['username_value'], [rfReplaceAll]);
+    Result := SimpleBOT.GetResponse(IntentName + 'Response');
+    Result := StringReplace(Result, '%username_value%',
+      Params.Values['username_value'], [rfReplaceAll]);
   end;
+end;
+
+function TMainModule.carikGroupInfoHandler(const IntentName: string;
+  Params: TStrings): string;
+begin
+  Result := Carik.GroupInfo;
 end;
 
 function TMainModule.isTelegram: boolean;
