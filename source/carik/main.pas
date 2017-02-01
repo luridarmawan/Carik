@@ -12,7 +12,7 @@ uses
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
 const
-  BOTNAME_DEFAULT = 'carik'; // always lowercase
+  BOTNAME_DEFAULT = 'Carik';
   CLARIFAI_TOKEN = 'clarifai/token';
   TELEGRAM_TOKEN = 'telegram/token';
 
@@ -97,7 +97,7 @@ end;
 procedure TMainModule.Post;
 var
   s, text_response: string;
-  chatID, chatType, messageID, fullName, userName, telegramToken: string;
+  chatID, chatType, messageID, _userID, fullName, userName, telegramToken: string;
   i, j: integer;
   x, updateID, lastUpdateID: longint;
   _regex: TRegExpr;
@@ -120,6 +120,7 @@ begin
     chatID := jsonData.GetPath('message.chat.id').AsString;
     chatType := jsonData.GetPath('message.chat.type').AsString;
     try
+      _userID := jsonData.GetPath('message.from.id').AsString;
       userName := jsonData.GetPath('message.from.username').AsString;
       fullName := trim(jsonData.GetPath('message.from.first_name').AsString +
         ' ' + jsonData.GetPath('message.from.last_name').AsString);
@@ -152,6 +153,7 @@ begin
   //  Text := _POST['text'];
 
   // CarikBOT isRecording
+  Carik.UserID := _userID;
   Carik.UserName := userName;
   Carik.FullName := fullName;
   try
@@ -198,6 +200,8 @@ begin
           if isTelegramInvitation then
           begin
             Text := '/invitation ' + FInvitedUserName + ' ' + FInvitedFirstName;
+            if FInvitedUserName = BOTNAME_DEFAULT + 'Bot' then
+              Carik.Invited;
           end
           else
           begin
@@ -629,7 +633,7 @@ end;
 function TMainModule.isMentioned(Text: string): boolean;
 begin
   Result := False;
-  if pos('@' + BOTNAME_DEFAULT, Text) > 0 then
+  if pos('@' + LowerCase(BOTNAME_DEFAULT), Text) > 0 then
     Result := True;
   if pos('Bot', Text) > 0 then    // force dectect as Bot  (____Bot)
     Result := True;
