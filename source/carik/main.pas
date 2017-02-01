@@ -24,6 +24,8 @@ type
   private
     forceRespond: boolean;
     jsonData: TJSONData;
+
+    FInvitedFirstName, FInvitedUserName: string;
     procedure BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
     function defineHandler(const IntentName: string; Params: TStrings): string;
     function resiHandler(const IntentName: string; Params: TStrings): string;
@@ -42,6 +44,8 @@ type
 
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
+    function isTelegramInvitation: boolean;
+    function InvitationResponse: string;
     function getTelegramImageID: string;
     function getTelegramImageCaption: string;
     function isMentioned(Text: string): boolean;
@@ -191,8 +195,15 @@ begin
         if (not isMentioned(Text)) then
         begin
           _SESSION['UPDATE_ID'] := updateID;
-          Response.Content := 'nomention';
-          Exit;
+          if isTelegramInvitation then
+          begin
+            Text := '/invitation ' + FInvitedUserName + ' ' + FInvitedFirstName;
+          end
+          else
+          begin
+            Response.Content := 'nomention';
+            Exit;
+          end;
         end;
       end;
     end;
@@ -548,6 +559,27 @@ begin
   except
   end;
   json.Free;
+end;
+
+function TMainModule.isTelegramInvitation: boolean;
+var
+  s: string;
+  _json: TJSONData;
+begin
+  Result := False;
+  try
+    FInvitedUserName := jsonData.GetPath('message.new_chat_member.username').AsString;
+    FInvitedFirstName := jsonData.GetPath('message.new_chat_member.first_name').AsString;
+  except
+  end;
+
+  if FInvitedUserName <> '' then
+    Result := True;
+end;
+
+function TMainModule.InvitationResponse: string;
+begin
+  Result := 'xx';
 end;
 
 function TMainModule.getTelegramImageID: string;
