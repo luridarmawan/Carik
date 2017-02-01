@@ -154,6 +154,7 @@ begin
     Carik.GroupName := jsonData.GetPath('message.chat.title').AsString;
   except
   end;
+  Carik.GroupChatID := chatID;
   if isTelegram then
   begin
     if ((chatType = 'group') or (chatType = 'supergroup')) then
@@ -197,18 +198,22 @@ begin
     end;
   end;// isTelegram
 
-  if Text = '' then
-    Exit;
-
   // remove mention from text
   Text := LowerCase(Text);
+  {
   if Pos('@' + BOTNAME_DEFAULT, Text) = 1 then
-    Text := StringReplace(Text, '@' + BOTNAME_DEFAULT, '', [rfReplaceAll, rfIgnoreCase]);
+  begin
+    Text := StringReplace(Text, '@' + BOTNAME_DEFAULT + 'Bot', '', [rfReplaceAll, rfIgnoreCase]);
+  end;
   s := '@' + Config[_AI_CONFIG_NAME] + 'bot';
   s := LowerCase(s);
   if Pos(s, Text) = 1 then
     Text := StringReplace(Text, s, '', [rfReplaceAll, rfIgnoreCase]);
+  }
+  Text := StringReplace(Text, '@' + BOTNAME_DEFAULT + 'Bot', '', [rfReplaceAll, rfIgnoreCase]);
   Text := Trim(Text);
+  if Text = '' then
+    Exit;
 
   // Main AI BOT
   SimpleBOT := TSimpleBotModule.Create;
@@ -481,7 +486,7 @@ begin
     end;
   end;
 
-  if _url = '' then
+  if _url = '' then                                // TODO: !!! kalau text kosong "@CarikBot" bingung dia
     Exit;
 
   _img := TClarifai.Create;
