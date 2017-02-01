@@ -46,7 +46,6 @@ type
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
     function isTelegramInvitation: boolean;
-    function InvitationResponse: string;
     function getTelegramImageID: string;
     function getTelegramImageCaption: string;
     function isMentioned(Text: string): boolean;
@@ -587,11 +586,6 @@ begin
 
   if FInvitedUserName <> '' then
     Result := True;
-end;
-
-function TMainModule.InvitationResponse: string;
-begin
-  Result := 'xx';
 end;
 
 function TMainModule.getTelegramImageID: string;
