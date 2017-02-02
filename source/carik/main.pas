@@ -7,7 +7,7 @@ interface
 uses
   fpjson, RegExpr,
   notulen_controller, simplebot_controller, logutil_lib, resiibacor_integration,
-  clarifai_integration, telegram_integration,
+  clarifai_integration, telegram_integration, googleplacesearch_integration,
   movie_controller, currencyibacor_integration,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
@@ -42,6 +42,7 @@ type
     function carikAdminTambahHandler(const IntentName: string; Params: TStrings): string;
     function carikAdminHapusHandler(const IntentName: string; Params: TStrings): string;
     function carikGroupInfoHandler(const IntentName: string; Params: TStrings): string;
+    function lokasiHandler(const IntentName: string; Params: TStrings): string;
 
     function isTelegram: boolean;
     function isTelegramGroup: boolean;
@@ -99,7 +100,7 @@ var
   s, text_response: string;
   chatID, chatType, messageID, _userID, fullName, userName, telegramToken: string;
   i, j: integer;
-  x, updateID, lastUpdateID: longint;
+  updateID, lastUpdateID: longint;
   _regex: TRegExpr;
 begin
   updateID := 0;
@@ -264,6 +265,7 @@ begin
   SimpleBOT.Handler['carik_admin_tambah'] := @carikAdminTambahHandler;
   SimpleBOT.Handler['carik_admin_hapus'] := @carikAdminHapusHandler;
   SimpleBOT.Handler['carik_group_info'] := @carikGroupInfoHandler;
+  SimpleBOT.Handler['lokasi'] := @lokasiHandler;
   text_response := SimpleBOT.Exec(Text);
   Response.Content := text_response;
 
@@ -550,6 +552,21 @@ begin
   Result := Carik.GroupInfo;
 end;
 
+function TMainModule.lokasiHandler(const IntentName: string; Params: TStrings
+  ): string;
+var
+  _object, _location, _keyword: string;
+begin
+  _keyword := Params.Values['keyword_value'];
+  with TGooglePlace.Create do
+  begin
+    Key:= Config['google/key'];
+    Result := SearchAsText( _keyword);
+
+    Free;
+  end;
+end;
+
 function TMainModule.isTelegram: boolean;
 begin
   Result := False;
@@ -577,9 +594,6 @@ begin
 end;
 
 function TMainModule.isTelegramInvitation: boolean;
-var
-  s: string;
-  _json: TJSONData;
 begin
   Result := False;
   try
@@ -594,7 +608,6 @@ end;
 
 function TMainModule.getTelegramImageID: string;
 var
-  _photo, _caption: string;
   _json: TJSONData;
 begin
   Result := '';
