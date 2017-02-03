@@ -446,6 +446,8 @@ begin
     Token := Config['ibacor/token'];
     if Token <> '' then
     begin
+      if Params.Values['ke_value'] = 'rupiah' then
+        Params.Values['ke_value'] := 'idr';
       Result := Converter(Params.Values['dari_value'], Params.Values['ke_value'],
         s2i(Params.Values['nominal_value']));
       if Result = '' then
@@ -557,7 +559,7 @@ function TMainModule.lokasiHandler(const IntentName: string; Params: TStrings
 var
   _object, _location, _keyword: string;
 begin
-  _keyword := Params.Values['keyword_value'];
+  _keyword := Params.Values['Lokasi_value'] + ' ' + Params.Values['keyword_value'];
   with TGooglePlace.Create do
   begin
     Key:= Config['google/key'];
