@@ -9,7 +9,7 @@ uses
   notulen_controller, simplebot_controller, logutil_lib, resiibacor_integration,
   clarifai_integration, telegram_integration, googleplacesearch_integration,
   movie_controller, currencyibacor_integration,
-  Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
+  Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, database_lib;
 
 const
   BOTNAME_DEFAULT = 'Carik';
@@ -157,11 +157,11 @@ begin
   Carik.UserID := _userID;
   Carik.UserName := userName;
   Carik.FullName := fullName;
+  Carik.GroupChatID := chatID;
   try
     Carik.GroupName := jsonData.GetPath('message.chat.title').AsString;
   except
   end;
-  Carik.GroupChatID := chatID;
   if isTelegram then
   begin
     if ((chatType = 'group') or (chatType = 'supergroup')) then
@@ -557,14 +557,13 @@ end;
 function TMainModule.lokasiHandler(const IntentName: string; Params: TStrings
   ): string;
 var
-  _object, _location, _keyword: string;
+  _keyword: string;
 begin
   _keyword := Params.Values['Lokasi_value'] + ' ' + Params.Values['keyword_value'];
   with TGooglePlace.Create do
   begin
     Key:= Config['google/key'];
     Result := SearchAsText( _keyword);
-
     Free;
   end;
 end;

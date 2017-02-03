@@ -9,7 +9,7 @@ uses
 
 implementation
 
-uses info_controller, main;
+uses main;
 
 initialization
   Route.Add( 'main', TMainModule);
