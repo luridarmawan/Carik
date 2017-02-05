@@ -45,6 +45,11 @@
   "telegram": {
     "token": ""
   },
+  "line":{
+    "default": {
+      "token": ""
+    }
+  },
   "ibacor": {
     "token": ""
   },
