@@ -5,17 +5,24 @@ unit main;
 interface
 
 uses
-  line_integration,
+  carik_webmodule, logutil_lib,
+  line_integration, simplebot_controller, notulen_controller,
   fpjson,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
+const
+  BOTNAME_DEFAULT = 'Carik';
+
 type
-  TMainModule = class(TMyCustomWebModule)
+
+  { TMainModule }
+
+  TMainModule = class(TCarikWebModule)
   private
     LINE: TLineIntegration;
     procedure BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
   public
-    ReplyToken, UserID, Text: string;
+    ReplyToken, UserID: string;
     constructor CreateNew(AOwner: TComponent; CreateMode: integer); override;
     destructor Destroy; override;
 
@@ -31,13 +38,13 @@ constructor TMainModule.CreateNew(AOwner: TComponent; CreateMode: integer);
 begin
   inherited CreateNew(AOwner, CreateMode);
   BeforeRequest := @BeforeRequestHandler;
-
   LINE := TLineIntegration.Create;
+  LINE.BotName := BOTNAME_DEFAULT;
 end;
 
 destructor TMainModule.Destroy;
 begin
-  LINE.Free;
+  Carik.Free;
   inherited Destroy;
 end;
 
@@ -57,18 +64,48 @@ end;
 // CURL example:
 //   curl -X POST -H "Authorization: Basic dW5hbWU6cGFzc3dvcmQ=" "yourtargeturl"
 procedure TMainModule.Post;
-var
-  s: string;
 begin
-  LINE.RequestContent:= Request.Content;
-  if not LINE.isMessage then
+  LINE.RequestContent := Request.Content;
+  LogUtil.Add(Request.Content, 'LINE');
+
+  if LINE.isMessage then
+  begin
+    Text := LINE.Text;
+  end
+  else
+  begin
+    if not LINE.isJoinToGroup then
+      Exit;
+    Text := '/invitation carikbot';
+  end;
+
+  if LINE.isGroup then
+  begin
+    if not LINE.isMentioned then
+      Exit;
+    SimpleBOT.FirstSessionResponse := True;
+    SimpleBOT.SecondSessionResponse := True;
+    Carik.GroupChatID := LINE.GroupID;
+    Carik.GroupName := LINE.GroupName;
+  end;
+
+  if Text = '' then
     Exit;
 
-  ReplyToken := LINE.ReplyToken;
-  Text := LINE.Text;
+  {
+  SimpleBOT.UserData['Name'] := userName;
+  SimpleBOT.UserData['FullName'] := fullName;
+  }
+  BotInit;
+  Response.Content := ProcessText(Text);
 
+  SimpleBOT.SimpleAI.ResponseText.Text :=
+    StringReplace(SimpleBOT.SimpleAI.ResponseText.Text, '\n', #10, [rfReplaceAll]);
+
+  // reply message
   LINE.Token := Config['line/default/token'];
-  LINE.Reply( ReplyToken, Text) ;
+  ReplyToken := LINE.ReplyToken;
+  LINE.Reply(ReplyToken, SimpleBOT.SimpleAI.ResponseText.Text);
 
   Response.Content := 'OK';
 end;

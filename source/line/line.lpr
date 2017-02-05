@@ -4,10 +4,10 @@ program line;
 
 uses
   cthreads,
-  fpcgi, sysutils, fastplaz_handler, common, main, routes;
+  fpcgi, sysutils, fastplaz_handler, common, main, routes, carik_webmodule;
 
 begin
-  Application.Title:='Line';
+  Application.Title:='Carik - LINE Bot';
   Application.Email := string( Config.GetValue(_SYSTEM_WEBMASTER_EMAIL,'webmaster@' + GetEnvironmentVariable('SERVER_NAME')));
   Application.DefaultModuleName := string( Config.GetValue(_SYSTEM_MODULE_DEFAULT, 'main'));
   Application.ModuleVariable := string( Config.GetValue(_SYSTEM_MODULE_VARIABLE, 'mod'));
