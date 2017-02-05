@@ -283,14 +283,12 @@ var
   _keyword: string;
 begin
   _keyword := Params.Values['Lokasi_value'] + ' ' + Params.Values['keyword_value'];
-  LogUtil.Add( _keyword, 'lokasi');
   with TGooglePlace.Create do
   begin
     Key := Config[GOOGLE_KEY];
     Result := SearchAsText(_keyword);
     Free;
   end;
-  LogUtil.Add( Result, 'lokasi');
 end;
 
 function TCarikWebModule.botEnableHandler(const IntentName: string;

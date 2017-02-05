@@ -40,6 +40,7 @@ begin
   BeforeRequest := @BeforeRequestHandler;
   LINE := TLineIntegration.Create;
   LINE.BotName := BOTNAME_DEFAULT;
+  LINE.Token := Config['line/default/token'];
 end;
 
 destructor TMainModule.Destroy;
@@ -64,6 +65,8 @@ end;
 // CURL example:
 //   curl -X POST -H "Authorization: Basic dW5hbWU6cGFzc3dvcmQ=" "yourtargeturl"
 procedure TMainModule.Post;
+var
+  s: string;
 begin
   LINE.RequestContent := Request.Content;
   LogUtil.Add(Request.Content, 'LINE');
@@ -89,9 +92,16 @@ begin
     Carik.GroupName := LINE.GroupName;
   end;
 
+  if LINE.isSticker then
+  begin
+    s := SimpleBOT.GetResponse('LINEEmojiResponse');
+    ReplyToken := LINE.ReplyToken;
+    LINE.SendSticker(ReplyToken, '1', s);
+    Exit;
+  end;
+
   if Text = '' then
     Exit;
-
   {
   SimpleBOT.UserData['Name'] := userName;
   SimpleBOT.UserData['FullName'] := fullName;
@@ -103,7 +113,6 @@ begin
     StringReplace(SimpleBOT.SimpleAI.ResponseText.Text, '\n', #10, [rfReplaceAll]);
 
   // reply message
-  LINE.Token := Config['line/default/token'];
   ReplyToken := LINE.ReplyToken;
   LINE.Reply(ReplyToken, SimpleBOT.SimpleAI.ResponseText.Text);
 
