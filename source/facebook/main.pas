@@ -54,6 +54,10 @@ end;
 procedure TMainModule.Get;
 begin
   Response.Content := '{}';
+
+  //faebook chalenge
+  Response.Content := _GET['hub.challenge'];
+
 end;
 
 // POST Method Handler
@@ -61,22 +65,24 @@ procedure TMainModule.Post;
 var
   s: string;
 begin
-  Facebook.RequestContent:= Request.Content;
+  Facebook.RequestContent := Request.Content;
   LogUtil.Add(Request.Content, 'FB');
 
   Text := Facebook.Text;
   if Text = '' then
     Exit;
 
-  SimpleBOT.FirstSessionResponse := True;
-  SimpleBOT.SecondSessionResponse := True;
+  SimpleBOT.FirstSessionResponse := False;
+  SimpleBOT.SecondSessionResponse := False;
   Carik.UserID := Facebook.UserID;
 
   BotInit;
   Response.Content := ProcessText(Text);
 
   // send
-  Facebook.Send( Facebook.UserID, SimpleBOT.SimpleAI.ResponseText.Text);
+  SimpleBOT.SimpleAI.ResponseText.Text :=
+    StringReplace(SimpleBOT.SimpleAI.ResponseText.Text, '\n', #10, [rfReplaceAll]);
+  Facebook.Send(Facebook.UserID, SimpleBOT.SimpleAI.ResponseText.Text);
 
 end;
 
