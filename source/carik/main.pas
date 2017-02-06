@@ -138,12 +138,14 @@ begin
   begin
     _regex := TRegExpr.Create;
     try
+      { // TODO: failed, if reply from other message
       //_regex.Expression := '(\\u(\w+))(\\u(\w+))';
       _regex.Expression := '"text":"([\\.\$\@A-Za-z0-9=_ :;\-"]+)"';
       if _regex.Exec(Request.Content) then
       begin
         Text := _regex.Match[1];
       end;
+      }
     except
     end;
     _regex.Free;
