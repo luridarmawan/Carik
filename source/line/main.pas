@@ -10,8 +10,7 @@ uses
   fpjson,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
-const
-  BOTNAME_DEFAULT = 'Carik';
+{$include ../carik.inc}
 
 type
 
@@ -45,7 +44,6 @@ end;
 
 destructor TMainModule.Destroy;
 begin
-  Carik.Free;
   inherited Destroy;
 end;
 

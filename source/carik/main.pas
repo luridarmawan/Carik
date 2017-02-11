@@ -242,6 +242,11 @@ begin
     SimpleBOT.FirstSessionResponse := True;
     SimpleBOT.SecondSessionResponse := True;
   end;
+
+  // TODO: REMOVE - force
+  SimpleBOT.FirstSessionResponse := False;
+  SimpleBOT.SecondSessionResponse := True;
+
   SimpleBOT.chatID := chatID;
   if userName <> '' then
   begin
@@ -556,16 +561,16 @@ begin
   Result := Carik.GroupInfo;
 end;
 
-function TMainModule.lokasiHandler(const IntentName: string; Params: TStrings
-  ): string;
+function TMainModule.lokasiHandler(const IntentName: string; Params: TStrings): string;
 var
   _keyword: string;
 begin
   _keyword := Params.Values['Lokasi_value'] + ' ' + Params.Values['keyword_value'];
   with TGooglePlace.Create do
   begin
-    Key:= Config['google/key'];
-    Result := SearchAsText( _keyword);
+    Key := Config['google/key'];
+    Result := SearchAsText(_keyword);
+
     Free;
   end;
 end;

@@ -18,7 +18,8 @@ SetEnvIf Authorization "(.*)" Authorization=$1
 
 RewriteRule ^(line)$ line.bin/$1 [QSA,L]
 RewriteRule ^(facebook)$ facebook.bin/$1 [QSA,L]
-
+RewriteRule ^(fb)$ facebook.bin/$1 [QSA,L]
+RewriteRule ^(telegram)$ telegram.bin [QSA,L]
 #
 RewriteCond %{REQUEST_FILENAME} -d [OR]
 RewriteCond %{REQUEST_FILENAME} -f [OR]

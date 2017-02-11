@@ -10,3 +10,9 @@ cd ../line
 mkdir lib
 fpc line.lpr @extra.cfg
 
+echo
+echo ---- Compiling TELEGRAM Bot
+cd ../telegram
+mkdir lib
+fpc telegram.lpr @extra.cfg
+

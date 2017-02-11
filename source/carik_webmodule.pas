@@ -6,22 +6,23 @@ interface
 
 uses
   fpjson,
-  common, json_lib, fastplaz_handler, notulen_controller, simplebot_controller, logutil_lib,
+  common, json_lib, fastplaz_handler, notulen_controller, simplebot_controller,
+  logutil_lib,
   movie_controller, currencyibacor_integration, clarifai_integration,
   telegram_integration, resiibacor_integration, googleplacesearch_integration,
   Classes, SysUtils;
 
-const
-  CLARIFAI_TOKEN = 'clarifai/default/token';
-  TELEGRAM_TOKEN = 'telegram/default/token';
-  GOOGLE_KEY = 'google/default/key';
+{$include carik.inc}
 
 type
+
+  TMessengerMode = (mmTelegram, mmLine, mmFacebook);
 
   { TCarikWebModule }
 
   TCarikWebModule = class(TMyCustomWebModule)
   private
+    FMessengerMode: TMessengerMode;
     forceRespond: boolean;
 
     // TELEGRAM
@@ -39,6 +40,8 @@ type
     function currencyHandler(const IntentName: string; Params: TStrings): string;
     function tebakGambarHandler(const IntentName: string; Params: TStrings): string;
     function lokasiHandler(const IntentName: string; Params: TStrings): string;
+    function carikAdminTambahHandler(const IntentName: string; Params: TStrings): string;
+    function carikAdminHapusHandler(const IntentName: string; Params: TStrings): string;
 
     function botEnableHandler(const IntentName: string; Params: TStrings): string;
     function botDisableHandler(const IntentName: string; Params: TStrings): string;
@@ -49,6 +52,8 @@ type
     SimpleBOT: TSimpleBotModule;
     constructor CreateNew(AOwner: TComponent; CreateMode: integer); override;
     destructor Destroy; override;
+
+    property MessengerMode : TMessengerMode read FMessengerMode write FMessengerMode;
 
     function ProcessText(AMessage: string): string;
     procedure BotInit;
@@ -291,6 +296,32 @@ begin
   end;
 end;
 
+function TCarikWebModule.carikAdminTambahHandler(const IntentName: string;
+  Params: TStrings): string;
+begin
+  if not isTelegramGroup then
+    Exit;
+  if Carik.AdminAdd(Params.Values['username_value']) then
+  begin
+    Result := SimpleBOT.GetResponse(IntentName + 'Response');
+    Result := StringReplace(Result, '%username_value%',
+      Params.Values['username_value'], [rfReplaceAll]);
+  end;
+end;
+
+function TCarikWebModule.carikAdminHapusHandler(const IntentName: string;
+  Params: TStrings): string;
+begin
+  if not isTelegramGroup then
+    Exit;
+  if Carik.AdminDel(Params.Values['username_value']) then
+  begin
+    Result := SimpleBOT.GetResponse(IntentName + 'Response');
+    Result := StringReplace(Result, '%username_value%',
+      Params.Values['username_value'], [rfReplaceAll]);
+  end;
+end;
+
 function TCarikWebModule.botEnableHandler(const IntentName: string;
   Params: TStrings): string;
 begin
@@ -314,6 +345,7 @@ begin
   inherited CreateNew(AOwner, CreateMode);
   SimpleBOT := TSimpleBotModule.Create;
   Carik := TNotulenController.Create;
+
 end;
 
 destructor TCarikWebModule.Destroy;
@@ -345,16 +377,17 @@ begin
   SimpleBOT.Handler['bot_enable'] := @botEnableHandler;
   SimpleBOT.Handler['bot_disable'] := @botDisableHandler;
 
-  {
-  SimpleBOT.Handler['carik_start'] := @Carik.StartHandler;
-  SimpleBOT.Handler['carik_stop'] := @Carik.StopHandler;
-  SimpleBOT.Handler['carik_check'] := @Carik.CheckHandler;
-  SimpleBOT.Handler['carik_topic'] := @Carik.TopicHandler;
-  SimpleBOT.Handler['carik_send'] := @Carik.SendHandler;
-  SimpleBOT.Handler['carik_admin_tambah'] := @carikAdminTambahHandler;
-  SimpleBOT.Handler['carik_admin_hapus'] := @carikAdminHapusHandler;
-  SimpleBOT.Handler['carik_group_info'] := @carikGroupInfoHandler;
-  }
+  if FMessengerMode = mmTelegram then
+  begin
+    SimpleBOT.Handler['carik_start'] := @Carik.StartHandler;
+    SimpleBOT.Handler['carik_stop'] := @Carik.StopHandler;
+    SimpleBOT.Handler['carik_check'] := @Carik.CheckHandler;
+    SimpleBOT.Handler['carik_topic'] := @Carik.TopicHandler;
+    SimpleBOT.Handler['carik_send'] := @Carik.SendHandler;
+    SimpleBOT.Handler['carik_admin_tambah'] := @carikAdminTambahHandler;
+    SimpleBOT.Handler['carik_admin_hapus'] := @carikAdminHapusHandler;
+    SimpleBOT.Handler['carik_group_info'] := @Carik.GroupInfoHandler;
+  end;
 end;
 
 function TCarikWebModule.OnErrorHandler(const Message: string): string;

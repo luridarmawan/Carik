@@ -10,8 +10,7 @@ uses
   fpjson,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 
-const
-  BOTNAME_DEFAULT = 'Carik';
+{$include ../carik.inc}
 
 type
   TMainModule = class(TCarikWebModule)
@@ -36,7 +35,7 @@ begin
   BeforeRequest := @BeforeRequestHandler;
   Facebook := TFacebookMessengerIntegration.Create;
   Facebook.BotName := BOTNAME_DEFAULT;
-  Facebook.Token := Config['facebook/default/token'];
+  Facebook.Token := Config[FACEBOOK_TOKEN];
 end;
 
 destructor TMainModule.Destroy;
@@ -53,11 +52,8 @@ end;
 // GET Method Handler
 procedure TMainModule.Get;
 begin
-  Response.Content := '{}';
-
   //faebook chalenge
   Response.Content := _GET['hub.challenge'];
-
 end;
 
 // POST Method Handler
