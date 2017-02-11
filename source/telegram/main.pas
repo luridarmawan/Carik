@@ -147,7 +147,7 @@ begin
         end
         else
         begin
-          Response.Content := 'nomention';
+          Response.Content := '{"status":"nomention"}';
           Exit;
         end;
       end;

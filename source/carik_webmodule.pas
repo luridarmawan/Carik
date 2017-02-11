@@ -53,7 +53,7 @@ type
     constructor CreateNew(AOwner: TComponent; CreateMode: integer); override;
     destructor Destroy; override;
 
-    property MessengerMode : TMessengerMode read FMessengerMode write FMessengerMode;
+    property MessengerMode: TMessengerMode read FMessengerMode write FMessengerMode;
 
     function ProcessText(AMessage: string): string;
     procedure BotInit;
@@ -277,8 +277,14 @@ begin
   Result := _img.GetTagsAsString;
   _img.Free;
 
-  s := SimpleBOT.GetResponse(IntentName + 'Response');
-  Result := Format(s, [Result]);
+  if Result <> '' then
+  begin
+    s := SimpleBOT.GetResponse(IntentName + 'Response');
+    Result := Format(s, [Result]);
+  end
+  else
+    Result := SimpleBOT.GetResponse(IntentName + 'NoResponse');
+
   Carik.ImageRecognitionCounting;
 end;
 
