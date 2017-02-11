@@ -1,5 +1,5 @@
 echo
-echo ----- Compiling Telegram Bot
+echo ----- Compiling GENERIC Bot
 cd source/carik
 mkdir lib
 fpc carik.lpr @extra.cfg
@@ -15,4 +15,10 @@ echo ---- Compiling TELEGRAM Bot
 cd ../telegram
 mkdir lib
 fpc telegram.lpr @extra.cfg
+
+echo
+echo ---- Compiling FACEBOOK Bot
+cd ../facebook
+mkdir lib
+fpc facebook.lpr @extra.cfg
 

@@ -169,7 +169,7 @@ begin
     if ((chatType = 'group') or (chatType = 'supergroup')) then
     begin
       Carik.IsGroup := True;
-      if Carik.Recording then
+      if Carik.IsRecording then
       begin
         Carik.RecordTelegramMessage(Request.Content);
       end;
@@ -417,7 +417,8 @@ begin
   _nominal := Params.Values['nominalpulsa_value'] + Params.Values['satuan'];
   _nominal := StringHumanToNominal(_nominal);
   _nominalFloat := StringHumanToFloat(_nominal);
-  ThousandSeparator := '.';
+  //ThousandSeparator := '.';
+  DefaultFormatSettings.ThousandSeparator := '.';
   _nominal := FormatFloat('###,##0', _nominalFloat);
 
 
