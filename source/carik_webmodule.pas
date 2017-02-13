@@ -260,7 +260,7 @@ begin
   with TTelegramIntegration.Create do
   begin
     Token := Config[TELEGRAM_TOKEN];
-    s := GetFileURL(s);
+    s := GetFilePath(s);
     if s <> '' then
     begin
       _url := format(TELEGRAM_FILEURL, [Token]) + s;

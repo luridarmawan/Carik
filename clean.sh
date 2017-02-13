@@ -16,6 +16,9 @@ find . -type f -name *.bak -delete
 find . -type f -name *.ppu -delete
 find . -type f -name *.log -delete
 find . -type f -name *.ses -delete
+find . -type f -name *.oga -delete
+find . -type f -name *.ogg -delete
+find . -type f -name *.mp3 -delete
 find . -type f -name *.compiled -delete
 find . -type f -name .DS_Store -delete
 find . -type d -name lib -exec rm -rf "{}" +

@@ -5,7 +5,8 @@ unit main;
 interface
 
 uses
-  carik_webmodule, logutil_lib, telegram_integration,
+  process,
+  carik_webmodule, logutil_lib, telegram_integration, witai_integration,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, database_lib;
 
 {$include ../carik.inc}
@@ -96,20 +97,22 @@ procedure TMainModule.Post;
 var
   updateID, lastUpdateID: longint;
   j: integer;
-  s: string;
+  s, voiceFileName, mp3FileName: string;
 begin
+
   updateID := 0;
   forceRespond := False;
   if AppData.debug then
     LogUtil.Add(Request.Content, 'TELE');
 
   TELEGRAM.RequestContent := Request.Content;
+  TELEGRAM.Token := Config[TELEGRAM_TOKEN];
   updateID := TELEGRAM.UpdateID;
+  MessageID := TELEGRAM.MessageID;
 
   Text := TELEGRAM.Text;
 
   //TODO: if emoticons
-
   Carik.UserID := TELEGRAM.UserID;
   Carik.UserName := TELEGRAM.UserName;
   Carik.FullName := TELEGRAM.FullName;
@@ -161,7 +164,10 @@ begin
     [rfReplaceAll, rfIgnoreCase]);
   Text := Trim(Text);
   if Text = '' then
+  begin
+    Response.Content := '{"status":"empty"}';
     Exit;
+  end;
 
   SimpleBOT.TrimMessage := True;
   // TODO: REMOVE - force
@@ -202,7 +208,6 @@ begin
     Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end;
 
-  MessageID := TELEGRAM.MessageID;
   if SimpleBOT.SimpleAI.Action = '' then // no mention reply, if no 'action'
     MessageID := '';
   if SimpleBOT.SimpleAI.Action = 'telegram_menu' then
@@ -217,7 +222,6 @@ begin
   //SimpleBOT.SimpleAI.ResponseText.Add('dua');
   //SimpleBOT.SimpleAI.ResponseText.Add('tiga');
 
-  TELEGRAM.Token := Config[TELEGRAM_TOKEN];
   TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID);
 
   if SimpleBOT.SimpleAI.ResponseText.Count > 1 then
