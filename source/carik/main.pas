@@ -6,7 +6,7 @@ interface
 
 uses
   fpjson, RegExpr,
-  notulen_controller, simplebot_controller, logutil_lib, resiibacor_integration,
+  carik_controller, simplebot_controller, logutil_lib, resiibacor_integration,
   clarifai_integration, telegram_integration, googleplacesearch_integration,
   movie_controller, currencyibacor_integration,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, database_lib;
@@ -53,7 +53,7 @@ type
     function isReply: boolean;
   public
     Text: string;
-    Carik: TNotulenController;
+    Carik: TCarikController;
     SimpleBOT: TSimpleBotModule;
     constructor CreateNew(AOwner: TComponent; CreateMode: integer); override;
     destructor Destroy; override;
@@ -72,7 +72,7 @@ begin
   inherited CreateNew(AOwner, CreateMode);
   BeforeRequest := @BeforeRequestHandler;
 
-  Carik := TNotulenController.Create;
+  Carik := TCarikController.Create;
 end;
 
 destructor TMainModule.Destroy;
@@ -508,7 +508,7 @@ begin
   with TTelegramIntegration.Create do
   begin
     Token := Config[TELEGRAM_TOKEN];
-    s := GetFileURL(s);
+    s := GetFilePath(s);
     if s <> '' then
     begin
       _url := format(TELEGRAM_FILEURL, [Token]) + s;
@@ -567,7 +567,7 @@ var
   _keyword: string;
 begin
   _keyword := Params.Values['Lokasi_value'] + ' ' + Params.Values['keyword_value'];
-  with TGooglePlace.Create do
+  with TGooglePlaceIntegration.Create do
   begin
     Key := Config['google/key'];
     Result := SearchAsText(_keyword);

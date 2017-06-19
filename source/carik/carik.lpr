@@ -3,7 +3,9 @@ program carik;
 {$mode objfpc}{$H+}
 
 uses
+  {$IFNDEF Windows}
   cthreads,
+  {$ENDIF}
   fpcgi, sysutils, fastplaz_handler, common, main, routes;
 
 begin

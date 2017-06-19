@@ -6,7 +6,7 @@ interface
 
 uses
   carik_webmodule, logutil_lib,
-  line_integration, simplebot_controller, notulen_controller,
+  line_integration, simplebot_controller, carik_controller,
   fpjson,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
 

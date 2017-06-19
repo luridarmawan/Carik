@@ -5,7 +5,7 @@ unit main;
 interface
 
 uses
-  carik_webmodule, logutil_lib, simplebot_controller, notulen_controller,
+  carik_webmodule, logutil_lib, simplebot_controller, carik_controller,
   facebookmessenger_integration,
   fpjson,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, html_lib, database_lib;
