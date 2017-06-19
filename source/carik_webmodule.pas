@@ -6,8 +6,8 @@ interface
 
 uses
   fpjson,
-  common, json_lib, fastplaz_handler, notulen_controller, simplebot_controller,
-  logutil_lib,
+  carik_controller,
+  common, json_lib, fastplaz_handler, simplebot_controller, logutil_lib,
   movie_controller, currencyibacor_integration, clarifai_integration,
   telegram_integration, resiibacor_integration, googleplacesearch_integration,
   Classes, SysUtils;
@@ -48,7 +48,7 @@ type
 
   public
     Text: string;
-    Carik: TNotulenController;
+    Carik: TCarikController;
     SimpleBOT: TSimpleBotModule;
     constructor CreateNew(AOwner: TComponent; CreateMode: integer); override;
     destructor Destroy; override;
@@ -294,7 +294,7 @@ var
   _keyword: string;
 begin
   _keyword := Params.Values['Lokasi_value'] + ' ' + Params.Values['keyword_value'];
-  with TGooglePlace.Create do
+  with TGooglePlaceIntegration.Create do
   begin
     Key := Config[GOOGLE_KEY];
     Result := SearchAsText(_keyword);
@@ -350,8 +350,7 @@ constructor TCarikWebModule.CreateNew(AOwner: TComponent; CreateMode: integer);
 begin
   inherited CreateNew(AOwner, CreateMode);
   SimpleBOT := TSimpleBotModule.Create;
-  Carik := TNotulenController.Create;
-
+  Carik := TCarikController.Create;
 end;
 
 destructor TCarikWebModule.Destroy;
