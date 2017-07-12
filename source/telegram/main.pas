@@ -118,7 +118,6 @@ begin
 
   Text := TELEGRAM.Text;
 
-
   //todo: cara membuat
   // isImage
   if TELEGRAM.isImage(False) then

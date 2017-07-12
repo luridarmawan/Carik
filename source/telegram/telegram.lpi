@@ -65,7 +65,7 @@
   <CompilerOptions>
     <Version Value="11"/>
     <Target>
-      <Filename Value="../../public_html/carik/telegram.bin"/>
+      <Filename Value="../../public_html/carik/telegram.bin" ApplyConventions="False"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
