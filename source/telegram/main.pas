@@ -24,9 +24,6 @@ type
     function isReply: boolean;
     procedure BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
   public
-    //UserID, ChatID, ChatType,
-    MessageID: string;
-
     constructor CreateNew(AOwner: TComponent; CreateMode: integer); override;
     destructor Destroy; override;
 
@@ -97,9 +94,9 @@ procedure TMainModule.Post;
 var
   updateID, lastUpdateID: longint;
   j: integer;
-  s, voiceFileName, mp3FileName: string;
+  s: string;
 begin
-
+  MessengerMode := mmTelegram;
   updateID := 0;
   forceRespond := False;
   if AppData.debug then
@@ -110,9 +107,31 @@ begin
   updateID := TELEGRAM.UpdateID;
   MessageID := TELEGRAM.MessageID;
 
+  Carik.UserPrefix := 'tl';
+  Carik.UserID := TELEGRAM.UserID;
+  Carik.UserName := TELEGRAM.UserName;
+  Carik.FullName := TELEGRAM.FullName;
+  Carik.GroupChatID := TELEGRAM.ChatID;
+  Carik.GroupName := TELEGRAM.GroupName;
+  Carik.IsGroup := TELEGRAM.IsGroup;
+  //SimpleBOT.SessionUserID := UniqueID;
+
   Text := TELEGRAM.Text;
 
+
+  //todo: cara membuat
+  // isImage
+  if TELEGRAM.isImage(False) then
+  begin
+
+    // your code
+    Exit;
+
+  end;//-- isImage
+
+
   //TODO: if emoticons
+  Carik.UserPrefix := 'tl';
   Carik.UserID := TELEGRAM.UserID;
   Carik.UserName := TELEGRAM.UserName;
   Carik.FullName := TELEGRAM.FullName;
@@ -128,6 +147,7 @@ begin
   lastUpdateID := s2i(_SESSION['UPDATE_ID']);
   if updateID < lastUpdateID then
   begin
+    Response.Content := '{"status":"expired"}';
     Exit;
   end;
   _SESSION['UPDATE_ID'] := updateID;
@@ -143,15 +163,27 @@ begin
       begin
         if TELEGRAM.IsInvitation then
         begin
+          LogUtil.Add('invitation','#1');
+          if not Carik.isSapaMemberBaru then
+          begin
+            Response.Content := '{"status":"invitation"}';
+            Exit;
+          end;
           Text := '/invitation ' + TELEGRAM.InvitedUserName + ' ' +
             TELEGRAM.InvitedFullName;
-          if TELEGRAM.InvitedFullName = BOTNAME_DEFAULT + 'Bot' then
+          InvitedUserName := TELEGRAM.InvitedUserName;
+          InvitedFullName := TELEGRAM.InvitedFullName;
+          if TELEGRAM.InvitedUserName = BOTNAME_DEFAULT + 'Bot' then
             Carik.Invited;
+          LogUtil.Add(Text,'#2');
         end
         else
         begin
-          Response.Content := '{"status":"nomention"}';
-          Exit;
+          if not forceRespond then
+          begin
+            Response.Content := '{"status":"nomention"}';
+            Exit;
+          end;
         end;
       end;
 
@@ -177,7 +209,6 @@ begin
   SimpleBOT.UserData['Name'] := TELEGRAM.UserName;
   SimpleBOT.UserData['FullName'] := TELEGRAM.FullName;
 
-  MessengerMode := mmTelegram;
   BotInit;
   Response.Content := ProcessText(Text);
 
@@ -213,32 +244,27 @@ begin
   if SimpleBOT.SimpleAI.Action = 'telegram_menu' then
     MessageID := '';
 
-  if SimpleBOT.SimpleAI.ResponseText.Count = 0 then
+  if SimpleBOT.SimpleAI.ResponseText.Count > 0 then
   begin
-    Exit;
-  end;
+    // Send Message
+    TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID);
 
-  //SimpleBOT.SimpleAI.ResponseText.Add('satu');
-  //SimpleBOT.SimpleAI.ResponseText.Add('dua');
-  //SimpleBOT.SimpleAI.ResponseText.Add('tiga');
-
-  TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID);
-
-  if SimpleBOT.SimpleAI.ResponseText.Count > 1 then
-  begin
-    for j := 1 to SimpleBOT.SimpleAI.ResponseText.Count - 1 do
+    if SimpleBOT.SimpleAI.ResponseText.Count > 1 then
     begin
-      s := SimpleBOT.SimpleAI.ResponseText[j];
-      if s <> '' then
+      for j := 1 to SimpleBOT.SimpleAI.ResponseText.Count - 1 do
       begin
-        TELEGRAM.SendMessage(TELEGRAM.ChatID, s, '');
+        s := SimpleBOT.SimpleAI.ResponseText[j];
+        if s <> '' then
+        begin
+          TELEGRAM.SendMessage(TELEGRAM.ChatID, s, '');
+        end;
+
+        // TODO: rekam percakapan si BOT
+
       end;
-      // TODO: rekam percakapan si BOT
-
     end;
-  end;
 
-
+  end;// if SimpleBOT.SimpleAI.ResponseText.Count > 0
 
   Response.ContentType := 'application/json';
 end;
