@@ -1,0 +1,19 @@
+
+*Sepertinya tidak ada jadwal/agenda di periode ini.*
+
+Untuk membuat jadwal, ketik:```
+buat jadwal ketemuan dengan dia besok malam
+jadwalin ketemuan dengan dia besok malam jam 7
+buat jadwal meeting dgn warga tanggal 17 juni jam 6 sore
+```
+
+Untuk melihat daftar jadwal/agenda, ketik:
+``` agenda```
+``` jadwal hari ini```
+``` jadwal besok```
+``` jadwal minggu ini```
+
+
+Untuk mencari jadwal sholat, ketik:
+``` jadwal sholat```
+``` jadwal sholat medan```

@@ -3,12 +3,14 @@ program facebook;
 {$mode objfpc}{$H+}
 
 uses
+  {$IFNDEF Windows}
   cthreads,
+  {$ENDIF}
   fpcgi, sysutils, fastplaz_handler, common, main, routes;
 
 begin
   Application.Title:='Facebook';
-  Application.Email := string( Config.GetValue(_SYSTEM_WEBMASTER_EMAIL,'webmaster@' + GetEnvironmentVariable('SERVER_NAME')));
+  Application.Email := string( Config.GetValue(_SYSTEM_WEBMASTER_EMAIL,UTF8Decode('webmaster@' + GetEnvironmentVariable('SERVER_NAME'))));
   Application.DefaultModuleName := string( Config.GetValue(_SYSTEM_MODULE_DEFAULT, 'main'));
   Application.ModuleVariable := string( Config.GetValue(_SYSTEM_MODULE_VARIABLE, 'mod'));
   Application.AllowDefaultModule := True;

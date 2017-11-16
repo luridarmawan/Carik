@@ -110,6 +110,13 @@ Beberapa hal yang bisa ditanyakan:
    * ```hitung sin(10)/2```
 - arti kata
    * ```artinya kehidupan```
+- penerjemahan kalimat (translate)
+   * ```terjemahin how are you```
+   * ```translate apa kabar```
+   * ```en id how are you```
+- Pajak Kendaraan Bermotor (hanya untuk area tertentu)
+   * ```pajak AB 1234 BC```
+
 - cek resi pengiriman paket dari kurir: jne, tiki, pos, pandu, jnt, sicepat dan wahana
    * ```format: resi [kurir] [koderesi]```
    * ```cek resi jno 12345678```
@@ -117,6 +124,8 @@ Beberapa hal yang bisa ditanyakan:
    * ```cari info film ada dengan cinta```
 - kurs
    * ```1 usd berapa idr```
+- QuickCount Pilkada DKI 2017
+   * ```pilkada dki```
 
 
 **beberapa fitur becanda:**

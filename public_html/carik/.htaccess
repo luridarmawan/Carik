@@ -8,7 +8,7 @@ AddHandler cgi-script .pas
 AddHandler cgi-script .exe
 Options +ExecCGI
 
-DirectoryIndex carik.bin
+DirectoryIndex simplebot.bin
 
 SetEnvIf Authorization "(.*)" Authorization=$1
 SetEnvIf ClientID "(.*)" ClientID=$1
@@ -20,11 +20,12 @@ RewriteRule ^(line)$ line.bin/$1 [QSA,L]
 RewriteRule ^(facebook)$ facebook.bin/$1 [QSA,L]
 RewriteRule ^(fb)$ facebook.bin/$1 [QSA,L]
 RewriteRule ^(telegram)$ telegram.bin [QSA,L]
+
 #
 RewriteCond %{REQUEST_FILENAME} -d [OR]
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -l
 RewriteRule ^(.*)$ - [NC,L]
 #RewriteRule ^(.*)$ 404.php [QSA,L]
-RewriteRule ^(.*)$ carik.bin/$1 [QSA,L]
+RewriteRule ^(.*)$ simplebot.bin/$1 [QSA,L]
 

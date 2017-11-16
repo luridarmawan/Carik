@@ -1,11 +1,11 @@
 {
   "systems": {
-    "sitename": "SimpleBOT",
-    "slogan": "SimpleBOT with SimpleAI and FastPlaz",
+    "sitename": "CarikBOT",
+    "slogan": "Carik BOT API",
     "baseurl": "",
-    "admin_email": "webmaster@coba.com",
+    "admin_email": "webmaster@carik.id",
     "development": true,
-    "debug": true,
+    "debug": false,
     "module_default": "main",
     "language_default": "id",
     "theme_enable": false,
@@ -14,28 +14,48 @@
     "temp": "ztemp",
     "error_url": "\/",
     "session_timeout": 0,
+    "ffmpeg_path": "./ffmpeg",
     "error_redirect": false
   },
   "ai": {
     "default": {
-      "name": "JarWo",
+      "name": "Carik",
       "datasource": "file",
       "debug": false,
-      "basedir": "files/ai/",
+      "basedir": "files/nlp/",
       "entities": [
-        "property-entities.txt",
+        "koperasi-entities.txt",
+        "lokasi-entities.txt",
+        "pascal-entities.txt",
+        "kpbi-entities.txt",
+        "tiket-entities.txt",
+        "pulsa-entities.txt",
         "dokter-entities.txt",
         "ai-entities.txt"
         ],
       "intents": [
-        "cs-intent.txt",
-        "property-intents.txt",
+        "koperasi-intents.txt",
+        "smarthome-intents.txt",
+        "jobplanet-intents.txt",
+        "lokasi-intents.txt",
+        "pascal-intents.txt",
+        "kpbi-intents.txt",
+        "tiket-intents.txt",
+        "pulsa-intents.txt",
+        "cs-intents.txt",
         "dokter-intents.txt",
         "ai-intents.txt"
         ],
       "response": [
+        "koperasi-response.txt",
+        "smarthome-response.txt",
+        "jobplanet-response.txt",
+        "lokasi-response.txt",
+        "pascal-response.txt",
+        "kpbi-response.txt",
+        "tiket-response.txt",
+        "pulsa-response.txt",
         "cs-response.txt",
-        "property-response.txt",
         "dokter-response.txt",
         "ai-response.txt",
         "ai-questions.txt"
@@ -43,37 +63,109 @@
     }
   },
   "telegram": {
-    "token": ""
+    "default": {
+      "token": "YourTelegramToken"
+    }
   },
   "line":{
+    "default": {
+      "token": "YourLineToken"
+    }
+  },
+  "facebook": {
+    "default": {
+      "token": "YourFacebookToken"
+    }
+  },
+  "omdb":{
+    "default": {
+      "key": ""
+    }
+  },
+  "ibacor":{
     "default": {
       "token": ""
     }
   },
-  "ibacor": {
-    "token": ""
+  "clarifai": {
+    "default": {
+      "client_id": "",
+      "client_secret": "",
+      "token": ""
+    }
+  },
+  "google": {
+    "key": "",
+    "default":{
+      "key": ""
+    }
+  },
+  "zomato": {
+    "default": {
+      "key": ""
+    }
+  },
+  "yandex": {
+    "default": {
+      "key": ""
+    }
+  },
+  "witai": {
+    "default": {
+      "token": ""
+    }
+  },
+  "cognitive": {
+    "ocr": {
+      "key": ""
+    }
+  },
+  "openweathermap": {
+    "default": {
+      "key": ""
+    }
+  },
+  "apixu": {
+    "default": {
+      "key": ""
+    }
+  },
+  "klaudless": {
+    "default": {
+      "appid": "",
+      "apikey": "",
+      "calendar_accountid": "",
+      "calendar_id": ""
+    }
+  },
+  "maskofa": {
+    "jadwalshalat": {
+      "sessionid": "",
+      "citylists": "files/shalat-citylist.txt"
+    }
+  },
+  "msbotframework": {
+    "default": {
+      "client_id": "",
+      "client_secret": ""
+    }
+  },
+  "rss": {
+    "detik":"http://rss.detik.com/index.php/detikcom_nasional",
+    "sindo":"https://www.sindonews.com/feed",
+    "antara":"http://www.antaranews.com/rss/top-news",
+    "tempo":"https://rss.tempo.co/index.php/teco/news/feed/start/0/limit/10/kanal/6",
+    "okezone":"http://sindikasi.okezone.com/index.php/rss/0/RSS2.0",
+    "kapanlagi":"https://www.kapanlagi.com/feed/",
+    "republika":"http://www.republika.co.id/rss"
+  },
+  "pajakmotor": {
+    "api_url": ""
   },
   "carik": {
     "path": "files/carik/",
+    "tts_url": "https://yourttsurl/speech/",
     "groups" : {
-      "PascalIndonesia" : {
-        "admin": "luridarmawan,paklebah,tigor"
-      },
-      "PaUd-PascalUnderware-" : {
-        "admin": "luridarmawan,paklebah,tigor"
-      },
-      "CafeStartup140315" : {
-        "admin": "luridarmawan,wirohardy,bontotpandawa"
-      },
-      "TanyaBisnis-ukmid" : {
-        "admin": "luridarmawan,sistemukm"
-      },
-      "SuperGroupTest" : {
-        "admin": "luridarmawan,seseorang"
-      },
-      "GroupTest" : {
-        "admin": "luridarmawan,seseorang"
-      }
     }
   },
   "database": {
@@ -85,7 +177,7 @@
       "password": "your_password",
       "database_name": "your_database",
       "prefix": "",
-      "library": "..\/libs\/win\/libmysql.dll"
+      "library": ""
     }
   },
   "mailer": {

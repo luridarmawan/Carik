@@ -1,6 +1,0 @@
-
-[Sakit]
-pusing=pusing2|pusing
-batuk=batuk
-deman=demam
-

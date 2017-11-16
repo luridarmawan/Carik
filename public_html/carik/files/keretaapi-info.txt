@@ -1,0 +1,8 @@
+
+*format penulisan jadwal kereta*
+
+```  JADWAL KERETA (KotaAsal) (StasiunAsal) ke (KotaTujuan) (StasiunTujuan) [Tanggal]```
+
+*Contoh:*
+```  JADWAL KERETA DARI JAKARTA GAMBIR KE SEMARANG TAWANG BESOK```
+```  JADWAL KERETA JAKARTA GAMBIR KE SEMARANG TAWANG TANGGAL 24 JUNI```

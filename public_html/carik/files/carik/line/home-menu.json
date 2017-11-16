@@ -1,0 +1,95 @@
+{
+	"type": "template",
+	"altText": "Pilihan utama dari Carik",
+	"template": {
+		"type": "carousel",
+		"title": "Pilihan utama dari Carik",
+		"text": "Pilihan utama dari Carik",
+		"columns": [{
+			"thumbnailImageUrl": "https:\/\/fire.carik.id\/images\/news\/news-02.jpg",
+			"title": "Berita Terbaru",
+			"text": "Berita terbaru dari portal2 berita di Indonesia",
+			"actions": [{
+				"type": "message",
+				"label": "Antara",
+				"text": "berita hari ini"
+			}, {
+				"type": "message",
+				"label": "Detik",
+				"text": "berita detik"
+			}, {
+				"type": "message",
+				"label": "Republika",
+				"text": "berita di republika"
+			}]
+		}, {
+			"thumbnailImageUrl": "https:\/\/fire.carik.id\/images\/calendar-05.jpg",
+			"title": "Jadwal dan Agenda",
+			"text": "Agenda Pribadimu atau Jadwal lainnya",
+			"actions": [{
+				"type": "message",
+				"label": "Agendamu",
+				"text": "agenda"
+			}, {
+				"type": "message",
+				"label": "Jadwal Sholat",
+				"text": "jadwal sholat jakarta"
+			}, {
+				"type": "message",
+				"label": "Kereta Api",
+				"text": "jadwal kereta api dari jakarta gambir ke semarang tawang besok"
+			}]
+		}, {
+			"thumbnailImageUrl": "https:\/\/fire.carik.id\/images\/others\/location-02.jpg",
+			"title": "Cari Lokasi",
+			"text": "Cari tempat makan, ATM, gedung, terminal dan lainnya",
+			"actions": [{
+				"type": "message",
+				"label": "Tempat Makan",
+				"text": "cari tempat makan di mega kuningan jakarta"
+			}, {
+				"type": "message",
+				"label": "ATM",
+				"text": "cari atm di dekat kuningan jakarta selatan"
+			}, {
+				"type": "message",
+				"label": "*CARI RUMAH*",
+				"text": "cari rumah dijual di jakarta selatan"
+			}]
+		}, {
+			"thumbnailImageUrl": "https:\/\/fire.carik.id\/images\/others\/translate.jpg",
+			"title": "Terjemahan Bahasa",
+			"text": "Terjemahan bahasa Indonesia ke Inggris dan sebaliknya",
+			"actions": [{
+				"type": "message",
+				"label": "Indonesia ke Inggris",
+				"text": "terjemahkan apa kabar"
+			}, {
+				"type": "message",
+				"label": "Indonesia ke Sunda",
+				"text": "sundanya apa kabar"
+			}, {
+				"type": "message",
+				"label": "Terjemahan Al Quran",
+				"text": "quran 1:1"
+			}]
+		}, {
+			"thumbnailImageUrl": "https:\/\/fire.carik.id\/images\/others\/help-02.jpg",
+			"title": "Lainnya",
+			"text": "Bantuan dan fitur-fitur lainnya",
+			"actions": [{
+				"type": "message",
+				"label": "BANTUAN",
+				"text": "help"
+			}, {
+				"type": "message",
+				"label": "Kamus Indonesia",
+				"text": "ARTINYA kehidupan"
+			}, {
+				"type": "message",
+				"label": "Kurs",
+				"text": "1 usd berapa rupiah"
+			}]
+		}]
+	}
+}
