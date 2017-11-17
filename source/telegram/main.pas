@@ -57,7 +57,8 @@ begin
   Result := False;
   if pos('@' + LowerCase(BOTNAME_DEFAULT), LowerCase(Text)) > 0 then
     Result := True;
-  if pos(' bot ', ' ' + LowerCase(Message) + ' ') > 0 then    // force dectect as Bot  (____Bot)
+  if pos(' bot ', ' ' + LowerCase(Message) + ' ') > 0 then
+    // force dectect as Bot  (____Bot)
     Result := True;
 end;
 
@@ -207,7 +208,7 @@ begin
       begin
         if TELEGRAM.IsInvitation then
         begin
-          LogUtil.Add('invitation','#1');
+          LogUtil.Add('invitation', '#1');
           if not Carik.isSapaMemberBaru then
           begin
             Response.Content := '{"status":"invitation"}';
@@ -219,7 +220,7 @@ begin
           InvitedFullName := TELEGRAM.InvitedFullName;
           if TELEGRAM.InvitedUserName = BOTNAME_DEFAULT + 'Bot' then
             Carik.Invited;
-          LogUtil.Add(Text,'#2');
+          LogUtil.Add(Text, '#2');
         end
         else
         begin
@@ -252,6 +253,9 @@ begin
 
   SimpleBOT.UserData['Name'] := TELEGRAM.UserName;
   SimpleBOT.UserData['FullName'] := TELEGRAM.FullName;
+
+  //TODO: add to other platform
+  SimpleBOT.AdditionalParameters.Values['UserID'] := 'tl-' + TELEGRAM.UserID;
 
   BotInit;
   Response.Content := ProcessText(Text);
@@ -300,7 +304,7 @@ begin
         audioCaption := SimpleBOT.SimpleAI.ResponseText[0];
         audioCaption := copy(audioCaption, 0, pos('\n', audioCaption) - 1);
 
-        s := PrepareTextToSpeech( SimpleBOT.SimpleAI.ResponseText.Text);
+        s := PrepareTextToSpeech(SimpleBOT.SimpleAI.ResponseText.Text);
         if s <> '' then
           TELEGRAM.SendAudio(TELEGRAM.ChatID, Config[CARIK_TTS_URL] + s,
             audioCaption, MessageID);
@@ -327,7 +331,8 @@ begin
 
   if SendVenue then
   begin
-    TELEGRAM.SendVenue(TELEGRAM.ChatID, VenueName, VenueAddress, VenueLatitude, VenueLongitude, '');
+    TELEGRAM.SendVenue(TELEGRAM.ChatID, VenueName, VenueAddress,
+      VenueLatitude, VenueLongitude, '');
   end;
 
   if SendAudio then
