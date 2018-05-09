@@ -1,14 +1,14 @@
 
 
-# Carik - Pencatat Diskusi Online
+# Carik - Bot Like Human
 
 ## What is it?
 
-**Carik** merupakan bot sederhana yang digunakan unt merekam pembicaraan di suatu group telegram.
+**Carik** adalah bot messenger yang bisa membantu Anda dalam aktivitas sehari-hari.
 
 Carik juga memiliki fitur sebagai penjawab pesan sederhana, menanyakan hal-hal yang telah didefinisikan sebelumnya oleh system.
-Walaupun emiliki fitur menjawab otomatis, dan belajar suatu definisi kata sederhana.
-Kecerdasan Bot ini tergantung dari data *entity* dan *intent* yang Anda miliki, serta logic handler yang Anda buat.
+Walaupun memiliki fitur menjawab otomatis, dan belajar suatu definisi kata sederhana,
+kecerdasan Bot ini tergantung dari data *entity* dan *intent* yang Anda miliki, serta logic handler yang Anda buat.
 
 Contoh penggunaan bot sederhana dengan SimpleBOT ini bisa anda coba dari situs [bot.fastplaz.com](http://bot.fastplaz.com) atau bisa melalu aplikasi chat **Telegram**, silahkan hubungi contact *'Fastplaz Bot'*.
 
@@ -17,13 +17,13 @@ Contoh penggunaan bot sederhana dengan SimpleBOT ini bisa anda coba dari situs [
 
 **Ringan Tanpa Beban**
 
-**Carik** merupakan turunan dari [SimpleBOT](https://github.com/luridarmawan/SimpleBOT), yang menggunakan kecerdasan buatan yang sederhana dari [SimpleAI](https://github.com/luridarmawan/SimpleAI).
+**Carik** merupakan turunan dari [SimpleBOT](https://github.com/luridarmawan/SimpleBOT), yang menggunakan [Natural Language Processing (NLP)](https://github.com/luridarmawan/SimpleAI) yang sederhana dari [SimpleAI](https://github.com/luridarmawan/SimpleAI).
 
 Dibuat dengan sederhana, simple dan ringan. SimpleBOT sendiri adalah _binary application_ sehingga diharapkan akan lebih cepat dan ringan. 
 
-Kompatibel dengan shared hosting umumnya.
+Kompatibel dengan shared hosting cPanel pada umumnya.
 
-Untuk penggunaan custom, cukup dibutuhkan instalasi Apache Web Server regular.
+Sedangkan untuk penggunaan custom, cukup dibutuhkan instalasi Apache Web Server regular.
 
 
 ## How to use it
@@ -150,3 +150,7 @@ bisa langsung dimention, atau dengan me-reply comment bot sebelumnya.
 
 [![Video to Compiling Carik](img/compiling.png)](https://www.youtube.com/watch?v=m8n4qijbcGM)
 
+## Referensi
+
+- [Natural Language Processing (NLP) sederhana dari Carik Bot](https://medium.com/@luridarmawan/natural-language-processing-nlp-sederhana-dari-carik-bot-78952b618695)
+- [Stemming Word dalam Carik](https://medium.com/@luridarmawan/stemming-word-dalam-carik-da3b802038c8)
