@@ -16,7 +16,8 @@ SetEnvIf Token "(.*)" Token=$1
 
 SetEnvIf Authorization "(.*)" Authorization=$1
 
-RewriteRule ^(carik)$ carik.bin/$1 [QSA,L]
+RewriteRule ^(carik)/(.*)$ carik.bin?$2 [QSA,L]
+RewriteRule ^(carik)$ carik.bin?$1 [QSA,L]
 RewriteRule ^(line)$ line.bin/$1 [QSA,L]
 RewriteRule ^(facebook)$ facebook.bin/$1 [QSA,L]
 RewriteRule ^(fb)$ facebook.bin/$1 [QSA,L]

@@ -209,9 +209,9 @@ dist
 *.o
 
 backup/
-public_html/ztemp/cache/*
-public_html/ztemp/error_log/*
-public_html/ztemp/sessions/*
+public_html/carik/ztemp/cache/*
+public_html/carik/ztemp/error_log/*
+public_html/carik/ztemp/sessions/*
 
 *.dll
 *.exe
