@@ -41,7 +41,7 @@ Untuk penggunaan custom, cukup dibutuhkan instalasi Apache Web Server regular.
 ```bash
 $ mkdir -p Carik/source/vendors
 $ cd Carik/source
-$ git clone https://github.com/luridarmawan/Carik.git
+$ git clone -b development https://github.com/luridarmawan/Carik.git
 
 # change to branch development
 
@@ -49,8 +49,8 @@ $ git clone https://github.com/luridarmawan/Carik.git
 #   change to branch development if needed
 
 $ cd vendors
-$ git clone https://github.com/fastplaz/fastplaz.git
-$ git clone https://github.com/luridarmawan/SimpleAI.git
+$ git clone -b development https://github.com/fastplaz/fastplaz.git
+$ git clone -b development https://github.com/luridarmawan/SimpleAI.git
 
 
 ```
