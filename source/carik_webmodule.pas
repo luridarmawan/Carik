@@ -16,9 +16,9 @@ uses
   apixu_integration, jobplanet_integration, bca_integration, witai_integration,
   maskofajadwalshalat_integration, line_integration, ibacortrainschedule_integration,
   facebookmessenger_integration, portalpulsa_integration,
-  googledistancematrix_integration,
+  googledistancematrix_integration, cognitivecustomvision_integration,
   kloudlesscalendar_integration, rss_lib, http_lib, IniFiles,
-  rajaongkir_integration,
+  rajaongkir_integration, googleanalytics_integration,
   process, dateutils, Classes, SysUtils;
 
 {$include carik.inc}
@@ -171,6 +171,7 @@ type
     function PrepareTextToSpeech(AText: string): string;
     function SpeechToText(AAudioFile: string; AConvert: boolean = True): string;
 
+    procedure Analytics(AChannel, AIntent, AText, AUserID: string);
   published
     property UniqueID: string read getUniqueID;
     property MessengerMode: TMessengerMode read FMessengerMode write FMessengerMode;
@@ -184,7 +185,9 @@ type
 
     // OBJECT
     property isObjectFocusExpired: boolean read getIsObjectFocusExpired;
-    function ObjectFocus: string;
+    function ObjectFocus: string; //deprecated
+    function ContextFocus: string;
+
 
     function LanguageSetHandler(const IntentName: string; Params: TStrings): string;
 
@@ -756,11 +759,13 @@ begin
   Result := '';
   if Config[COGNITIVE_OCR_TOKEN] = '' then
     Exit;
+  {
   if not isTelegramGroup then
   begin
     Result := _TELEGRAM_ERR_GROUP_ONLY;
     Exit;
   end;
+  }
   s := getTelegramImageID;
   if s = '' then
     Exit;
@@ -785,7 +790,6 @@ begin
     Token := Config[COGNITIVE_OCR_TOKEN];
     Language := 'en';
     Result := Scan(_url);
-    LogUtil.Add('x:' + ResponseText, 'OCR');
     Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
     Free;
   end;
@@ -851,11 +855,13 @@ begin
   Result := '';
   if Config[COGNITIVE_OCR_TOKEN] = '' then
     Exit;
+  {
   if not isTelegramGroup then
   begin
     Result := _TELEGRAM_ERR_GROUP_ONLY;
     Exit;
   end;
+  }
   s := getTelegramImageID;
   if s = '' then
     Exit;
@@ -878,8 +884,10 @@ begin
   with TCognitiveDomainSpecific.Create do
   begin
     Token := Config[COGNITIVE_OCR_TOKEN];
-    Model := 'celebrities';
+    Details := 'celebrities';
     Result := Scan(_url);
+    LogUtil.Add(Token, 'Token');
+    LogUtil.Add(ResultText, 'ImageToFigure');
     Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
     Free;
   end;
@@ -969,6 +977,18 @@ begin
   if FImageURL = '' then
     Exit;
 
+  {
+  with TCognitiveCustomVision.Create do
+  begin
+    Key := Config[CUSTOMVISION_KEY];
+    URL := Config[CUSTOMVISION_URL];
+    s := Trim( Prediction(FImageURL));
+    Free;
+  end;
+  if s <> '' then
+    Result := '*Prediksi*:' + #10 + s;
+  }
+
   // clarifai
   img := TClarifai.Create;
   img.ClientID := Config[CLARIFAI_CLIENTID];
@@ -1032,13 +1052,14 @@ begin
     end;
     Free;
   end;
-  Result := Result + #10#10'*Tags:*'#10 + _tags + #10 + s;
+  if s <> '' then
+    Result := Result + #10#10'*Tags:*'#10 + _tags + #10 + s;
 
   // tokoh dikenal
   with TCognitiveDomainSpecific.Create do
   begin
     Token := Config[COGNITIVE_OCR_TOKEN];
-    Model := 'celebrities';
+    Details := 'celebrities';
     s := Scan(FImageURL);
     Free;
   end;
@@ -1107,23 +1128,30 @@ end;
 
 function TCarikWebModule.lokasiHandler(const IntentName: string;
   Params: TStrings): string;
+const
+  LOKASI_RANGE = '(sini|disini|di sini|terdekat|dekat)';
 var
-  _keyword: string;
+  i: Integer;
+  s, _keyword, jamBuka: string;
 begin
   _keyword := Params.Values['keyword_value'];
   Result := Params.Values['Lokasi_value'] + ' ' + Params.Values['keyword_value'];
-  if (_keyword = 'sini') or (_keyword = 'disini') or (_keyword = 'di sini') or
-    (_keyword = 'terdekat') or (_keyword = '') or (Result = 'rumah sakit') then
+
+  if preg_match(LOKASI_RANGE, _keyword) or (Result = 'rumah sakit') or
+    (_keyword = '') then
   begin
-    SimpleBOT.UserData['OBJECT_DETAIL'] := Params.Values['Lokasi_value'];
+    _keyword := preg_replace(LOKASI_RANGE, '', _keyword);
+    SimpleBOT.UserData['CONTEXT_DETAIL'] :=
+      Params.Values['Lokasi_value'] + ' ' + _keyword;
+    if SimpleBOT.UserData['CONTEXT_DETAIL'] = 'rs' then
+      SimpleBOT.UserData['CONTEXT_DETAIL'] := 'rumah sakit';
     Result := SimpleBOT.GetResponse(IntentName + 'NoLocation');
     Result := StringReplace(Result, '%lokasi%', Params.Values['Lokasi_value'],
       [rfReplaceAll]);
     Exit;
   end;
 
-  _keyword := trim(Params.Values['Lokasi_value'] + ' ' +
-    Params.Values['keyword_value']);
+  _keyword := trim(Params.Values['Lokasi'] + ' ' + Params.Values['keyword_value']);
   with TGooglePlaceIntegration.Create do
   begin
     Key := Config[GOOGLE_KEY];
@@ -1136,15 +1164,52 @@ begin
       FVenueAddress := Address;
       FVenueLatitude := Latitude;
       FVenueLongitude := Longitude;
-      FSendVenue := True;
+      //FSendVenue := True; // data lokasi banyak yg tidak akurat
       if MessengerMode = mmTelegram then
         Result := '';
       if MessengerMode = mmLine then
         Result := '';
+
+      s := Detail(PlaceID);
+      if s <> '' then
+      begin
+        s := '*' + jsonGetData(Data, 'result/name') + '*';
+        s := s + #10 + jsonGetData(Data, 'result/formatted_address');
+
+        // Jam Buka
+        s := s + #10 + 'Jam buka: ';
+        i := DayOfWeek(Now)-2;
+        if i = -1 then
+          i := 6;
+        jamBuka := jsonGetData(Data, 'result/opening_hours/periods['+i2s(i)+']/open/time');
+
+        if jamBuka <> '' then
+        begin
+          s := s + jamBuka;
+          s := s + ' - ' + jsonGetData(Data, 'result/opening_hours/periods['+i2s(i)+']/close/time');
+          s := s + #10;
+        end;
+        if jsonGetData(Data, 'result/opening_hours/open_now') = 'True' then
+          s := s + 'Saat ini buka.';
+
+        s := s + #10 + StringReplace(jsonGetData(Data, 'result/international_phone_number'),
+          ' ', '', [rfReplaceAll]);
+
+        s := s + #10#10'maps: ' + jsonGetData(Data, 'result/url');
+        s := s + #10 + jsonGetData(Data, 'result/website');
+        s := Trim(s);
+        s := StringReplace(s, #10, '\n', [rfReplaceAll]);
+        Result := s;
+      end;
+
     end;
 
     if Result = '' then
-      Result := SimpleBOT.GetResponse(IntentName + 'NotFound');
+    begin
+      //Result := SimpleBOT.GetResponse(IntentName + 'NotFound');
+      //Result := StringReplace(Result, '%lokasi%', Params.Values['Lokasi_value'],
+      //  [rfReplaceAll]);
+    end;
     Free;
   end;
 end;
@@ -1179,7 +1244,7 @@ begin
   if (_keyword = 'sini') or (_keyword = 'disini') or (_keyword = 'di sini') or
     (_keyword = '') then
   begin
-    SimpleBOT.UserData['OBJECT_DETAIL'] := Params.Values['Lokasi_value'];
+    SimpleBOT.UserData['CONTEXT_DETAIL'] := Params.Values['Lokasi_value'];
     Result := SimpleBOT.GetResponse(IntentName + 'NoLocation');
     Result := StringReplace(Result, '%lokasi%', Params.Values['Lokasi_value'],
       [rfReplaceAll]);
@@ -1189,7 +1254,7 @@ begin
   //_keyword := _keyword + ', Indonesia';
   with TZomatoIntegration.Create do
   begin
-    URL := 'http://carik.id/services/zomato/';
+    URL := Config[ZOMATO_URL];
     Key := Config[ZOMATO_KEY];
     EntityType := '';
     EntityID := 94; //Indonesia
@@ -2295,6 +2360,39 @@ begin
 
 end;
 
+procedure TCarikWebModule.Analytics(AChannel, AIntent, AText, AUserID: string);
+begin
+  with TGoogleAnalyticsIntegration.Create do
+  begin
+    TrackingID := Config[GOOGLEANALYTICS_TRACKING_ID];
+    ClientID := AUserID;
+    HitType := 'event';
+    Payloads['an'] := Config[CONFIG_BOTNAME];
+    Payloads['ai'] := Config[CONFIG_BOTNAME];
+    Payloads['av'] := AChannel + '-v0';
+    Payloads['ec'] := AChannel;
+    Payloads['ea'] := AIntent;
+    Payloads['el'] := UrlEncode(AText);
+    Payloads['lbl'] := 'lbl1';
+    Payloads['uid'] := AUserID;
+    if not Send then
+      LogUtil.Add(URL, 'Analytics-Failed');
+    Free;
+  end;
+
+  with TGoogleAnalyticsIntegration.Create do
+  begin
+    TrackingID := Config[GOOGLEANALYTICS_TRACKING_ID];
+    ClientID := AUserID;
+    HitType := 'pageview';
+    Payloads['dt'] := AIntent;
+    Payloads['dp'] := UrlEncode(AIntent + '/' + AText);
+    Send;
+    Free;
+  end;
+
+end;
+
 function TCarikWebModule.texttospeechHandler(const IntentName: string;
   Params: TStrings): string;
 begin
@@ -2975,7 +3073,7 @@ begin
   Result := Trim(Result);
 end;
 
-function TCarikWebModule.ObjectFocus: string;
+function TCarikWebModule.ObjectFocus: string; // deprecated
 var
   s: string;
 begin
@@ -2985,6 +3083,18 @@ begin
     Exit;
   if MinutesBetween(Now, StrToDateTime(s)) <= _OBJECT_DISCUSSION_MAXTIME then
     Result := SimpleBOT.UserData['OBJECT'];
+end;
+
+function TCarikWebModule.ContextFocus: string;
+var
+  s: string;
+begin
+  Result := '';
+  s := SimpleBOT.UserData['CONTEXT_DATE'];
+  if s = '' then
+    Exit;
+  if MinutesBetween(Now, StrToDateTime(s)) <= _OBJECT_DISCUSSION_MAXTIME then
+    Result := SimpleBOT.UserData['CONTEXT'];
 end;
 
 function TCarikWebModule.LanguageSetHandler(const IntentName: string;
@@ -3057,6 +3167,14 @@ begin
   SimpleBOT.TrimMessage := False;
   SimpleBOT.IsStemming := False;
   Result := SimpleBOT.Exec(AMessage);
+  if (SimpleBOT.ResponseText.Text = '') and not (FSendAudio or FSendPhoto or FSendRichContent or FSendVenue) then
+  begin
+    if (not FSendVenue) and (not FSendRichContent) then
+    begin
+      SimpleBOT.ResponseText.Text := SimpleBOT.GetResponse('DataTidakAdaResponse');
+      Result := SimpleBOT.SimpleAI.ResponseJson;
+    end;
+  end;
 
   if getIsTranslate then
   begin
@@ -3197,6 +3315,7 @@ begin
 
 
   //TODO: simpan message ke DB, untuk dipelajari oleh AI
+  Analytics('global', 'failed', Message, Carik.UserID);
 
   FErrorCount := FErrorCount + 1;
 end;

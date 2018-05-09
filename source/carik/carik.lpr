@@ -26,3 +26,4 @@ begin
   Application.Initialize;
   Application.Run;
 end.
+

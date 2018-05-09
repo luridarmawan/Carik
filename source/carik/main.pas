@@ -14,8 +14,6 @@ uses
 
 const
   BOTNAME_DEFAULT = 'Carik';
-  CLARIFAI_TOKEN = 'clarifai/token';
-  TELEGRAM_TOKEN = 'telegram/token';
 
 type
 
@@ -71,7 +69,7 @@ end;
 //   curl "http://local-carik.fastplaz.com/ai/" -X POST -d '{"message":{"message_id":0,"chat":{"id":0},"text":"Hi"}}'
 procedure TMainModule.Post;
 var
-  s, text_response: string;
+  s, text_response, channelID: string;
   chatID, chatType, _userID, fullName, userName, telegramToken: string;
   i, j: integer;
   updateID, lastUpdateID: longint;
@@ -87,6 +85,7 @@ begin
     try
       Text := jsonData.GetPath('message.text').AsString;
     except
+      Text := '';
     end;
     if Text = 'False' then
       Text := '';
@@ -107,8 +106,8 @@ begin
   end;
 
   // maybe submitted from post data
-  if Text = '' then
-    Text := _POST['text'];
+  //if Text = '' then
+  //  Text := _POST['text'];
 
   // CarikBOT isRecording
   Carik.UserID := _userID;
@@ -170,6 +169,12 @@ begin
   end;
 
   //---
+  channelID := _GET['channel'];
+  if Carik.UserID = '' then
+    Carik.UserID := '';
+  if channelID = '' then
+    channelID := 'direct';
+  Analytics(channelID, SimpleBOT.SimpleAI.IntentName, Text, channelID + '-' + Carik.UserID);
   SimpleBOT.Free;
   Response.ContentType := 'application/json';
 end;

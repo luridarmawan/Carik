@@ -1,12 +1,19 @@
 const
   BOTNAME_DEFAULT = 'Carik';
+  CONFIG_BOTNAME = 'ai/default/name';
   CLARIFAI_TOKEN = 'clarifai/default/token';
   CLARIFAI_CLIENTID = 'clarifai/default/client_id';
   CLARIFAI_CLIENTSECRET = 'clarifai/default/client_secret';
+
+  CUSTOMVISION_KEY = 'customvision/default/key';
+  CUSTOMVISION_URL = 'customvision/default/url';
+
   TELEGRAM_TOKEN = 'telegram/default/token';
   FACEBOOK_TOKEN = 'facebook/default/token';
   WITAI_TOKEN = 'witai/default/token';
   GOOGLE_KEY = 'google/default/key';
+  GOOGLEANALYTICS_TRACKING_ID = 'googleanalytics/default/tracking_id';
+  ZOMATO_URL = 'zomato/default/url';
   ZOMATO_KEY = 'zomato/default/key';
   YANDEX_KEY = 'yandex/default/key';
   COGNITIVE_OCR_TOKEN = 'cognitive/ocr/key';
