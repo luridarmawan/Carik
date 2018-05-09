@@ -19,6 +19,9 @@ begin
 
   Application.OnGetModule := @FastPlasAppandler.OnGetModule;
   Application.PreferModuleName := True;
+  {$if (fpc_version=3) and (fpc_release>=0) and (fpc_patch>=4)}
+  Application.LegacyRouting := True;
+  {$endif}
 
   Application.Initialize;
   Application.Run;
