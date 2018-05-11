@@ -22,6 +22,8 @@
       "name": "Carik",
       "datasource": "file",
       "debug": false,
+      "stemming": true,
+      "standard_word_check": true,
       "basedir": "files/nlp/",
       "entities": [
         "koperasi-entities.txt",
