@@ -3165,7 +3165,9 @@ var
 begin
   SimpleBOT.OnError := @OnErrorHandler;  // Your Custom Message
   SimpleBOT.TrimMessage := False;
-  SimpleBOT.IsStemming := False;
+  SimpleBOT.IsStemming := Config[STEMMING_ENABLED];
+  SimpleBOT.StandardWordCheck := Config[STANDARDWORD_CHECKING];
+
   Result := SimpleBOT.Exec(AMessage);
   if (SimpleBOT.ResponseText.Text = '') and not (FSendAudio or FSendPhoto or FSendRichContent or FSendVenue) then
   begin

@@ -53,3 +53,6 @@ const
 
   PAJAKMOTOR_API = 'pajakmotor/api_url';
 
+  STEMMING_ENABLED = 'ai/default/stemming';
+  STANDARDWORD_CHECKING = 'ai/default/standard_word_check';
+
