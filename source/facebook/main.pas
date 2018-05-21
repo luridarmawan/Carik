@@ -67,6 +67,9 @@ begin
   Facebook.RequestContent := Request.Content;
   LogUtil.Add(Request.Content, 'FB');
 
+  if not (_GET['token'] = '') then
+    Facebook.Token := _GET['token'];
+
   Text := Facebook.Text;
   Carik.UserPrefix := 'fb';
   Carik.UserID := Facebook.UserID;

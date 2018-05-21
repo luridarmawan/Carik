@@ -81,13 +81,12 @@ end;
 // Init First
 procedure TMainModule.BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
 begin
-  //Response.ContentType := 'application/json';
+  Response.ContentType := 'application/json';
 end;
 
 // GET Method Handler
 procedure TMainModule.Get;
 begin
-  Response.ContentType := 'application/json';
   Response.Content := '{}';
 end;
 
@@ -105,6 +104,9 @@ begin
   forceRespond := False;
   if AppData.debug then
     LogUtil.Add(Request.Content, 'TELE');
+
+  if not (_GET['token'] = '') then
+    TELEGRAM.Token := _GET['token'];
 
   TELEGRAM.RequestContent := Request.Content;
   TELEGRAM.Token := Config[TELEGRAM_TOKEN];
@@ -167,10 +169,10 @@ begin
     SimpleBOT.UserData['LOC_DATE'] := DateTimeToStr(Now);
 
     // still on topic, find location
-    if ObjectFocus <> '' then
+    if ContextFocus <> '' then
     begin
-      Text := ObjectFocus + ' ' + SimpleBOT.UserData['LOC_LAT'] +
-        ' ' + SimpleBOT.UserData['LOC_LON'] + ' ' + SimpleBOT.UserData['OBJECT_DETAIL'];
+      Text := ContextFocus + ' ' + SimpleBOT.UserData['LOC_LAT'] +
+        ' ' + SimpleBOT.UserData['LOC_LON'] + ' ' + SimpleBOT.UserData['CONTEXT_DETAIL'];
       LogUtil.Add(Text, 'LOKASI');
     end;
   end;// Is Location
@@ -255,11 +257,13 @@ begin
   SimpleBOT.UserData['FullName'] := TELEGRAM.FullName;
 
   //TODO: add to other platform
-  SimpleBOT.AdditionalParameters.Values['UserID'] := 'tl-' + TELEGRAM.UserID;
+  SimpleBOT.AdditionalParameters.Values['UserID'] := 'tl-' + TELEGRAM.UserID; //TODO: tambahkan ke messenger lain
+  SimpleBOT.AdditionalParameters.Values['ChatID'] := 'tl-' + TELEGRAM.ChatID; //TODO: tambahkan ke messenger lain
 
   BotInit;
   Response.Content := ProcessText(Text);
-  Response.ContentType := 'application/json';
+
+  //Exit;//ulil
 
   //TODO: rekam pembicaraan sendiri
 
@@ -277,6 +281,7 @@ begin
   end;
 
   //Exec Command
+  {
   if Carik.IsCommand(SimpleBOT.SimpleAI.ResponseText.Text) then
   begin
     SimpleBOT.SimpleAI.ResponseText.Text :=
@@ -287,6 +292,7 @@ begin
     //TODO: generate user data and object
     Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end;
+  }
 
   if SimpleBOT.SimpleAI.Action = '' then // no mention reply, if no 'action'
     MessageID := '';
@@ -345,6 +351,7 @@ begin
     //TELEGRAM.SendPhotoFromURL( TELEGRAM.ChatID, FileURL, Caption, MessageID);
   end;
 
+  Analytics('telegram', SimpleBOT.SimpleAI.IntentName, Text, 'tl-' + Carik.UserID);
   Response.ContentType := 'application/json';
 end;
 
