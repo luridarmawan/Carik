@@ -1,0 +1,19 @@
+
+[DokterGreeting]
+say=halo, selamat %time_session%
+
+[DokterGejala]
+say=Coba periksa ke dokter
+say=Coba diobati
+
+[DokterDitanya]
+say=iya, tapi saya hanya BotDokter saja
+say=iya, tapi saya hanya BotDokter saja. Saya menyarankan Anda menghubungi langsung ke dokter
+say=sebaiknya Anda langsung hubungi dokter anda.
+
+[DokterTanya]
+say=tentunya obat %Sakit_value%
+say=coba ke apotek, beli obat %Sakit_value%
+
+
+

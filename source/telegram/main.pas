@@ -72,7 +72,7 @@ begin
   try
     json.LoadFromJsonString(Request.Content);
     s := json['message/reply_to_message/from/username'];
-    if pos('Bot', s) > 0 then
+    if pos('Bot', s) > 0 then // if not from Bot
       Result := True;
   except
   end;
@@ -87,6 +87,7 @@ end;
 // GET Method Handler
 procedure TMainModule.Get;
 begin
+  //TODO: Telegram Sender via Get Method
   Response.Content := '{}';
 end;
 
@@ -210,7 +211,7 @@ begin
       begin
         if TELEGRAM.IsInvitation then
         begin
-          LogUtil.Add('invitation', '#1');
+          //LogUtil.Add('invitation', '#1');
           if not Carik.isSapaMemberBaru then
           begin
             Response.Content := '{"status":"invitation"}';
@@ -228,8 +229,16 @@ begin
         begin
           if not forceRespond then
           begin
-            Response.Content := '{"status":"nomention"}';
-            Exit;
+            if isTriggeredText(Text) then
+            begin
+
+            end
+            else
+            begin
+              LogChat(TELEGRAM_CHANNEL_ID, Carik.GroupChatID, Carik.UserID, Carik.UserName, Text, '', True, False);
+              Response.Content := '{"status":"nomention"}';
+              Exit;
+            end;
           end;
         end;
       end;
@@ -261,9 +270,24 @@ begin
   SimpleBOT.AdditionalParameters.Values['ChatID'] := 'tl-' + TELEGRAM.ChatID; //TODO: tambahkan ke messenger lain
 
   BotInit;
-  Response.Content := ProcessText(Text);
+  if TriggeredText = '' then
+    Response.Content := ProcessText(Text)
+  else
+    Response.Content := ProcessText(TriggeredText);
 
-  //Exit;//ulil
+  LogChat(TELEGRAM_CHANNEL_ID, Carik.GroupChatID, Carik.UserID, Carik.UserName, TELEGRAM.Text, SimpleBOT.SimpleAI.ResponseText.Text, Carik.IsGroup, True);
+  if not TELEGRAM.IsGroup then
+  begin
+    if IsUserSuspended( TELEGRAM_CHANNEL_ID, Carik.UserID) then
+    begin
+      if AppData.debug then
+         LogUtil.Add( Carik.UserID + ' suspended', 'USERCHECK');
+      Exit;
+    end;
+  end;
+
+
+  Exit;//ulil
 
   //TODO: rekam pembicaraan sendiri
 

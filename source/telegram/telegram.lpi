@@ -15,9 +15,6 @@
     <i18n>
       <EnableI18N LFM="False"/>
     </i18n>
-    <VersionInfo>
-      <StringTable ProductVersion=""/>
-    </VersionInfo>
     <BuildModes Count="1">
       <Item1 Name="Default" Default="True"/>
     </BuildModes>
@@ -31,10 +28,10 @@
     </RunParams>
     <RequiredPackages Count="4">
       <Item1>
-        <PackageName Value="fastplaz_integration"/>
+        <PackageName Value="simplebot_package"/>
       </Item1>
       <Item2>
-        <PackageName Value="simplebot_package"/>
+        <PackageName Value="fastplaz_integration"/>
       </Item2>
       <Item3>
         <PackageName Value="LCL"/>

@@ -65,7 +65,7 @@ type
     { add your program here }
 
 
-    WriteLn('OK: ');
+    WriteLn('OK: ' + Config['IBACOR_TOKEN']);
     //ReadLn;
 
     // stop program loop

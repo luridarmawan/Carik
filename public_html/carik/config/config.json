@@ -1,9 +1,9 @@
 {
   "systems": {
-    "sitename": "CarikBOT",
-    "slogan": "Carik BOT API",
+    "sitename": "SimpleBOT",
+    "slogan": "SimpleBOT with SimpleAI and FastPlaz",
     "baseurl": "",
-    "admin_email": "webmaster@carik.id",
+    "admin_email": "webmaster@coba.com",
     "development": true,
     "debug": false,
     "module_default": "main",
@@ -12,79 +12,112 @@
     "theme": "default",
     "cache": "none",
     "temp": "ztemp",
-    "error_url": "\/",
+    "error_url": "/",
     "session_timeout": 0,
     "ffmpeg_path": "./ffmpeg",
     "error_redirect": false
+  },
+  "external_nlp": {
+    "enable": false,
+    "nlp": [
+      {
+        "enable": true,
+        "url": "http://localhost:8080/api/",
+        "key": ""
+      },
+      {
+        "enable": true,
+        "url": "http://ml.carik.local:8008/learning",
+        "key": ""
+      }
+    ]
+  },
+  "knowledge_base": {
+    "url": ""
   },
   "ai": {
     "default": {
       "name": "Carik",
       "datasource": "file",
       "debug": false,
-      "stemming": true,
+      "stemming": false,
       "standard_word_check": true,
-      "basedir": "files/nlp/",
+      "basedir": "files/ai/",
+      "unknown_stats_url": "",
+      "chatlog_url": "",
+      "user_status": {
+        "client_id": "carik",
+        "url": ""
+      },
+      "external_nlp": {
+        "enable": false,
+        "url": "",
+        "key": ""
+      },
       "entities": [
-        "koperasi-entities.txt",
         "lokasi-entities.txt",
-        "pascal-entities.txt",
-        "kpbi-entities.txt",
-        "tiket-entities.txt",
-        "pulsa-entities.txt",
-        "dokter-entities.txt",
         "ai-entities.txt"
-        ],
+      ],
       "intents": [
-        "koperasi-intents.txt",
+        "chat-intents.txt",
+        "kdrt-intents.txt",
+        "property-intents.txt",
         "smarthome-intents.txt",
-        "jobplanet-intents.txt",
         "lokasi-intents.txt",
-        "pascal-intents.txt",
-        "kpbi-intents.txt",
         "tiket-intents.txt",
         "pulsa-intents.txt",
         "cs-intents.txt",
-        "dokter-intents.txt",
         "ai-intents.txt"
-        ],
+      ],
       "response": [
-        "koperasi-response.txt",
+        "chat-response.txt",
+        "kdrt-response.txt",
+        "property-response.txt",
         "smarthome-response.txt",
-        "jobplanet-response.txt",
         "lokasi-response.txt",
-        "pascal-response.txt",
-        "kpbi-response.txt",
         "tiket-response.txt",
-        "pulsa-response.txt",
         "cs-response.txt",
-        "dokter-response.txt",
         "ai-response.txt",
         "ai-questions.txt"
-        ]
+      ],
+      "trigger_word": {
+        "bot_call": ["Carik", "Bot"],
+        "meninggal": ["(telah|telah|kemaren|kemarin|tadi|yang) meninggal", "innalillahi"],
+        "sakit": ["lagi sakit"],
+        "makan2": ["makan2", "makan-makan"],
+        "ulang_tahun": ["ulang tahun", "hbd", "birthday", "milad", "met ultah"],
+        "aamiin": ["aamiin|amiin|aamin|aamien|آمين"]
+      }
     }
   },
   "telegram": {
     "default": {
-      "token": "YourTelegramToken"
+      "token": "tour_telegram_token"
     }
   },
-  "line":{
+  "line": {
     "default": {
-      "token": "YourLineToken"
+      "token": "your_line_token"
     }
   },
   "facebook": {
     "default": {
-      "token": "YourFacebookToken"
+      "token": "your_facebook_token"
     }
   },
-  "omdb":{
+  "omdb": {
     "default": {
       "key": ""
     }
   },
-  "ibacor":{
+  "PortalPulsa": {
+    "default": {
+      "userid": "",
+      "key": "",
+      "secret": ""
+    }
+  },
+  "ibacor": {
     "default": {
       "token": ""
     }
@@ -98,12 +131,18 @@
   },
   "google": {
     "key": "",
-    "default":{
+    "default": {
       "key": ""
+    }
+  },
+  "googleanalytics": {
+    "default": {
+      "tracking_id": ""
     }
   },
   "zomato": {
     "default": {
+      "url": "",
       "key": ""
     }
   },
@@ -119,7 +158,14 @@
   },
   "cognitive": {
     "ocr": {
-      "key": ""
+      "key": "",
+      "key2": ""
+    }
+  },
+  "customvision": {
+    "default": {
+      "key": "",
+      "url": ""
     }
   },
   "openweathermap": {
@@ -143,7 +189,7 @@
   "maskofa": {
     "jadwalshalat": {
       "sessionid": "",
-      "citylists": "files/shalat-citylist.txt"
+      "citylists": ""
     }
   },
   "msbotframework": {
@@ -153,33 +199,31 @@
     }
   },
   "rss": {
-    "detik":"http://rss.detik.com/index.php/detikcom_nasional",
-    "sindo":"https://www.sindonews.com/feed",
-    "antara":"http://www.antaranews.com/rss/top-news",
-    "tempo":"https://rss.tempo.co/index.php/teco/news/feed/start/0/limit/10/kanal/6",
-    "okezone":"http://sindikasi.okezone.com/index.php/rss/0/RSS2.0",
-    "kapanlagi":"https://www.kapanlagi.com/feed/",
-    "republika":"http://www.republika.co.id/rss"
+    "detik": "http://rss.detik.com/index.php/detikcom_nasional",
+    "sindo": "https://www.sindonews.com/feed",
+    "antara": "http://www.antaranews.com/rss/top-news",
+    "tempo": "https://rss.tempo.co/index.php/teco/news/feed/start/0/limit/10/kanal/6",
+    "okezone": "http://sindikasi.okezone.com/index.php/rss/0/RSS2.0",
+    "kapanlagi": "https://www.kapanlagi.com/feed/",
+    "republika": "http://www.republika.co.id/rss"
   },
   "pajakmotor": {
     "api_url": ""
   },
   "carik": {
     "path": "files/carik/",
-    "tts_url": "https://yourttsurl/speech/",
-    "groups" : {
-    }
+    "tts_url": ""
   },
-  "database": {
-    "default": {
-      "driver": "MySQL 5.5",
-      "hostname": "localhost",
-      "port": "",
-      "username": "your_username",
-      "password": "your_password",
-      "database_name": "your_database",
-      "prefix": "",
-      "library": ""
+  "database" : {
+    "default" : {
+      "driver" : "MySQL 5.7",
+      "hostname" : "localhost",
+      "port" : "",
+      "username" : "root",
+      "password" : "root",
+      "database_name" : "carik",
+      "prefix" : "",
+      "library" : ""
     }
   },
   "mailer": {

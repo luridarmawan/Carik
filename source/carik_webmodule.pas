@@ -19,6 +19,7 @@ uses
   googledistancematrix_integration, cognitivecustomvision_integration,
   kloudlesscalendar_integration, rss_lib, http_lib, IniFiles,
   rajaongkir_integration, googleanalytics_integration,
+  kamuskemdikbud_integration, thesaurus_integration,
   process, dateutils, Classes, SysUtils;
 
 {$include carik.inc}
@@ -49,6 +50,7 @@ type
     FSendPhoto: boolean;
     FSendRichContent: boolean;
     FSendVenue: boolean;
+    FTriggeredText: string;
     FVenueAddress: string;
     FVenueLatitude: double;
     FVenueLongitude: double;
@@ -67,7 +69,9 @@ type
     function generateEventName(AEventName: string): string;
 
     // HANDLER
+    function definisiHandler(const IntentName: string; Params: TStrings): string;
     function defineHandler(const IntentName: string; Params: TStrings): string;
+    function userProfileHandler(const IntentName: string; Params: TStrings): string;
     function botStartHandler(const IntentName: string; Params: TStrings): string;
     function resiHandler(const IntentName: string; Params: TStrings): string;
     procedure setisSpeakingMode(AValue: boolean);
@@ -158,6 +162,8 @@ type
     function LineProperySearch(ATitle, AJson: string): string;
     function LineBerita(ATitle, AJson: string): string;
     function FacebookBerita(ATitle, AJson: string): string;
+
+    procedure SaveUnknownChat(AText: string);
   public
     MessageID: string;
     Text: string;
@@ -171,7 +177,14 @@ type
     function PrepareTextToSpeech(AText: string): string;
     function SpeechToText(AAudioFile: string; AConvert: boolean = True): string;
 
+    function isTriggeredText(Message: string): boolean;
+    function IsUserSuspended(AChannelID, AUserID: string): boolean;
+    procedure LogChat(AChannelID: string; AGroupID: string;
+      AUserID: string; AUserName: string; AText: string; AReply: string;
+      AIsGroup: boolean = True; AIsMentioned: boolean = True);
     procedure Analytics(AChannel, AIntent, AText, AUserID: string);
+    function KnowledgeBase(AKeyword: string): string;
+    function ExternalNLP(AText: string): string;
   published
     property UniqueID: string read getUniqueID;
     property MessengerMode: TMessengerMode read FMessengerMode write FMessengerMode;
@@ -182,6 +195,7 @@ type
     property FileURL: string read FFileURL;
     property Caption: string read FCaption;
     property RichContent: string read FRichContent;
+    property TriggeredText: string read FTriggeredText;
 
     // OBJECT
     property isObjectFocusExpired: boolean read getIsObjectFocusExpired;
@@ -276,7 +290,8 @@ const
   //_ICON_WEKER = '⏰⏱';
   //_ICON_NUMBER = '0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣🔟';
   _ICON_NUMBER_ARRAY: array [0..10] of string =
-    ('0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟');
+    ('0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣',
+    '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟');
 
   _CARIK_SPEAKING_MODE = '_SPEAKING_MODE';
 
@@ -284,6 +299,8 @@ const
   DEFAULT_NEWS_IMAGE_URL = 'https://fire.carik.id/images/news/news.png';
   TEXT2SPEECH_MAX_CHAR = 250;
   ERROR_COUNT_MAX = 2;
+
+  AI_CONFIG_TRIGGERWORD = 'ai/default/trigger_word';
 
 { TSmartHomeTestIntegration }
 
@@ -438,8 +455,6 @@ begin
 end;
 
 function TCarikWebModule.getIsTranslate: boolean;
-var
-  s: string;
 begin
   Result := False;
 
@@ -538,6 +553,51 @@ begin
   Result := generateCalendarID + '|' + AEventName;
 end;
 
+function TCarikWebModule.definisiHandler(const IntentName: string;
+  Params: TStrings): string;
+var
+  keyName: string;
+begin
+  Result := '';
+
+  keyName := Params.Values['Text'];
+  if keyName = '' then
+    Exit;
+
+  Result := LoadCache('definisi-' + keyName);
+  if Result <> '' then
+    Exit;
+
+  // use knowledge basde first
+  Result := KnowledgeBase(keyName);
+  //TODO: safe to local thesaurus
+  if Result <> '' then
+    Exit;
+
+  // use local dictionary
+  with TThesaurusIntegration.Create do
+  begin
+    Result := Find(keyName);
+    Free;
+  end;
+  Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, '--', '..', [rfReplaceAll]);
+  if Result <> '' then
+    Exit;
+
+  with TKamusIntegration.Create do
+  begin
+    Result := Find(keyName);
+    Free;
+  end;
+
+  if Result <> '' then
+    SaveCache('definisi-' + keyName, Result);
+
+  if Result = '' then
+    Result := SimpleBOT.SimpleAI.GetResponse('NotFound');
+end;
+
 function TCarikWebModule.defineHandler(const IntentName: string;
   Params: TStrings): string;
 var
@@ -565,6 +625,16 @@ begin
 
   // Save to database
   //   keyName & keyValue
+end;
+
+function TCarikWebModule.userProfileHandler(const IntentName: string;
+  Params: TStrings): string;
+begin
+  Result := Carik.FullName; //TODO: Get User Profile
+
+  Result := Result + #13 + SimpleBOT.GetResponse(IntentName + 'Response');
+  Result := Trim(Result);
+  Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
 end;
 
 function TCarikWebModule.botStartHandler(const IntentName: string;
@@ -624,11 +694,10 @@ begin
 
   with TPortalPulsaIntegration.Create do
   begin
-    UserID := 'P21765';
-    Key := 'dc40e6d1c4dcd48cd254cc5cc1248ea5';
-    Secret := 'd10fdea4e4085145e63bf5521fe1a2314a30bd67fd047f76891799cf4401ab83';
+    UserID := Config[PORTALPULSA_USERID];
+    Key := Config[PORTALPULSA_KEY];
+    Secret := Config[PORTALPULSA_SECRET];
     TransactionID := FormatDateTime('yyyymmddHHnnss', Now) + _nomor;
-
     if IsiPulsa(_nomor, '5') then
     begin
 
@@ -670,7 +739,6 @@ begin
     begin
 
     end;
-    LogUtil.Add(Message, 'PULSA');
     Free;
   end;
 
@@ -886,8 +954,6 @@ begin
     Token := Config[COGNITIVE_OCR_TOKEN];
     Details := 'celebrities';
     Result := Scan(_url);
-    LogUtil.Add(Token, 'Token');
-    LogUtil.Add(ResultText, 'ImageToFigure');
     Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
     Free;
   end;
@@ -1129,9 +1195,9 @@ end;
 function TCarikWebModule.lokasiHandler(const IntentName: string;
   Params: TStrings): string;
 const
-  LOKASI_RANGE = '(sini|disini|di sini|terdekat|dekat)';
+  LOKASI_RANGE = '(sini|disini|di sini|terdekat|dekat|near me|near by)';
 var
-  i: Integer;
+  i: integer;
   s, _keyword, jamBuka: string;
 begin
   _keyword := Params.Values['keyword_value'];
@@ -1178,22 +1244,24 @@ begin
 
         // Jam Buka
         s := s + #10 + 'Jam buka: ';
-        i := DayOfWeek(Now)-2;
+        i := DayOfWeek(Now) - 2;
         if i = -1 then
           i := 6;
-        jamBuka := jsonGetData(Data, 'result/opening_hours/periods['+i2s(i)+']/open/time');
+        jamBuka := jsonGetData(Data, 'result/opening_hours/periods[' +
+          i2s(i) + ']/open/time');
 
         if jamBuka <> '' then
         begin
           s := s + jamBuka;
-          s := s + ' - ' + jsonGetData(Data, 'result/opening_hours/periods['+i2s(i)+']/close/time');
+          s := s + ' - ' + jsonGetData(Data, 'result/opening_hours/periods[' +
+            i2s(i) + ']/close/time');
           s := s + #10;
         end;
         if jsonGetData(Data, 'result/opening_hours/open_now') = 'True' then
           s := s + 'Saat ini buka.';
 
-        s := s + #10 + StringReplace(jsonGetData(Data, 'result/international_phone_number'),
-          ' ', '', [rfReplaceAll]);
+        s := s + #10 + StringReplace(jsonGetData(Data,
+          'result/international_phone_number'), ' ', '', [rfReplaceAll]);
 
         s := s + #10#10'maps: ' + jsonGetData(Data, 'result/url');
         s := s + #10 + jsonGetData(Data, 'result/website');
@@ -1260,8 +1328,6 @@ begin
     EntityID := 94; //Indonesia
     s := SearchAsJson(_keyword, s2f(Params.Values['lat_value']),
       s2f(Params.Values['lon_value']), 5);
-    //LogUtil.Add(ResultText, 'LINE-KULINER');
-    //die( ResultText);
     if s <> '' then
       Result := ConvertJsonToTextInfo(s);
     Free;
@@ -1418,7 +1484,6 @@ function TCarikWebModule.kofaJadwalImsyakHandler(const IntentName: string;
   Params: TStrings): string;
 var
   s, kota, imsyak, maghrib: string;
-  t: int64;
 begin
   Result := '';
   kota := Params.Values['kota_value'];
@@ -1628,10 +1693,13 @@ begin
   Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
 end;
 
+//--> senin jam 11 meeting sama anu
+//--> info mudik
+
 function TCarikWebModule.kloudlessCalendarEventCreateHandler(const IntentName: string;
   Params: TStrings): string;
 var
-  jam, menit, jamSelesai, penambahanJam: integer;
+  jam, menit, jamSelesai: integer;
   s, eventName: string;
   startTime, endTime: TDateTime;
   jamTime: TTime;
@@ -1663,7 +1731,6 @@ begin
   // jam
   menit := 0;
   jamSelesai := 1;
-  penambahanJam := 0;
   if Params.Values['Nominal_value'] <> '' then
     Params.Values['Jam_value'] := Params.Values['Nominal_value'];
   s := Params.Values['Jam_value'];
@@ -1824,7 +1891,6 @@ function TCarikWebModule.apixuweatherInfoHandler(const IntentName: string;
   Params: TStrings): string;
 var
   _keyword, _suffix: string;
-  _img: string;
 
   function translateToID(ASource: string): string;
   begin
@@ -1853,7 +1919,6 @@ begin
     Result := WeatherAsJson(_keyword);
     if Result <> '' then
     begin
-      _img := 'http:' + Data['current.condition.icon'];
       Result := 'Cuaca di ' + Data['location.name'] + ':';
       Result := Result + #10 + translateToID(Data['current.condition.text']);
       Result := Result + #10'Suhu: ' + FormatFloat('#0.0',
@@ -2360,6 +2425,156 @@ begin
 
 end;
 
+function TCarikWebModule.isTriggeredText(Message: string): boolean;
+var
+  i, j: integer;
+  s, stime, strigger_name, strigger, LMessage: string;
+  jData: TJSONData;
+  d: TDateTime;
+  tmpFormatSettings: TFormatSettings;
+begin
+  Result := False;
+  LMessage := ' ' + Message + ' ';
+  jData := nil;
+
+  tmpFormatSettings := FormatSettings;
+  tmpFormatSettings.DateSeparator := '-';
+  tmpFormatSettings.ShortDateFormat := 'yyyy-MM-dd';
+  tmpFormatSettings.LongDateFormat := 'yyyy-MM-dd HH:nn:ss';
+
+  { TODO:
+  if last visit < 1 menit,
+    maka cek trigger2 khusus
+  selain itu, check trigger global
+  }
+
+  try
+    s := Config.GetObject(AI_CONFIG_TRIGGERWORD).AsJSON;
+    jData := GetJSON(s);
+    for i := 0 to jData.Count - 1 do
+    begin
+      strigger_name := Config.GetObject(AI_CONFIG_TRIGGERWORD).Names[i];
+      for j := 0 to jData.Items[i].Count - 1 do
+      begin
+        strigger := jData.Items[i].Items[j].AsString;
+        if preg_match(strigger, LMessage) then
+        begin
+          s := SafeText(strigger_name);
+          s := ReplaceAll(s, ['(', ')'], '');
+          s := mysql_real_escape_string(s);
+          s := TRIGGER_SESSION_PREFIX + Carik.GroupName + Carik.GroupChatID + '-' + s + '_time';
+
+          stime := Carik.Data.ReadString(TRIGGER_SESSION_PREFIX, s,
+            FormatDateTime('yyyy-mm-dd HH:nn:ss', IncMinute(Now, TRIGGER_INTERVAL + 2)));
+          try
+            d := StrToDateTime(stime, tmpFormatSettings);
+            //j := MinutesBetween(Now, d);
+            if MinutesBetween(Now, d) <= TRIGGER_INTERVAL then // in minutes
+            begin
+              Break;
+            end;
+          except
+          end;
+
+          Carik.Data.WriteString(TRIGGER_SESSION_PREFIX, s, FormatDateTime('yyyy-mm-dd HH:nn:ss', Now));
+          FTriggeredText := Trim(strigger);
+          Result := True;
+          break;
+        end;
+      end;
+
+    end;
+  except
+  end;
+
+
+  if Assigned(jData) then
+    jData.Free;
+  exit;
+
+  try
+    s := Config[AI_CONFIG_TRIGGERWORD];
+    jData := GetJSON(s);
+    for i := 0 to jData.Count - 1 do
+    begin
+      strigger := trim(jData.Items[i].AsString);
+      if preg_match(strigger, LMessage) then
+      begin
+        s := SafeText(strigger);
+        s := ReplaceAll(s, ['(', ')'], '');
+        s := mysql_real_escape_string(s);
+        s := TRIGGER_SESSION_PREFIX + Carik.GroupName + Carik.GroupChatID + '-' + s + '_time';
+
+        stime := Carik.Data.ReadString(TRIGGER_SESSION_PREFIX, s,
+          FormatDateTime('yyyy-mm-dd HH:nn:ss', IncMinute(Now, TRIGGER_INTERVAL + 2)));
+        try
+          d := StrToDateTime(stime, tmpFormatSettings);
+          j := MinutesBetween(Now, d);
+          if MinutesBetween(Now, d) <= TRIGGER_INTERVAL then // in minutes
+          begin
+            Break;
+          end;
+        except
+        end;
+
+        Carik.Data.WriteString(TRIGGER_SESSION_PREFIX, s, FormatDateTime('yyyy-mm-dd HH:nn:ss', Now));
+        FTriggeredText := Trim(strigger);
+        Result := True;
+        break;
+      end;
+    end;
+
+  except
+  end;
+
+end;
+
+function TCarikWebModule.IsUserSuspended(AChannelID, AUserID: string): boolean;
+var
+  s, check_url, client_id: string;
+  http_response: IHTTPResponse;
+  user_data: TJSONData;
+begin
+  Result := False;
+  if AUserID = '' then
+    Exit;
+  try
+    check_url := '';
+    check_url := Config[USERSTATUS_URL];
+    client_id := Config[USERSTATUS_CLIENTID];
+  except
+  end;
+  if client_id = '' then
+    Exit;
+  if check_url = '' then
+    Exit;
+
+  try
+    with THTTPLib.Create do
+    begin
+      URL := check_url;
+      AddHeader('Cache-Control', 'no-cache');
+      AddHeader('X-Client-Type', 'beta'); //TODO: client type
+      FormData['channel_id'] := AChannelID;
+      FormData['client_id'] := client_id;
+      FormData['user_id'] := AUserID;
+      http_response := Post;
+      if http_response.ResultCode = 200 then
+      begin
+        user_data := GetJSON(http_response.ResultText);
+        s := jsonGetData(user_data, 'user.status');
+        if s = 'disabled' then
+          Result := True;
+      end;
+
+      Free;
+    end;
+  except
+  end;
+
+end;
+
+
 procedure TCarikWebModule.Analytics(AChannel, AIntent, AText, AUserID: string);
 begin
   with TGoogleAnalyticsIntegration.Create do
@@ -2372,6 +2587,7 @@ begin
     Payloads['av'] := AChannel + '-v0';
     Payloads['ec'] := AChannel;
     Payloads['ea'] := AIntent;
+    Payloads['dp'] := '/' + AIntent;
     Payloads['el'] := UrlEncode(AText);
     Payloads['lbl'] := 'lbl1';
     Payloads['uid'] := AUserID;
@@ -2389,6 +2605,83 @@ begin
     Payloads['dp'] := UrlEncode(AIntent + '/' + AText);
     Send;
     Free;
+  end;
+
+end;
+
+function TCarikWebModule.KnowledgeBase(AKeyword: string): string;
+var
+  kb_url: string;
+  kb_json: TJSONData;
+  http_response: IHTTPResponse;
+begin
+  Result := '';
+  try
+    kb_url := '';
+    kb_url := Config[KNOWLEDGEBASE_URL];
+  except
+  end;
+
+  if kb_url = '' then
+    Exit;
+
+  try
+    with THTTPLib.Create do
+    begin
+      URL := kb_url;
+      AddHeader('Cache-Control', 'no-cache');
+      AddHeader('X-Client-Type', 'beta'); //TODO: client type
+      FormData['keyword'] := AKeyword;
+      http_response := Post;
+      if http_response.ResultCode = 200 then
+      begin
+        kb_json := GetJSON(http_response.ResultText);
+        Result := jsonGetData(kb_json, 'text');
+      end;
+
+      Free;
+    end;
+  except
+  end;
+
+end;
+
+function TCarikWebModule.ExternalNLP(AText: string): string;
+var
+  nlp_enable: boolean;
+  nlp_url: string;
+  nlp_json: TJSONData;
+  http_response: IHTTPResponse;
+begin
+  Result := '';
+  try
+    nlp_url := '';
+    nlp_url := Config[EXTERNAL_NLP_URL];
+    nlp_enable := Config[EXTERNAL_NLP_ENABLE];
+  except
+  end;
+  if nlp_url = '' then
+    Exit;
+
+  if not nlp_enable then
+    Exit;
+
+  nlp_url := nlp_url + '?text=' + UrlEncode(AText);
+  try
+    with THTTPLib.Create do
+    begin
+      URL := nlp_url;
+      AddHeader('Cache-Control', 'no-cache');
+      AddHeader('X-Client-Type', 'beta'); //TODO: client type
+      http_response := Get;
+      if http_response.ResultCode = 200 then
+      begin
+        nlp_json := GetJSON(http_response.ResultText);
+        Result := jsonGetData(nlp_json, 'text');
+      end;
+      Free;
+    end;
+  except
   end;
 
 end;
@@ -2965,7 +3258,6 @@ begin
           end;
           ThumbnailImageURL :=
             StringReplace(ThumbnailImageURL, 'http://', 'https://', [rfReplaceAll]);
-          //TODO: image http to https
 
           //AddActionPostBack( 'Detail', 'asdf?asfd=2&a=1');
           AddActionURI('Berita Selengkapnya', jsonGetData(jData, '[' +
@@ -2995,7 +3287,6 @@ end;
 function TCarikWebModule.FacebookBerita(ATitle, AJson: string): string;
 var
   i: integer;
-  s: string;
   jData: TJSONData;
   jElements: TJSONObject;
 begin
@@ -3007,7 +3298,6 @@ begin
   try
     jData := GetJSON(AJson);
     jData := jData.GetPath('items');
-    s := jData.AsJSON;
 
     with TFacebookTemplateElement.Create do
     begin
@@ -3017,7 +3307,7 @@ begin
       ActionURL := 'aaacccc';
 
       jElements.Add(AsJSON);
-      jElements.Add(AsJSON);                    //xx
+      jElements.Add(AsJSON);
       //jElements.Arrays['elements'] := GetJSON( AsJSON);
       //TODO: apa ini?  die(jElements.AsString);
 
@@ -3039,6 +3329,77 @@ begin
   jElements.Free;
 end;
 
+procedure TCarikWebModule.LogChat(AChannelID: string; AGroupID: string;
+  AUserID: string; AUserName: string; AText: string; AReply: string;
+  AIsGroup: boolean; AIsMentioned: boolean);
+var
+  log_url: string;
+  http_response: IHTTPResponse;
+  is_group, is_mentioned: string;
+begin
+  if AText = '' then
+    Exit;
+  try
+    log_url := '';
+    log_url := Config[CHATLOG_URL];
+  except
+  end;
+  if log_url = '' then
+    Exit;
+
+  is_group := '1';
+  is_mentioned := '1';
+  if AIsGroup then
+    is_group := '0';
+  if AIsMentioned then
+    is_mentioned := '0';
+
+  with THTTPLib.Create do
+  begin
+    URL := log_url;
+    AddHeader('Cache-Control', 'no-cache');
+    AddHeader('X-Client-Type', 'beta'); //TODO: client type
+    FormData['channelID'] := AChannelID;
+    FormData['groupID'] := AGroupID;
+    FormData['userID'] := AUserID;
+    FormData['userName'] := AUserName;
+    FormData['text'] := AText;
+    FormData['reply'] := AReply;
+    FormData['isGroup'] := is_group;
+    FormData['isMentioned'] := is_mentioned;
+    http_response := Post;
+    Free;
+  end;
+
+end;
+
+procedure TCarikWebModule.SaveUnknownChat(AText: string);
+var
+  log_url: string;
+  http_response: IHTTPResponse;
+begin
+  if AText = '' then
+    Exit;
+  try
+    log_url := '';
+    log_url := Config[UNKNOWN_STATS_URL];
+  except
+  end;
+  if log_url = '' then
+    Exit;
+
+  with THTTPLib.Create do
+  begin
+    URL := log_url;
+    AddHeader('Cache-Control', 'no-cache');
+    AddHeader('X-Client-Type', 'beta'); //TODO: client type
+    FormData['text'] := AText;
+    http_response := Post;
+    Free;
+  end;
+
+end;
+
 constructor TCarikWebModule.CreateNew(AOwner: TComponent; CreateMode: integer);
 begin
   inherited CreateNew(AOwner, CreateMode);
@@ -3055,6 +3416,7 @@ begin
   FLanguage := '';
   FFileURL := '';
   FCaption := '';
+  FTriggeredText := '';
   FErrorCount := 0;
   FMessengerMode := mmNone;
 end;
@@ -3112,11 +3474,11 @@ begin
     FIsTranslate := True;
     FLanguage := Params.Values['Language'];
     SimpleBOT.UserData['language'] := FLanguage;
+    SimpleBOT.UserData['language_datetime'] := FormatDateTime('yyyy-mm-dd HH:nn:ss', Now);
     Result := SimpleBOT.GetResponse(IntentName + 'Response');
     Result := StringReplace(Result, '%Language_value%',
       Params.Values['Language_value'], [rfReplaceAll]);
   end;
-  //TODO: set time language
 end;
 
 function TCarikWebModule.translateIndonesiaToSundaHandler(const IntentName: string;
@@ -3165,16 +3527,21 @@ var
 begin
   SimpleBOT.OnError := @OnErrorHandler;  // Your Custom Message
   SimpleBOT.TrimMessage := False;
-  SimpleBOT.IsStemming := Config[STEMMING_ENABLED];
-  SimpleBOT.StandardWordCheck := Config[STANDARDWORD_CHECKING];
+  try
+    SimpleBOT.IsStemming := Config[STEMMING_ENABLED];
+    SimpleBOT.StandardWordCheck := Config[STANDARDWORD_CHECKING];
+  except
+  end;
 
   Result := SimpleBOT.Exec(AMessage);
-  if (SimpleBOT.ResponseText.Text = '') and not (FSendAudio or FSendPhoto or FSendRichContent or FSendVenue) then
+  if (SimpleBOT.ResponseText.Text = '') and not (FSendAudio or
+    FSendPhoto or FSendRichContent or FSendVenue) then
   begin
     if (not FSendVenue) and (not FSendRichContent) then
     begin
-      SimpleBOT.ResponseText.Text := SimpleBOT.GetResponse('DataTidakAdaResponse');
-      Result := SimpleBOT.SimpleAI.ResponseJson;
+      //ulil - no responses
+      //SimpleBOT.ResponseText.Text := SimpleBOT.GetResponse('DataTidakAdaResponse');
+      //Result := SimpleBOT.SimpleAI.ResponseJson;
     end;
   end;
 
@@ -3192,6 +3559,9 @@ end;
 procedure TCarikWebModule.BotInit;
 begin
   SimpleBOT.Handler['define'] := @defineHandler;
+  SimpleBOT.Handler['definisi'] := @definisiHandler;
+  SimpleBOT.Handler['user_profile'] := @userProfileHandler;
+
   SimpleBOT.Handler['bot_start'] := @botStartHandler;
   SimpleBOT.Handler['resi_paket'] := @resiHandler;
   SimpleBOT.Handler['voucher_konvensional'] := @voucherConvensionalHandler;
@@ -3315,11 +3685,13 @@ begin
 
   end;
 
-
-  //TODO: simpan message ke DB, untuk dipelajari oleh AI
-  Analytics('global', 'failed', Message, Carik.UserID);
-
-  FErrorCount := FErrorCount + 1;
+  Result := ExternalNLP(Message);
+  if Result = '' then
+  begin
+    SaveUnknownChat(Message);
+    Analytics('global', 'unknown', Message, Carik.UserID);
+    FErrorCount := FErrorCount + 1;
+  end;
 end;
 
 function TCarikWebModule.CleanupMessage(const AMessage: string): string;

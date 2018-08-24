@@ -13,11 +13,18 @@ uses
 {$include ../carik.inc}
 
 type
+
+  { TMainModule }
+
   TMainModule = class(TCarikWebModule)
   private
     FPrefix: string;
     Facebook: TFacebookMessengerIntegration;
     procedure BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
+
+    // Payload
+    function payloadTestHandler(const APayload, ATitle: String): String;
+
   public
     constructor CreateNew(AOwner: TComponent; CreateMode: integer); override;
     destructor Destroy; override;
@@ -48,7 +55,12 @@ end;
 // Init First
 procedure TMainModule.BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
 begin
-  Response.ContentType := 'application/json';
+  //Response.ContentType := 'application/json';
+end;
+
+function TMainModule.payloadTestHandler(const APayload, ATitle: String): String;
+begin
+  Result := 'echo: ' + ATitle;
 end;
 
 // GET Method Handler
@@ -74,6 +86,40 @@ begin
   Carik.UserPrefix := 'fb';
   Carik.UserID := Facebook.UserID;
   SimpleBOT.SessionUserID := UniqueID;
+
+  // voice processing
+  if Facebook.IsVoice then
+  begin
+    fbVoice := 'ztemp/voice/' + Facebook.MessageID + '.mp4';
+    if FileExists(fbVoice) then
+      DeleteFile(fbVoice);
+    if not Facebook.DownloadVoiceTo(fbVoice) then
+    begin
+      Response.Content := '{"status":"voicefailed"}';
+      Exit;
+    end;
+
+    mp3File := 'ztemp/voice/' + Facebook.MessageID + '.mp3';
+    if FileExists(mp3File) then
+      DeleteFile(mp3File);
+    if Exec('./ffmpeg', ['-i', fbVoice, '-ac', '1', mp3File], s, swoNone) then
+    begin
+      with TWitAiIntegration.Create do
+      begin
+        Token := Config[WITAI_TOKEN];
+        //ContentType := Facebook.VoiceType; use default
+        Text := trim(SpeechToText(mp3File));
+        if Text = '' then
+        begin
+          LogUtil.Add(ResultText, 'FB-voice');
+        end;
+        Free;
+      end;
+      FPrefix := SimpleBOT.GetResponse('VoiceResult');
+      FPrefix := format(FPrefix, [Text]) + '\n\n';
+    end;
+
+  end;// end - voice processing
 
   if Facebook.isImage then
   begin
@@ -107,6 +153,32 @@ begin
 
   end; //-- isImage
 
+  // Is Location
+  if Facebook.IsLocation then
+  begin
+    SimpleBOT.UserData['LOC_LAT'] := FloatToStr(Facebook.LocationLatitude);
+    SimpleBOT.UserData['LOC_LON'] := FloatToStr(Facebook.LocationLongitude);
+    SimpleBOT.UserData['LOC_NAME'] := Facebook.LocationName;
+    SimpleBOT.UserData['LOC_DATE'] := DateTimeToStr(Now);
+
+    // still on topic, find location
+    if ContextFocus <> '' then
+    begin
+      Text := ContextFocus + ' ' + SimpleBOT.UserData['LOC_LAT'] +
+        ' ' + SimpleBOT.UserData['LOC_LON'] + ' ' + SimpleBOT.UserData['CONTEXT_DETAIL'];
+      LogUtil.Add(Text, 'LOKASI');
+    end;
+  end; //-- Is Location
+
+  if Facebook.isPostback then
+  begin
+    Facebook.PayloadHandler['test'] := @payloadTestHandler;
+    Text := Facebook.PayloadHandling;
+
+    die( 'zzz: ' + Text);
+    Text := '';
+  end;
+
   if Text = '' then
   begin
     Response.Content := '{"status":"empty"}';
@@ -118,8 +190,24 @@ begin
   Carik.UserID := Facebook.UserID;
   Carik.UserPrefix := 'fb';
 
+  SimpleBOT.UserData['Name'] := Facebook.UserID;
+  SimpleBOT.UserData['FullName'] := Facebook.UserID; //TODO: Get Full Name
+  SimpleBOT.AdditionalParameters.Values['UserID'] := 'fb-' + Facebook.UserID;
+  SimpleBOT.AdditionalParameters.Values['ChatID'] := 'fb-' + Facebook.MessageID;
+
   BotInit;
   Response.Content := ProcessText(Text);
+
+  LogChat(FACEBOOK_CHANNEL_ID, Carik.GroupChatID, Carik.UserID, Carik.UserName, Facebook.Text, SimpleBOT.SimpleAI.ResponseText.Text, Carik.IsGroup, True);
+  //if not TELEGRAM.IsGroup then
+  begin
+    if IsUserSuspended( FACEBOOK_CHANNEL_ID, Carik.UserID) then
+    begin
+      if AppData.debug then
+         LogUtil.Add( Carik.UserID + ' suspended', 'USERCHECK');
+      Exit;
+    end;
+  end;
 
   //Exec Command
   if Carik.IsCommand(SimpleBOT.SimpleAI.ResponseText.Text) then
@@ -134,8 +222,12 @@ begin
     Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end;
 
+  //Exit;//ulil
+
   if SendRichContent then
   begin
+    die('...rich...');
+    exit;
     //LINE.Push(line.UserID, RichContent, True);
     //LogUtil.Add( LINE.ResultText, 'FB-Rich');
   end;
@@ -147,6 +239,10 @@ begin
   SimpleBOT.SimpleAI.ResponseText.Text :=
     TrimFacebookMessage(SimpleBOT.SimpleAI.ResponseText.Text);
   Facebook.Send(Facebook.UserID, SimpleBOT.SimpleAI.ResponseText.Text);
+  if not Facebook.IsSuccessfull then
+  begin
+    LogUtil.Add(Facebook.ResultText, 'FB');
+  end;
 
   // if speaking mode
   if SpeakingMode then
@@ -168,6 +264,7 @@ begin
     Facebook.SendAudio(Facebook.UserID, FileURL);
   end;
 
+  Analytics('facebook', SimpleBOT.SimpleAI.IntentName, Text, 'fb-' + Carik.UserID);
 end;
 
 

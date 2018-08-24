@@ -89,6 +89,38 @@ begin
   Carik.UserID := LINE.UserID;
   SimpleBOT.SessionUserID := UniqueID;
 
+  if LINE.isVoice then
+  begin
+    lineVoice := 'ztemp/cache/' + LINE.MessageID + '.mp4';
+    if FileExists(lineVoice) then
+      DeleteFile(lineVoice);
+    if not LINE.GetContent(LINE.MessageID, lineVoice) then
+    begin
+      Response.Content := '{"status":"voicefailed"}';
+      Exit;
+    end;
+
+    Text := SpeechToText(lineVoice);
+
+    if Text <> '' then
+    begin
+      s := SimpleBOT.GetResponse('VoiceResult');
+      s := format(s, [Text]);
+      s := TrimLineMessage(s);
+      LINE.Reply(ReplyToken, s);
+      forceRespond := True;
+    end
+    else
+    begin
+      s := SimpleBOT.GetResponse('VoiceResultNone');
+      s := StringReplace(s, '%username%', '', [rfReplaceAll]);
+      s := TrimLineMessage(s);
+      LINE.Reply(ReplyToken, s);
+      Exit;
+    end;
+
+  end;//-- isVoice
+
   if not forceRespond then
   begin
     if LINE.isMessage then
@@ -162,6 +194,8 @@ begin
     Exit;
   end;
 
+  LogChat(LINE_CHANNEL_ID, Carik.GroupChatID, Carik.UserID, Carik.UserName, Text, SimpleBOT.SimpleAI.ResponseText.Text, Carik.IsGroup, True);
+
   {
   SimpleBOT.UserData['Name'] := userName;
   SimpleBOT.UserData['FullName'] := fullName;
@@ -169,6 +203,7 @@ begin
   MessengerMode := mmLine;
   BotInit;
   Response.Content := ProcessText(Text);
+  //exit; //ulil
 
   SimpleBOT.SimpleAI.ResponseText.Text :=
     StringReplace(SimpleBOT.SimpleAI.ResponseText.Text, '\n', #10, [rfReplaceAll]);
@@ -181,6 +216,8 @@ begin
     LINE.Send(LINE.UserID, SimpleBOT.SimpleAI.ResponseText.Text)
   else
     LINE.Reply(ReplyToken, SimpleBOT.SimpleAI.ResponseText.Text);
+  if SimpleBOT.Debug then
+    LogUtil.Add( LINE.ResultText, 'LINE');
 
 
   if SpeakingMode then
@@ -223,6 +260,7 @@ begin
     LogUtil.Add(LINE.ResultText, 'LINE-Rich');
   end;
 
+  Analytics('line', SimpleBOT.SimpleAI.IntentName, Text, 'ln-' + Carik.UserID);
   //Response.Content := 'OK';
 end;
 

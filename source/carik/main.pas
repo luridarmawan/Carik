@@ -6,11 +6,11 @@ interface
 
 uses
   carik_webmodule,
-  fpjson, RegExpr,
+  fpjson, RegExpr, googlegeocoding_integration,
   carik_controller, simplebot_controller, logutil_lib, resiibacor_integration,
   clarifai_integration, telegram_integration, googleplacesearch_integration,
   movie_controller, currencyibacor_integration,
-  Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, database_lib;
+  Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, database_lib, json_helpers, string_helpers;
 
 const
   BOTNAME_DEFAULT = 'Carik';
@@ -56,6 +56,7 @@ end;
 // Init First
 procedure TMainModule.BeforeRequestHandler(Sender: TObject; ARequest: TRequest);
 begin
+  Response.ContentType := 'application/json';
 end;
 
 // GET Method Handler
@@ -83,25 +84,28 @@ begin
   try
     jsonData := GetJSON(Request.Content);
     try
-      Text := jsonData.GetPath('message.text').AsString;
+      //Text := jsonData.GetPath('message.text').AsString;
     except
       Text := '';
     end;
+    Text := jsonData.Value['message/text'];
     if Text = 'False' then
       Text := '';
-    updateID := jsonData.GetPath('update_id').AsInteger;
-    messageID := jsonData.GetPath('message.message_id').AsString;
-    chatID := jsonData.GetPath('message.chat.id').AsString;
-    chatType := jsonData.GetPath('message.chat.type').AsString;
-    try
-      _userID := jsonData.GetPath('message.from.id').AsString;
-      userName := jsonData.GetPath('message.from.username').AsString;
-      fullName := trim(jsonData.GetPath('message.from.first_name').AsString +
-        ' ' + jsonData.GetPath('message.from.last_name').AsString);
-      if fullName = '' then
-        fullName := userName;
-    except
-    end;
+
+    messageID := jsonData.Value['message/message_id'];
+    chatID := jsonData.Value['message/chat/id'];
+    chatType := jsonData.Value['message/chat/type'];
+
+    _userID := jsonData.Value['message/from/id'];
+    userName := jsonData.Value['message/from/username'];
+    if userName = '' then
+      userName := trim(jsonData.Value['message/from/name']);
+    fullName := trim( jsonData.Value['message/from/first_name'] + ' '
+      + jsonData.Value['message/from/last_name']);
+    if fullName = '' then
+      fullName := trim(jsonData.Value['message/from/name']);
+    if fullName = '' then
+      fullName := userName;
   except
   end;
 
@@ -120,7 +124,7 @@ begin
   end;
 
   // remove mention from text
-  Text := LowerCase(Text);
+  Text := Text.ToLower;
   {
   if Pos('@' + BOTNAME_DEFAULT, Text) = 1 then
   begin
@@ -155,7 +159,6 @@ begin
   BotInit;
   Response.Content := ProcessText(Text);
 
-
   //Exec Command
   if Carik.IsCommand(SimpleBOT.SimpleAI.ResponseText.Text) then
   begin
@@ -170,11 +173,18 @@ begin
 
   //---
   channelID := _GET['channel'];
-  if Carik.UserID = '' then
-    Carik.UserID := '';
   if channelID = '' then
     channelID := 'direct';
-  Analytics(channelID, SimpleBOT.SimpleAI.IntentName, Text, channelID + '-' + Carik.UserID);
+
+  if not (_GET['_DEBUG'] = '1') then
+  begin
+    Analytics(channelID, SimpleBOT.SimpleAI.IntentName, Text, channelID + '-' + Carik.UserID);
+    if channelID = 'whatsapp' then
+      LogChat(WHATSAPP_CHANNEL_ID, Carik.GroupChatID, Carik.UserID, Carik.UserName, Text, SimpleBOT.SimpleAI.ResponseText.Text, Carik.IsGroup, True)
+    else
+      LogChat(DEFAULT_CHANNEL_ID, Carik.GroupChatID, Carik.UserID, Carik.UserName, Text, SimpleBOT.SimpleAI.ResponseText.Text, Carik.IsGroup, True);
+  end;
+
   SimpleBOT.Free;
   Response.ContentType := 'application/json';
 end;

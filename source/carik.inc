@@ -1,6 +1,23 @@
 const
+  DEFAULT_CHANNEL_ID = '1';
+  TELEGRAM_CHANNEL_ID = '2';
+  FACEBOOK_CHANNEL_ID = '3';
+  LINE_CHANNEL_ID = '4';
+  WHATSAPP_CHANNEL_ID = '5';
+  SKYPE_CHANNEL_ID = '6';
+  SLACK_CHANNEL_ID = '7';
+
   BOTNAME_DEFAULT = 'Carik';
   CONFIG_BOTNAME = 'ai/default/name';
+
+  USERSTATUS_URL = 'ai/default/user_status/url';
+  USERSTATUS_CLIENTID = 'ai/default/user_status/client_id';
+  KNOWLEDGEBASE_URL = 'knowledge_base/url';
+  CHATLOG_URL = 'ai/default/chatlog_url';
+  UNKNOWN_STATS_URL = 'ai/default/unknown_stats_url';
+  EXTERNAL_NLP_ENABLE = 'ai/default/external_nlp/enable';
+  EXTERNAL_NLP_URL = 'ai/default/external_nlp/url';
+
   CLARIFAI_TOKEN = 'clarifai/default/token';
   CLARIFAI_CLIENTID = 'clarifai/default/client_id';
   CLARIFAI_CLIENTSECRET = 'clarifai/default/client_secret';
@@ -55,4 +72,8 @@ const
 
   STEMMING_ENABLED = 'ai/default/stemming';
   STANDARDWORD_CHECKING = 'ai/default/standard_word_check';
+
+  TRIGGER_INTERVAL = 60;
+  TRIGGER_SESSION_PREFIX = 'TRIGGER_';
+
 

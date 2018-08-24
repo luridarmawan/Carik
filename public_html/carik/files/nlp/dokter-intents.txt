@@ -1,0 +1,16 @@
+
+[DokterGreeting]
+say=@Greeting @Profesi:dokter
+say=@Waktu:waktu
+
+[DokterGejala]
+say=@Sapaan:aku @apapun @Sakit
+say=@Sapaan:aku @Sakit
+
+[DokterDitanya]
+say=@Sapaan:aku @apapun (t|n)anya @Profesi:dokter
+say=@Sapaan:aku @apapun (t|n)anya ke @Profesi:dokter
+
+[DokterTanya]
+say=obat untuk @Sakit
+say=obat @Sakit
