@@ -286,9 +286,6 @@ begin
     end;
   end;
 
-
-  Exit;//ulil
-
   //TODO: rekam pembicaraan sendiri
 
   if TELEGRAM.IsGroup then
