@@ -5,7 +5,7 @@
     "baseurl": "",
     "admin_email": "webmaster@coba.com",
     "development": true,
-    "debug": false,
+    "debug": true,
     "module_default": "main",
     "language_default": "id",
     "theme_enable": false,
@@ -42,7 +42,7 @@
       "debug": false,
       "stemming": false,
       "standard_word_check": true,
-      "basedir": "files/ai/",
+      "basedir": "files/nlp/",
       "unknown_stats_url": "",
       "chatlog_url": "",
       "user_status": {
