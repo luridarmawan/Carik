@@ -1,0 +1,41 @@
+stages:
+  - build
+
+build_production:
+  stage: build
+  image: centos
+  script:
+    - 'yum -y install openssh-clients'
+    - 'ssh-agent bash'
+    - 'mkdir -p ~/.ssh'
+    - 'echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - 'ssh-add <(echo "$SSH_PRIVATE_KEY")'
+    - '# Update source'
+    - 'ssh -p22 ec2-user@54.254.152.24 "cd garapan/Carik/source/vendors/fastplaz/ && git pull origin development"'
+    - '# MARK'
+    - '#ssh -p22 ec2-user@54.254.152.24 "cd garapan/Carik/source/Carik/ && git pull origin development"'
+    - '# Compiling'
+    - 'ssh -p22 ec2-user@54.254.152.24 "cd garapan/Carik/source/Carik/source/facebook/ && ./build.sh"'
+    - 'ssh -p22 ec2-user@54.254.152.24 "cd garapan/Carik/source/Carik/source/carik/ && ./build.sh"'
+    - 'ssh -p22 ec2-user@54.254.152.24 "cd garapan/Carik/source/Carik/source/telegram/ && ./build.sh"'
+    - 'ssh -p22 ec2-user@54.254.152.24 "cd garapan/Carik/source/Carik/source/line/ && ./build.sh"'
+    - 'ssh -p22 ec2-user@54.254.152.24 "cd garapan/Carik/source/Carik/source/messenger/ && ./build.sh"'
+
+build_telegram:
+  stage: build
+  image: centos
+  script:
+    - 'yum -y install openssh-clients'
+    - 'ssh-agent bash'
+    - 'mkdir -p ~/.ssh'
+    - 'echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+    - 'ssh-add <(echo "$SSH_PRIVATE_KEY")'
+    - '# Update source'
+    - 'ssh -p22 ec2-user@54.254.152.24 "cd garapan/Carik/source/vendors/fastplaz/ && git pull origin development"'
+    - '# MARK'
+    - '#ssh -p22 ec2-user@54.254.152.24 "cd garapan/Carik/source/Carik/ && git pull origin development"'
+    - '# Compiling'
+    - 'ssh -p22 ec2-user@54.254.152.24 "cd garapan/Carik/source/Carik/source/telegram/ && ./build.sh"'
+  only:
+    - development
+  when: manual
