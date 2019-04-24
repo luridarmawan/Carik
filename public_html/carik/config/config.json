@@ -1,0 +1,239 @@
+{
+  "systems": {
+    "sitename": "SimpleBOT",
+    "slogan": "SimpleBOT with SimpleAI and FastPlaz",
+    "baseurl": "",
+    "admin_email": "webmaster@coba.com",
+    "development": true,
+    "debug": true,
+    "module_default": "main",
+    "language_default": "id",
+    "theme_enable": false,
+    "theme": "default",
+    "cache": "none",
+    "temp": "ztemp",
+    "error_url": "/",
+    "session_timeout": 0,
+    "ffmpeg_path": "./ffmpeg",
+    "error_redirect": false
+  },
+  "external_nlp": {
+    "enable": false,
+    "nlp": [
+      {
+        "enable": true,
+        "url": "http://localhost:8080/api/",
+        "key": ""
+      },
+      {
+        "enable": true,
+        "url": "http://ml.carik.local:8008/learning",
+        "key": ""
+      }
+    ]
+  },
+  "knowledge_base": {
+    "url": ""
+  },
+  "ai": {
+    "default": {
+      "name": "Carik",
+      "datasource": "file",
+      "debug": false,
+      "stemming": false,
+      "standard_word_check": true,
+      "basedir": "files/nlp/",
+      "unknown_stats_url": "",
+      "chatlog_url": "",
+      "user_status": {
+        "client_id": "carik",
+        "url": ""
+      },
+      "external_nlp": {
+        "enable": false,
+        "url": "",
+        "key": ""
+      },
+      "entities": [
+        "lokasi-entities.txt",
+        "ai-entities.txt"
+      ],
+      "intents": [
+        "chat-intents.txt",
+        "kdrt-intents.txt",
+        "property-intents.txt",
+        "smarthome-intents.txt",
+        "lokasi-intents.txt",
+        "tiket-intents.txt",
+        "pulsa-intents.txt",
+        "cs-intents.txt",
+        "ai-intents.txt"
+      ],
+      "response": [
+        "chat-response.txt",
+        "kdrt-response.txt",
+        "property-response.txt",
+        "smarthome-response.txt",
+        "lokasi-response.txt",
+        "tiket-response.txt",
+        "cs-response.txt",
+        "ai-response.txt",
+        "ai-questions.txt"
+      ],
+      "trigger_word": {
+        "bot_call": ["Carik", "Bot"],
+        "meninggal": ["(telah|telah|kemaren|kemarin|tadi|yang) meninggal", "innalillahi"],
+        "sakit": ["lagi sakit"],
+        "makan2": ["makan2", "makan-makan"],
+        "ulang_tahun": ["ulang tahun", "hbd", "birthday", "milad", "met ultah"],
+        "aamiin": ["aamiin|amiin|aamin|aamien|آمين"]
+      }
+    }
+  },
+  "telegram": {
+    "default": {
+      "token": "tour_telegram_token"
+    }
+  },
+  "line": {
+    "default": {
+      "token": "your_line_token"
+    }
+  },
+  "facebook": {
+    "default": {
+      "token": "your_facebook_token"
+    }
+  },
+  "omdb": {
+    "default": {
+      "key": ""
+    }
+  },
+  "PortalPulsa": {
+    "default": {
+      "userid": "",
+      "key": "",
+      "secret": ""
+    }
+  },
+  "ibacor": {
+    "default": {
+      "token": ""
+    }
+  },
+  "clarifai": {
+    "default": {
+      "client_id": "",
+      "client_secret": "",
+      "token": ""
+    }
+  },
+  "google": {
+    "key": "",
+    "default": {
+      "key": ""
+    }
+  },
+  "googleanalytics": {
+    "default": {
+      "tracking_id": ""
+    }
+  },
+  "zomato": {
+    "default": {
+      "url": "",
+      "key": ""
+    }
+  },
+  "yandex": {
+    "default": {
+      "key": ""
+    }
+  },
+  "witai": {
+    "default": {
+      "token": ""
+    }
+  },
+  "cognitive": {
+    "ocr": {
+      "key": "",
+      "key2": ""
+    }
+  },
+  "customvision": {
+    "default": {
+      "key": "",
+      "url": ""
+    }
+  },
+  "openweathermap": {
+    "default": {
+      "key": ""
+    }
+  },
+  "apixu": {
+    "default": {
+      "key": ""
+    }
+  },
+  "klaudless": {
+    "default": {
+      "appid": "",
+      "apikey": "",
+      "calendar_accountid": "",
+      "calendar_id": ""
+    }
+  },
+  "maskofa": {
+    "jadwalshalat": {
+      "sessionid": "",
+      "citylists": ""
+    }
+  },
+  "msbotframework": {
+    "default": {
+      "client_id": "",
+      "client_secret": ""
+    }
+  },
+  "rss": {
+    "detik": "http://rss.detik.com/index.php/detikcom_nasional",
+    "sindo": "https://www.sindonews.com/feed",
+    "antara": "http://www.antaranews.com/rss/top-news",
+    "tempo": "https://rss.tempo.co/index.php/teco/news/feed/start/0/limit/10/kanal/6",
+    "okezone": "http://sindikasi.okezone.com/index.php/rss/0/RSS2.0",
+    "kapanlagi": "https://www.kapanlagi.com/feed/",
+    "republika": "http://www.republika.co.id/rss"
+  },
+  "pajakmotor": {
+    "api_url": ""
+  },
+  "carik": {
+    "path": "files/carik/",
+    "tts_url": ""
+  },
+  "database" : {
+    "default" : {
+      "driver" : "MySQL 5.7",
+      "hostname" : "localhost",
+      "port" : "",
+      "username" : "root",
+      "password" : "root",
+      "database_name" : "carik",
+      "prefix" : "",
+      "library" : ""
+    }
+  },
+  "mailer": {
+    "default": {
+      "hostname": "your.smtp.server",
+      "username": "your_username",
+      "password": "the_password",
+      "smtp_port": "465",
+      "ssl": true,
+      "tls": true
+    }
+  }
+}

@@ -1,0 +1,207 @@
+[Example]
+action=example
+say=example
+
+[WordCencor]
+gila=gila|gendeng|crazy|pea|kampret
+binatang=asu|anjing|babi
+lainnya=tai|taek|eek|pret|setan|kakeane|dancuk|jiancuk
+sexuality=kontol|ngentu|bawuk|ngentot
+wtf=what the fuck|fuck|wtf
+
+[Greeting]
+hi=hi|hii|hai|hei|halo|hallo|halow|hallow|hellow|hola|hox|hy
+salam=salam kenal|salam
+yo=yo|yoyoi
+jawa=kulonuwun|nuwun
+
+[SalamMuslim]
+salam=assalamualaikum|assalamu'alaikum|assalamualaykum|assalamu'alaykum|assalamu alaikum
+salamlengkap=assalamu alaikum wa rahmatullah|assalamu'alaikum wa rahmatullah
+
+[SalamArabic]
+salam1=ﷵ
+
+[Sapaan]
+aku=aku|saya|sy|gue|gwe|gw|akyu|ane|私
+kamu=kamu|kmu|mu|kamyu|kau|dikau|engkau|ngkau|anda|lu|loe|ente|sampean|samean
+dia=om|mbah|pak|mas|pakdhe|kak|kakak|mas|bu|ibu|dek
+kakak=kk
+
+[HalTerlarang]
+narkoba=ganja|inex|narkoba|morfin|candu
+miras=bir|wiski|vodka
+mabuk=mabuk|mabok
+sex=kentu|ngentot|ml|sex|homo|lesbian|lesbi
+
+[Keadaan]
+baik=baik|sehat|alhamdulillah|kuat|semangat|sembuh
+buruk=buruk|sakit|demam|capek|lelah|sepi|pusing|pusing2|mual|mual2
+
+
+[Pasangan]
+pasangan=jodoh|pasangan
+suami=suami|swami|laki|cowo
+istri=istri|bini|wife|cewe
+pacar=pacar
+
+[Abaikan]
+yuk=dong|yuk
+
+[TanyaLokasi]
+dimana=di mana|dimana
+
+[Pembayaran]
+cicilan=cicilan|cicil|angsuran|angsur|installment|instalment
+tunai=tunai
+
+[Tanya]
+tandatanya=\?
+siapa=siapa|syapa|sapa
+apa=apa|apakah|pa
+mengapa=mengapa|ngapa|napa|kenapa|knp|why
+berapa=berapa|brp|brapa|piro
+bagaimana=bagaimana|gimana|gmn|bgmn|bgm|how
+bisa=bisakah|bisa|boleh|bolehkan|bolehkan
+mau=mau|bersedia
+ngapain=ngapain
+kapan=kapan|kpn
+
+[Perintah]
+cari=cariin|carikan|cari|temukan
+beli=belikan|beli|blikan|beliin|pesan|pesen|pesan|pesenin|pesanin
+jual=jual|jualin
+buat=mbuat|buatkan|buat|buwat|buatin
+hitung=hitung|hitungkan|hitungin|itungin
+ambil=ambil|ambilkan
+pergi=pergi
+
+[Respon]
+baik=baik|baiklah|okey|okeh|oke|okelah|ok|sip|sipp|senang|seneng|yoi|terima kasih|terima ksh|makasih|trm ksh|thx|thanks|silahkan|selow|woles|slow|iya|ya|yak|oiyah|tentu|thank|thx|cakep
+buruk=mbuh|tauah|tauk|ga tau|ngga tau|entahlah|gaje|gajelas|karepmu|auah|au ah|ga asik|gak asik|gak asyik|goblok|sombong|sontoloyo|asem|terserah|dasar|iyalah
+maklum=maklumi|maklum
+gemblung=gemblung|gokil|bego|parah|gandeng|songong|setres|stres|stress|ngeyel
+
+[Logika]
+ya=iyak|yak|yak|iyes|yes
+tidak=tidak|tdk|nggak|gak|ga|enggak
+
+[Waktu]
+jam=jam
+hari=hari|hr
+minggu=minggu
+bulan=bulan|bln
+tahun=tahun|thn
+tanggal=tanggal|tgl
+waktu=pagi|siang|sore|petang|malam|malem|morning|night
+
+[Kondisi]
+jika=jika|kalau|kalaw|kalo|klo|apabila|bila
+
+[RutinitasHarian]
+makan=makan|mangan|maem|mkan|makanan
+minum=minum|mnum|minuman
+mandi=mandi|mndi
+tidur=tidur|turu|bobo
+kerja=kerja|gawe
+
+[Aktivitas]
+laku=lakukan|jalani|perbuat
+belajar=belajar|blajar
+
+[PersonalStatus]
+nikah=nikah|menikah|merid|married|meried
+single=jomblo|single|gadis|gds|lajang|perjaka|homo|jablai
+
+[Umur]
+umur=umur|usia
+umurmu=umurmu
+
+[JenisKelamin]
+laki=laki-laki|laki laki|laki|lanang|lelaki
+perempuan=perempuan|gadis|ibu
+
+[PersonalKnowledge]
+tahu=kenal|tau|tahu|ngerti|ngertiin
+
+[HargaLevel]
+mahal=paling mahal|termahal|mahal|mhal
+murah=paling murah|termurah|murah|mrah
+
+[Nominal]
+nominal=.*\d
+range=kisaran|seharga|seputar|harga
+harga=harga|hrga
+
+[RangeNilai]
+minimal=minimal|min|mulai dari|mulai|terendah
+maksimal=maksimal|maximal|max|dibawah|di bawah|dibaah|kurang dari|kurang|tidak lebih dari|tdk lebih dr|tidak lebih|tdk lebih|tertinggi
+
+[Angka]
+angka=.*\d
+angkasatuan=satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|seratus|seribu|sejuta
+
+[Satuan]
+ribu=ribu|rb
+juta=juta|jt
+milyar=milyar|milyr|miliar
+
+[Kencantikan]
+baik=ngganteng|ganteng|cantik|keren|hebat|powerful|top|pinter|pintar|cakep
+buruk=jelek|songong|gila|budeg|bodoh
+
+[Perasaan]
+tidak=benci|jijay|ga suka|ga seneng
+baik=suka|demen|seneng|kesengsem|trisna|love
+
+[Ekspresi]
+baik=haha|hehe|hihi|hoho|wkwk|muachhh|muatih
+kaget=eehh|ehh|wow
+
+[Keraguan]
+kok=kok|koq|lhoo|lho|lah|oya|ohya|masa sih|masa
+
+[Sifat]
+baik=baik|super|luar biasa|hebat|keren|cool|pinter|cerdas
+buruk=jahat|genit|bodoh|goblok|jelek
+
+[Figure]
+presiden=soekarno|soeharto|sby|jokowi|megawati|prabowo|jkw
+pahlawan=pattimura|diponegoro|kartini
+jagoan123=ansori|encang|ihdi|oka|abi|ines
+dev=peter|bams|bambang|anne|deroh|ratu|yudi|joko
+devpascal=indra|tigor|derit|kofa|maskofa
+CafeStartup=temmy|gisela|gisel|bontot|wiwin
+
+[Profesi]
+pembantu=pembantu
+karyawan=karyawan
+programmer=developer|programmer|tukang ketik
+prt=pembantu rumah tangga|prt|pembantu rmh tangga
+dokter=dokter|dok
+swasta=swasta
+pns=pegawai negeri|pgw negeri|pegawai negri|pgw negri
+
+[MelakukanSesuatu]
+hubungi=menghubungi|hubungi|ngubungin|kontak
+belajar=belajar
+ngopi=ngopi
+
+[Sedang]
+sudah=sdh|sudah|sdah|udah
+sedang=sedang|sdg|lagi|lg
+akan=akan|mau|mo
+
+[Tolong]
+tolong=tolong|tulung|tolongin
+help=help
+
+[NoRespon]
+responthx=sama-sama|sama sama|sama|sama2
+
+[TandaBaca]
+tanya=\?
+titik=.
+koma=,
+seru=\!
+

@@ -1,0 +1,434 @@
+[ExamplePattern]
+action=example
+say=@Example
+
+[WordCencor]
+say=@WordCencor
+
+[Test1]
+say=test
+
+[ResponBaik]
+say=^@Respon:baik
+say=^@Respon:maklum
+
+[ResponBuruk]
+say=@Respon:buruk
+say=@Logika:tidak @Tanya:bisa
+say=@Logika:tidak usah
+say=^@Logika:tidak
+say=@Respon:gemblung
+
+[HubungiSupport]
+say=@Tanya:bagaimana @Sapaan:aku @MelakukanSesuatu:hubungi support
+say=@Tanya:bagaimana @Sapaan:aku @MelakukanSesuatu:hubungi
+
+[PembantuCari]
+say=@Profesi:pembantu @PropertyType:rumah tangga
+say=pembantu rumah tangga
+
+[Sanjungan]
+say=@Sapaan:kamu @apapun @Kencantikan:baik
+say=@Sapaan:kamu @Kencantikan:baik
+say=@Sapaan:kamu @apapun @Sifat:baik
+say=@Sapaan:kamu @Sifat:baik
+
+[Mengeluh]
+say=(kok|koq) gitu
+say=@Tanya:bagaimana sih
+say=capek (ahh|deh)
+
+[TelegramBotStart]
+action=telegram_menu
+say=/start
+
+[ResiPaket]
+action=resi_paket
+say=resi @vendor @nomor
+
+[Kamus]
+action=kamus
+object=kamus
+say1=apa itu @word
+say2=^@word (artinya|arti|maksud|maksudnya|kamus)
+say2=^(artinya|arti|maksud|maksudnya|kamus) @word
+say4=@word (artinya|arti|maksud|maksudnya|kamus)
+say3=(artinya|arti|maksud|maksudnya|kamus) @word
+
+[Larangan]
+say=(jangan|jgn) @apapun
+
+[Ajakan]
+say=@word (yuk|yuukk|yok)
+
+[xxxx]
+say=xxx
+
+[SuggestionResponse]
+action=suggestion
+say=(suggest|saran|teach) @answer : @question
+say=(suggest|saran|teach) @answer: @question
+
+[CarikStart]
+action=carik_start
+say=mulai (catat|catet)
+say=(rekam|catat|catet|mulai|start) (kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen|nyatet)
+say=(kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen|nyatet) (mulai|dimulai|start|dicatat|dicatet)
+say=(mulai|start) (kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen|nyatet)
+
+[CarikStop]
+action=carik_stop
+say=(kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen|nyatet) (dihentikan|stop|berhenti)
+say=(dihentikan|stop|berhenti|hentikan) (kulwap|obrolan|diskusi|rapat|rekaman|rekam|catatan|catat|notulen|nyatet)
+
+[CarikSend]
+action=carik_send
+say=kirimkan rekaman ke @email
+say=rekaman kirim ke @email
+
+[CariCheck]
+action=carik_check
+say=sedang (nyatet|catet|rekam)
+
+
+[SholatJadwal]
+action=jadwal_sholat
+say=jadwalsholat @kota
+say=jadwalsholat
+say=(jadwal|jadual) sholat (untuk|utk|kota) @kota
+say=(jadwal|jadual) sholat @kota
+say=(jadwal|jadual) sholat
+
+[Lahir]
+object=lahir
+say=@Sapaan:kamu lahir
+say=@Sapaan:kamu lahirnya
+
+[NoEnglish]
+say=are you speaking english
+say=speaking english
+say=speak english
+
+[CariJodoh]
+object=jodoh
+say=@Perintah:cari @Pasangan
+say=@Pasangan:pasangan
+
+[CariJodohKriteria]
+object=jodoh
+say=yang @Kencantikan
+
+[TanyaPasanganSeseorang]
+say=@Tanya:siapa @Pasangan @seseorang
+say=@Pasangan @seseorang
+
+[Lulus]
+say=@Tanya:kapan @siapapun (lulus|wisusda|meninggal|mati)
+say=@Tanya:kapan (lulus|wisuda|meninggal|mati)
+
+[Nikah]
+say=@Tanya:kapan @siapapun @PersonalStatus:status
+say=@Tanya:kapan @PersonalStatus:status
+
+[Kencan]
+say=@Sapaan:aku kencan
+say=kencan
+say=@Sapaan:kamu lamar
+say=jalan2
+
+[HalTerlarang]
+say=@Perintah @HalTerlarang
+say=@HalTerlarang
+
+[KeadaanBaik]
+say=@Sapaan:kamu @Keadaan:baik
+say=@Keadaan:baik
+
+[KeadaanBuruk]
+say=@Sapaan:kamu @Keadaan:buruk
+say=@Keadaan:buruk
+say=@Keadaan:buruk @apapun
+
+
+[Menghibur]
+say=jangan sedih
+say=jgn sedih
+say=sayang banget
+
+[TidakPunyaSesuatu]
+say=@Logika:tidak punya @apapun
+
+
+[SuruhanPositif]
+say=@MelakukanSesuatu:belajar @apapun rajin
+
+[Ekspresi]
+say=^@Ekspresi
+say=^@Keraguan
+say=ga pa pa
+say=ga papa
+say=gpp
+say=apaan
+say=kepo
+say=makanya
+say=bawel
+
+[Greeting]
+say=@Greeting apa kabar
+say=@Greeting
+say=selamat @Waktu
+say=how are you
+say=how are u
+say=how r you
+say=@Waktu:waktu
+
+[SalamMuslim]
+say=@SalamMuslim
+say=@SalamArabic
+
+[Perpisahan]
+say=selamat tinggal
+say=sampai ketemu lagi
+say=sampai ketemu
+say=sampai jumpa
+say=bye
+
+[Perkenalan]
+action=define|Name
+say=namaku adalah @Name
+say=namaku @Name
+say=nama @Sapaan:aku @Name
+say=@Name nama @Sapaan:aku
+say=@Name namaku
+say=^nama @Name
+say:Name=^@Sapaan:aku @Name
+
+[PerkenalanEmail]
+action=define|Email
+say=email ku @Email
+say=emailku @Email
+say=email sy @Email
+say=email @Email
+    
+[StatusAku]
+say=masih @PersonalStatus
+say=@Sedang:sudah @PersonalStatus
+say=@Sapaan:kamu @PersonalStatus
+say=@Sapaan @PersonalStatus
+
+[Aktivitas]
+say=@Sapaan:kamu @Sedang @apapun
+say=^@Sedang:sedang @apapun
+say=@Sedang:sudah @apapun
+
+[JenisKelamin]
+say=@Tanya:kamu @JenisKelamin
+
+[Umur]
+say=@Tanya:berapa @Umur
+say=@Umur @Sapaan:kamu
+say=@Umur@Sapaan:kamu
+say=@Umur
+
+[TokohSiapa]
+say=@Tanya:siapa @apapun @Figure
+say=@Tanya:siapa @Figure   
+say=@Figure @Tanya:siapa
+
+[SiapaAku]
+say=@Tanya:siapa @Sapaan:aku
+
+[Siapa]
+say=perkenalkan diri
+say=boleh kenalan
+say=mau kenalan
+say=@Tanya:siapa @Sapaan:kamu
+say=@Sapaan:kamu @Tanya:siapa
+say=@Sapaan:kamu itu @Tanya:siapa
+say=@Sapaan:kamu itu @Tanya:apa
+say=kenalan @Abaikan
+say=@Abaikan kenalan
+say=^nama @whatever
+
+[InginTanya]
+say=mau (t|n)anya
+say=boleh (t|n)anya
+
+
+[TanyaLokasi]
+object=location
+say=rumah @Sapaan:kamu @Tanya:dimana
+say=rumah@Sapaan:kamu @Tanya:dimana
+say=@TanyaLokasi rumah @Sapaan:kamu
+say=@TanyaLokasi rumahmu
+say=@TanyaLokasi rumah
+say=@TanyaLokasi @Sapaan:kamu
+say=@Sapaan:kamu @TanyaLokasi
+
+[Kabar]
+say=@Tanya:bagaimana kabar@Sapaan:kamu
+say=@Tanya:bagaimana kabar
+say=@Tanya:bagaimana @Sapaan:kamu
+say=@Tanya:apa kabar@Sapaan:kamu
+say=@Tanya:apa kabar
+say=@Sapaan:kamu @Tanya:bagaimana
+say=kabar@Sapaan:kamu @Tanya:bagaimana
+say=kabar @Tanya:bagaimana
+
+[Cuaca]
+action=cuaca
+say=@Tanya:bagaimana cuaca
+say=cuaca @Tanya
+say=suasana @Tanya:bagaimana
+say=cuaca
+
+[Angka]
+action=angka
+say=@Angka @Satuan
+say=@berapapun @Satuan
+
+[UngkapanBaik]
+say=@Sapaan @Sifat:baik
+say=@Sifat:baik
+say=asik @Logika:tidak
+
+[UngkapanBuruk]
+say=@Sapaan @Sifat:buruk
+say=@Sifat:buruk
+
+[Waktu]
+say=@Tanya @Waktu
+say=@range @Waktu:-waktu @Tanya:berapa
+say=@range @Waktu:-waktu @Tanya:apa
+say=@Waktu:-waktu @Tanya:berapa
+say=@Waktu:-waktu @Tanya:apa
+
+[CantikGanteng]
+boundary=false
+say=@apapun @Kencantikan ya
+say=@apapun @Kencantikan ga
+say=@apapun @Kencantikan gak
+
+[YangPaling]
+say=yang paling @apapun
+say=paling @apapun
+
+[TanyaTentangTokoh]
+say=@Sapaan:kamu @PersonalKnowledge @apapun @Figure
+say=@Sapaan:kamu @PersonalKnowledge @Figure
+say=@PersonalKnowledge @sebutan @Figure
+say=@PersonalKnowledge @Figure
+
+[TanyaTentangTokohTidakDikenal]
+say=@Tanya:siapa @siapapun
+say=@Sapaan:kamu @PersonalKnowledge @siapapun
+say=@PersonalKnowledge @siapapun
+
+[LoremIpsum]
+say=lorem ipsum
+say=loremipsum
+
+[Math]
+action=math
+object=berhitung
+boundary=false
+say=@Tanya:berapa @Formula
+say=@Perintah:hitung @Formula
+
+
+[TanyaSeandainya]
+say=@Tanya:bagaimana @Kondisi:jika @apapun
+
+[TidakYakin]
+say=@apapun @Logika:tidak @PersonalKnowledge:tahu
+say=beneran
+
+[Deskripsi]
+action=define
+say=@Key itu adalah @Value
+say=@Key adalah @Value
+say=@Key adl @Value
+say=@Key itu @Value
+say=@Key = @Value
+say=@Key=@Value
+
+[KenapaDisimpan]
+say=@Tanya:mengapa kok disimpan
+say=@Tanya:mengapa @apapun
+
+[telolet]
+say=om telolet om
+say=omteloletom
+say=telolet
+
+[DomainWhois]
+action=domain_whois
+say=whois domain @domain @option
+say=whois domain @domain
+say=whois @domain @option
+say=whois @domain
+say=who is @domain
+
+[Cari]
+action=cari
+say=@Perintah:cari
+
+[EmailBuat]
+object=email
+say=@Perintah:buat @Sapaan:aku email
+say=@Perintah:buat email
+
+[MakanBuat]
+object=makanan
+say=@Perintah:buat @Sapaan:aku @RutinitasHarian:makan
+say=@Perintah:buat @Sapaan:aku @RutinitasHarian:minum
+say=@Perintah:buat @RutinitasHarian:makan
+say=@Perintah:buat @RutinitasHarian:minum
+
+[MakanBeli]
+action=footorder
+object=makanan
+say=@Perintah:beli @Sapaan:aku @RutinitasHarian:makan
+say=@Perintah:beli @Sapaan:aku @RutinitasHarian:minum
+say=@Perintah:beli @RutinitasHarian:makan
+say=@Perintah:beli @RutinitasHarian:minum
+
+[PulsaBeli]
+action=pulsaorder
+object=pulsa
+say=@Perintah:beli @Sapaan:aku pulsa
+say=@Perintah:beli pulsa
+
+[MintaTolong]
+say=@Tolong
+
+[BisaApa]
+say=bisa @Sapaan:kamu @Lakukan
+say=@Sapaan:kamu bisa @Tanya:apa
+say=@Tanya:bisa @Tanya:apa
+say=@Tanya:bisa @apapun
+
+[Hadir]
+say=ternyata ada di sini
+say=ternyata ada disini
+say=ada di sini ternyata
+say=ada disini ternyata
+
+[KataTanyaSaja]
+say=^@Tanya
+say=@Tanya:ngapain
+
+[PerintahSaja]
+say=@Perintah
+
+[NoRespon]
+say=^@NoRespon
+say=emailnya disimpan
+
+[TandaBaca]
+say=^@TandaBaca
+
+[Browse]
+action=url|post|http://local-echo.fastplaz.com/?var1=value
+say=browse @whatever
+
