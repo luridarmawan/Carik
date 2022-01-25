@@ -3,10 +3,11 @@ program telegram;
 {$mode objfpc}{$H+}
 
 uses
-  {$IFNDEF Windows}
-  cthreads,
-  {$ENDIF}
-  fpcgi, sysutils, fastplaz_handler, common, main, routes;
+  {$IFNDEF Windows}cthreads,{$ENDIF}
+  fpcgi, sysutils, fastplaz_handler, common, main, routes, telegram_handler,
+  command_controller;
+
+{$R *.res}
 
 begin
   Application.Title:='Telegram';
@@ -19,7 +20,7 @@ begin
 
   Application.OnGetModule := @FastPlasAppandler.OnGetModule;
   Application.PreferModuleName := True;
-  {$if (fpc_version=3) and (fpc_release>=0) and (fpc_patch>=4)}
+  {$if FPC_FULlVERSION >= 30004}
   Application.LegacyRouting := True;
   {$endif}
 

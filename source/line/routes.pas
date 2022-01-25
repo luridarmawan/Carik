@@ -12,7 +12,7 @@ implementation
 uses main;
 
 initialization
-  Route.Add( 'main', TMainModule);
+  Route.Add( 'main', TLineModule);
 
 end.
 

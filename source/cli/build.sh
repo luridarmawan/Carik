@@ -1,3 +1,3 @@
-mkdir lib
-fpc telegram.lpr @extra.cfg
+mkdir -p lib
+fpc carik.lpr @extra.cfg
 

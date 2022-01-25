@@ -5,13 +5,14 @@ unit routes;
 interface
 
 uses
-  Classes, SysUtils, fastplaz_handler;
+  Classes, SysUtils, fpjson, fastplaz_handler;
 
 implementation
 
 uses main;
 
 initialization
-  Route.Add( 'main', TMainModule);
+  Route[ '/'] := TFacebookModule; // Main Module
+
 end.
 

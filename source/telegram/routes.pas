@@ -5,15 +5,16 @@ unit routes;
 interface
 
 uses
-  Classes, SysUtils, fastplaz_handler;
+  Classes, SysUtils, fpjson, fastplaz_handler;
 
 implementation
 
-uses main;
+uses main, command_controller;
 
 initialization
-  Route.Add('main', TMainModule);
-  //route[]
+  Route['/command'] := TCommandController;
+  Route['/'] := TTelegramModule;
+  //Route['main'] := TTelegramModule;
 
 end.
 
