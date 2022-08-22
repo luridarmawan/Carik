@@ -62,7 +62,7 @@ type
 
   function TCarik.OnErrorHandler(const Message: string): string;
   begin
-    Result := 'error nihh...'; //TODO: samain dgn onerror carik_webmodule
+    Result := 'error nihh...';        samain dgn onerror carik_webmodule
   end;
 
   procedure TCarik.DoRun;

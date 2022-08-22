@@ -1,4 +1,8 @@
 unit telegram_handler;
+{
+  [x]
+  curl "http://local-bot.carik.test/ai/telegram.bin" -d ""
+}
 
 {$mode objfpc}{$H+}
 
@@ -128,11 +132,14 @@ begin
   try
     json.LoadFromJsonString(Request.Content);
     s := json['message/reply_to_message/from/username'];
-    replyFrom := json['message/reply_to_message/from/id'];
-    try
-      replyFromUsername := json['message/reply_to_message/from/username'];
-    except
-    end;
+    //replyFrom := json['message/reply_to_message/from/id'];
+    //try
+    //  replyFromUsername := json['message/reply_to_message/from/username'];
+    //except
+    //end;
+    replyFrom := TELEGRAM.ReplyFromID;
+    replyFromUsername := TELEGRAM.ReplyFromUserName;
+
     replyFromName := string(trim(json['message/reply_to_message/from/first_name'] + ' '
       + json['message/reply_to_message/from/last_name'])).Trim;
     if not ASuffix.IsEmpty then
@@ -169,8 +176,11 @@ begin
   json := TJSONUtil.Create;
   json.LoadFromJsonString(Request.Content);
   try
-    replyFrom := json['message/reply_to_message/from/id'];
-    replyFromUsername := json['message/reply_to_message/from/username'];
+    //replyFrom := json['message/reply_to_message/from/id'];
+    //replyFromUsername := json['message/reply_to_message/from/username'];
+    replyFrom := TELEGRAM.ReplyFromID;
+    replyFromUsername := TELEGRAM.ReplyFromUserName;
+
     if replyFromUsername.IsExists(ASuffix) then
     begin
       Result := True;
@@ -392,19 +402,20 @@ end;
 // GET Method Handler
 procedure TTelegramHandler.Get;
 begin
-  OutputJson(400, 'Invalid method.');
+  OutputJson(0, 'Invalid Method');
 end;
 
 // POST Method Handler
 procedure TTelegramHandler.Post;
 var
   updateID, lastUpdateID: longint;
-  j, spamScoreTotal: integer;
-  s, imgTag, audioCaption, voiceFileName, mp3FileName, tmpStr: string;
+  i, j, spamScoreTotal: integer;
+  s, imgTag, audioCaption, voiceFileName, mp3FileName, tmpStr, fileType, fileCaption, url: string;
   disableMarkdown, isHandled, localReplyDisable, canSendMessage, isEditMessage: boolean;
   forceSendMessage, forceReply: boolean;
   replyText: TStringList;
   json: TJSONUtil;
+  filesAsArray: TJSONArray;
 begin
   if _GET['_debug'] <> '1' then
     if not _DEVELOPMENT_ then CloseConnection('{}'); //ulil
@@ -419,9 +430,16 @@ begin
   isEditMessage := False;
   forceSendMessage := False;
   forceReply := false;
+  if AppData.debug then
+  begin
+    s := Request.Content.Replace(#13,'').Replace(#10,'');
+    LogUtil.Add(s, 'TELE');
+  end;
 
   TELEGRAM.RequestContent := Request.Content;
   OriginalText := TELEGRAM.Text;
+  //if TELEGRAM.ChatID = '-1001240569966' then
+  //  LogUtil.Add(Request.Content.Replace(#13,'').Replace(#10,''), 'JAVASCRIPT');
 
   SessionController.SessionPrefix := 'telegram';
   SessionController.SessionSuffix := TELEGRAM.UserID;
@@ -616,7 +634,7 @@ begin
       begin
         if TELEGRAM.IsUserLeft then
         begin
-          LogJoin(TELEGRAM_CHANNEL_ID, TELEGRAM.ChatID, '', TELEGRAM.LeftUserID, '', '', False, True);
+          LogJoin(TELEGRAM_CHANNEL_ID, TELEGRAM.ChatID, '', TELEGRAM.LeftUserID, '', '', TELEGRAM.InvitedBy, False, True);
           LogUtil.Add('left:'+TELEGRAM.ChatID+'/'+TELEGRAM.UserID, 'USER');
           Response.Content := '{"status":"userleft"}';
           Exit;
@@ -649,7 +667,7 @@ begin
             end
             else
             begin
-              LogJoin(TELEGRAM_CHANNEL_ID, TELEGRAM.ChatID, TELEGRAM.GroupName, TELEGRAM.InvitedUserId, TELEGRAM.InvitedUserName, TELEGRAM.InvitedFullName, RestrictUser);
+              LogJoin(TELEGRAM_CHANNEL_ID, TELEGRAM.ChatID, TELEGRAM.GroupName, TELEGRAM.InvitedUserId, TELEGRAM.InvitedUserName, TELEGRAM.InvitedFullName, TELEGRAM.InvitedBy, RestrictUser);
               Response.Content := '{"status":"invitation"}';
               Exit;
             end;
@@ -698,9 +716,10 @@ begin
             Carik.Invited;
             LogGroupAdd(TELEGRAM_CHANNEL_ID, TELEGRAM.ChatID, TELEGRAM.GroupName, TELEGRAM.UserID, TELEGRAM.UserName, TELEGRAM.FullName);
           end else begin
-            LogJoin(TELEGRAM_CHANNEL_ID, TELEGRAM.ChatID, TELEGRAM.GroupName, TELEGRAM.InvitedUserId, TELEGRAM.InvitedUserName, TELEGRAM.InvitedFullName, RestrictUser);
+            LogJoin(TELEGRAM_CHANNEL_ID, TELEGRAM.ChatID, TELEGRAM.GroupName, TELEGRAM.InvitedUserId, TELEGRAM.InvitedUserName, TELEGRAM.InvitedFullName, TELEGRAM.InvitedBy, RestrictUser);
             LogUtil.Add(Request.Content.Replace(#13,'').Replace(#10,''), 'JOIN');
           end;
+          exit; delete
         end
         else
         begin
@@ -723,13 +742,18 @@ begin
               if not isWhiteListed(replyFromUsername) then
               begin
                 if (Pos('spam', Text.ToLower) = 1) then
-                  ReportSpam(replyFrom, replyFromName, TELEGRAM.UserID);
+                begin
+                  s := ReportSpam(replyFrom, replyFromName, TELEGRAM.UserID);
+                  if s.IsNotEmpty then
+                    LogUtil.Add(s, 'SPAM');
+                end;
 
                 Text := 'spamreport ' + replyFrom;
                 Suffix := TELEGRAM.GroupAdminList(TELEGRAM.ChatID);
                 //Suffix := '\n@' + Suffix.Replace(',', ', @');
                 LogUtil.Add(TELEGRAM.ChatID + ':' + TELEGRAM.ReplyFromUserID + ': ' + TELEGRAM.ReplyFromUserName, 'SPAM');
                 AutoDeleteMessage := 24*60;
+                ToggleSpammer := True;
               end else
               begin
                 Text := 'spamreportwhitelisted ' + replyFromName;
@@ -801,7 +825,6 @@ begin
             end;
           end;//forceRespond
           LogUtil.Add('noz', 'CHECK');
-          //die('noz');exit;
 
         end;
       end;
@@ -840,13 +863,17 @@ begin
   SimpleBOT.AdditionalParameters.Values['UserID'] := 'tl-' + TELEGRAM.UserID; //TODO: tambahkan ke messenger lain
   SimpleBOT.AdditionalParameters.Values['ChatID'] := 'tl-' + TELEGRAM.ChatID; //TODO: tambahkan ke messenger lain
   SimpleBOT.AdditionalParameters.Values['FullName'] := TELEGRAM.FullName; //TODO: tambahkan ke messenger lain
+  SimpleBOT.AdditionalParameters.Values['MessageID'] := MessageID;
   if TELEGRAM.IsInvitation then
   begin
     SimpleBOT.AdditionalParameters.Values['UserID'] := TELEGRAM.InvitedUserId;
     SimpleBOT.AdditionalParameters.Values['FullName'] := TELEGRAM.InvitedFullName;
   end;
   if TELEGRAM.IsGroup then
+  begin
     SimpleBOT.AdditionalParameters.Values['GroupID'] := 'tl-' + TELEGRAM.ChatID;
+    SimpleBOT.AdditionalParameters.Values['GroupName'] := TELEGRAM.GroupName;
+  end;
 
   // check if any custom handler
   //remove LogUtil.Add('B: ' + TimeUsage.ToString + ' | ' + Text, 'LD');
@@ -862,7 +889,13 @@ begin
     end;
   end;
 
-  Text := GenerateTextFromCustomActionOption(Text);
+  if FormInputHandler() then
+  begin
+    isHandled := True;
+  end;
+
+  if not isHandled then
+    Text := GenerateTextFromCustomActionOption(Text);
   if IsMuted then
   begin
     LogChat(TELEGRAM_CHANNEL_ID, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, OriginalText, '',
@@ -874,6 +907,7 @@ begin
   if preg_match('(\/start )(.+)$', Text) then
   begin
     Text := Text.Replace('_',' ').Replace('/start ', '').Trim;
+    TELEGRAM.SendMessage(TELEGRAM.ChatID, 'Anda mengirimkan perintah "*'+Text+'*" dari tautan luar.\nMohon ditunggu');
   end;
 
 
@@ -924,7 +958,7 @@ begin
   // custom action: button, quickreply
   if IsCustomAction then
   begin
-    SaveActionToUserData;
+    SaveActionToUserData(CustomReplyType, CustomReplyData.Data);
   end;
 
   if not Prefix.IsEmpty then
@@ -934,8 +968,13 @@ begin
   end;
   if not Suffix.IsEmpty then
   begin
-    j := SimpleBOT.SimpleAI.ResponseText.Count-1;
-    SimpleBOT.SimpleAI.ResponseText[j] := SimpleBOT.SimpleAI.ResponseText[j] + Suffix;
+    if SimpleBOT.SimpleAI.ResponseText.Count = 0 then
+      SimpleBOT.SimpleAI.ResponseText.Add(Suffix)
+    else
+    begin
+      j := SimpleBOT.SimpleAI.ResponseText.Count-1;
+      SimpleBOT.SimpleAI.ResponseText[j] := SimpleBOT.SimpleAI.ResponseText[j] + Suffix;
+    end;
     Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end;
 
@@ -1054,7 +1093,7 @@ begin
               + '\n\n' + CustomActionAsText.Replace(#10,'\n');
             TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID);
           end;
-          if CustomReplyType = 'menu' then
+          if ((CustomReplyType = 'menu') or (CustomReplyType = 'list')) then
           begin
             if not CustomActionAsText.IsEmpty then
             begin
@@ -1062,14 +1101,24 @@ begin
                 + '\n' + ACTION_CAPTION + '\n' + CustomActionAsText.Replace(#10,'\n');
               if CustomActionSuffix.IsNotEmpty then
                 SimpleBOT.SimpleAI.ResponseText.Text := SimpleBOT.SimpleAI.ResponseText.Text.Trim
-                  + '\n\n' + CustomActionSuffix.Replace(#10,'\n');
+                  + '\n' + CustomActionSuffix.Replace(#10,'\n');
               Response.Content := SimpleBOT.SimpleAI.ResponseJson;
             end;
             TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID);
           end;
+          if CustomReplyType = 'form' then
+          begin
+            if not TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID) then
+            begin
+              LogUtil.Add('FORM: '+SimpleBOT.SimpleAI.ResponseText[0], 'DEBUG');
+            end;
+          end;
           if CustomReplyType = 'none' then
           begin
-            TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID);
+            if not TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID) then
+            begin
+              LogUtil.Add('none: '+SimpleBOT.SimpleAI.ResponseText[0], 'DEBUG');
+            end;
           end;
 
 
@@ -1094,8 +1143,8 @@ begin
           //s := AnsiToUtf8(SimpleBOT.SimpleAI.ResponseText[0]);
           s := SimpleBOT.SimpleAI.ResponseText[0];
           TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID);
-          LogUtil.Add(TELEGRAM.ChatID + '/' + TELEGRAM.UserID + '('+TELEGRAM.GroupName+')::' + OriginalText + ' |-> ' + s, 'SENTLOG');
-          LogUtil.Add(Request.Content.Replace(#13,'').Replace(#10,''), 'SENTLOG');
+          LogUtil.Add(TELEGRAM.ChatID + '/' + TELEGRAM.UserID + '('+TELEGRAM.GroupName+')::' + OriginalText + ' |-> ' + s, 'SENTLOG1');
+          LogUtil.Add(Request.Content.Replace(#13,'').Replace(#10,''), 'SENTLOG2');
         end;// /IsCustomAction
       end;
       if AppData.debug then
@@ -1117,8 +1166,11 @@ begin
         s := SimpleBOT.SimpleAI.ResponseText[j];
         if s <> '' then
         begin
-          TELEGRAM.SendMessage(TELEGRAM.ChatID, s, '');
-          LogUtil.Add(TELEGRAM.ChatID + '/' + TELEGRAM.UserID + '('+TELEGRAM.GroupName+'):' + OriginalText + '|' + s, 'SENTLOG');
+          if not TELEGRAM.SendMessage(TELEGRAM.ChatID, s, '') then
+          begin
+            LogUtil.Add('regular: '+SimpleBOT.SimpleAI.ResponseText[0], 'DEBUG');
+          end;
+          LogUtil.Add(TELEGRAM.ChatID + '/' + TELEGRAM.UserID + '('+TELEGRAM.GroupName+'):' + OriginalText + '|' + s, 'SENTLOG3');
         end;
         // TODO: rekam percakapan si BOT
 
@@ -1147,6 +1199,25 @@ begin
     begin
       TELEGRAM.SendMessage( TELEGRAM.ChatID, 'Maaf, gambar tidak berhasil dikirimkan', MessageID);
     end;
+  end;
+
+  // send files
+  try
+    filesAsArray := SimpleBOT.SimpleAI.CustomReply.ValueArray['action/files'];
+    if filesAsArray.Count > 0 then
+    begin
+      for i := 0 to filesAsArray.Count-1 do
+      begin
+        fileType := SimpleBOT.SimpleAI.CustomReply['action/files['+i.ToString+']/type'];
+        if fileType = 'audio' then
+        begin
+          url := SimpleBOT.SimpleAI.CustomReply['action/files['+i.ToString+']/url'];
+          fileCaption := SimpleBOT.SimpleAI.CustomReply['action/files['+i.ToString+']/caption'];
+          TELEGRAM.SendAudio(TELEGRAM.ChatID, url, fileCaption, MessageID);
+        end;
+      end;
+    end;
+  except
   end;
 
   {

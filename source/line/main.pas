@@ -52,6 +52,7 @@ end;
 function TLineModule.OnMessageHandler(AMessage: string;
   var Handled: boolean): string;
 begin
+  Result := '';
   //Result := 'echo: ' + Carik.UserID  + '/' + AMessage;
   //Handled := true;
 end;

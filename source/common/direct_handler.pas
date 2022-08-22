@@ -76,7 +76,7 @@ end;
 // GET Method Handler
 procedure TCarikHandler.Get;
 begin
-  OutputJson(400, 'Invalid Method');
+  OutputJson(0, 'Invalid Method');
 end;
 
 // POST Method Handler
@@ -85,7 +85,7 @@ end;
 procedure TCarikHandler.Post;
 var
   s, text_response, responseFormat: string;
-  chatID, chatType, _userID, fullName, userName, groupID: string;
+  chatID, chatType, _userID, fullName, userName, groupID, groupName: string;
   i, j: integer;
   json: TJSONUtil;
   cmdAction, parameterAction, fieldAction : TStrings;
@@ -114,6 +114,8 @@ begin
     messageID := jsonData.Value['message/message_id'];
     chatID := jsonData.Value['message/chat/id'];
     chatType := jsonData.Value['message/chat/type'];
+    groupID := jsonData.Value['message/chat/group_id'];
+    groupName := jsonData.Value['message/chat/group_name'];
 
     _userID := jsonData.Value['message/from/id'];
     userName := jsonData.Value['message/from/username'];
@@ -126,6 +128,7 @@ begin
     if fullName = '' then
       fullName := userName;
     responseFormat := jsonData.Value['message/format'];
+    DashboardDeviceID := s2i(jsonData.Value['message/chat/dashboard_device_id']);
   except
   end;
 
@@ -151,6 +154,8 @@ begin
     ChannelId := 'android';
   if ChannelId = 'whatsapp' then
     MessengerMode := mmWhatsapp;
+  if ChannelId = 'discord' then
+    MessengerMode := mmDiscord;
 
   // CarikBOT isRecording
   Carik.UserPrefix := '';
@@ -158,7 +163,6 @@ begin
   Carik.UserID := _userID; //!
   Carik.UserName := userName;
   Carik.FullName := fullName;
-  Carik.GroupChatID := chatID;
 
   SessionController.SessionPrefix := 'carik';
   SessionController.SessionSuffix := chatID;
@@ -213,16 +217,25 @@ begin
   SimpleBOT.chatID := chatID;
   if userName <> '' then
   begin
-    SimpleBOT.UserData['Name'] := userName;
-    SimpleBOT.UserData['FullName'] := fullName;
+    try
+      SimpleBOT.UserData['Name'] := userName;
+      SimpleBOT.UserData['FullName'] := fullName;
+    except
+    end;
   end;
 
-  groupID := _GET['groupID'];
+  s := jsonData.Value['message/chat/is_group'];
+  Carik.IsGroup := s2b(s);
+
+  if groupID.IsEmpty then
+    groupID := _GET['groupID'];
   if not groupID.IsEmpty then
   begin
     chatID := groupID;
     Carik.GroupChatID := groupID;
     SimpleBOT.AdditionalParameters.Values['GroupID'] := groupID;
+    if groupName.IsNotEmpty then
+      SimpleBOT.AdditionalParameters.Values['GroupName'] := groupName;
   end;
   SimpleBOT.AdditionalParameters.Values['FullName'] := fullName;
   if (_GET['_DEBUG'] = '1') then
@@ -244,7 +257,14 @@ begin
     end;
   end;
 
-  Text := GenerateTextFromCustomActionOption(Text);
+
+  if FormInputHandler() then
+  begin
+    isHandled := True;
+  end;
+
+  if not isHandled then
+    Text := GenerateTextFromCustomActionOption(Text);
   if IsMuted then
   begin
     LogChat(ChannelId, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, OriginalText, '', Carik.IsGroup, True);
@@ -256,7 +276,7 @@ begin
   begin
     BotInit;
     Response.Content := ProcessText(Text);
-    SimpleBOT.SimpleAI.ResponseText.Text := Prefix + RemoveDummyImageLink(SimpleBOT.SimpleAI.ResponseText.Text).Trim + Suffix;
+    SimpleBOT.SimpleAI.ResponseText.Text := Prefix + RemoveDummyImageLink(SimpleBOT.SimpleAI.ResponseText.Text).Trim;
     if responseFormat = 'text' then
     begin
       SimpleBOT.SimpleAI.ResponseText.Text := RemoveMarkDown(SimpleBOT.SimpleAI.ResponseText.Text);
@@ -278,12 +298,11 @@ begin
       s := preg_replace('\[(.*?)\]\((.*?)\)', '$1, $2', s); // url
       SimpleBOT.SimpleAI.ResponseText.Text := s;
     end;
-    Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end else begin
     SimpleBOT.SimpleAI.ResponseText.Text := replyText.Text;
-    Response.Content := SimpleBOT.SimpleAI.ResponseJson;
     replyText.Free
   end;
+  Response.Content := SimpleBOT.SimpleAI.ResponseJson;
 
   if not SimpleBOT.IsExternal then
   begin
@@ -320,21 +339,6 @@ begin
     Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end;
 
-  // custom action: button, quickreply
-  if IsCustomAction then
-  begin
-    SaveActionToUserData;
-    if not CustomActionAsText.IsEmpty then
-    begin
-      SimpleBOT.SimpleAI.ResponseText.Text := SimpleBOT.SimpleAI.ResponseText.Text.Trim
-        + '\n' + ACTION_CAPTION + '\n' + CustomActionAsText.Replace(#10,'\n');
-      if CustomActionSuffix.IsNotEmpty then
-        SimpleBOT.SimpleAI.ResponseText.Text := SimpleBOT.SimpleAI.ResponseText.Text.Trim
-          + '\n\n' + CustomActionSuffix.Replace(#10,'\n');
-      Response.Content := SimpleBOT.SimpleAI.ResponseJson;
-    end;
-  end;
-
   {
   if not Prefix.IsEmpty then
   begin
@@ -342,12 +346,37 @@ begin
     Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end;
   }
-  if not Suffix.IsEmpty then
+
+  if Suffix.IsNotEmpty then
   begin
-    j := SimpleBOT.SimpleAI.ResponseText.Count-1;
-    SimpleBOT.SimpleAI.ResponseText[j] := SimpleBOT.SimpleAI.ResponseText[j] + Suffix;
-    Response.Content := SimpleBOT.SimpleAI.ResponseJson;
+    if GenericContent then
+    begin
+      if SimpleBOT.SimpleAI.ResponseText.Count = 0 then
+        SimpleBOT.SimpleAI.ResponseText.Add(Suffix)
+      else
+      begin
+        j := SimpleBOT.SimpleAI.ResponseText.Count-1;
+        SimpleBOT.SimpleAI.ResponseText[j] := SimpleBOT.SimpleAI.ResponseText[j] + Suffix;
+      end;
+      Response.Content := SimpleBOT.SimpleAI.ResponseJson;
+    end;
   end;
+
+  // custom action: button, quickreply
+  if IsCustomAction then
+  begin
+    SaveActionToUserData(CustomReplyType, CustomReplyData.Data);
+    if not CustomActionAsText.IsEmpty then
+    begin
+      SimpleBOT.SimpleAI.ResponseText.Text := SimpleBOT.SimpleAI.ResponseText.Text.Trim
+        + '\n' + ACTION_CAPTION + '\n' + CustomActionAsText.Replace(#10,'\n');
+      if CustomActionSuffix.IsNotEmpty then
+        SimpleBOT.SimpleAI.ResponseText.Text := SimpleBOT.SimpleAI.ResponseText.Text.Trim
+          + '\n' + CustomActionSuffix.Replace(#10,'\n');
+      Response.Content := SimpleBOT.SimpleAI.ResponseJson;
+    end;
+  end;
+  Response.Content := GenerateResponseJson;
 
   if ActionCallback <> '' then
   begin
@@ -392,7 +421,7 @@ begin
   s := json['response/action/callback_string'];
   if s <> '' then
   begin
-    text_response := '#internalAction';
+    //text_response := '#internalAction';
   end;
   json.Free;
 

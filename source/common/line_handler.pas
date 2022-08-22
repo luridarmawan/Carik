@@ -11,7 +11,7 @@ uses
   carik_webmodule, logutil_lib, json_lib,
   line_integration, simplebot_controller, carik_controller,
   fpjson,
-  Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, database_lib, json_helpers;
+  Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, database_lib, string_helpers, json_helpers;
 
 {$include ../common/carik.inc}
 _DEVELOPMENT_ = False;
@@ -217,7 +217,7 @@ begin
     s := UTF8ToString(ACaption);
     captionLength := s.Length;
     if captionLength > 60 then
-      Text := 'Pilihan lain:';
+      Text := 'Pilihan:';
     ThumbnailImageURL := AImageDefault;
 
     for i := 0 to buttonList.Count-1 do
@@ -553,7 +553,14 @@ begin
     end;
   end;
 
-  Text := GenerateTextFromCustomActionOption(Text);
+  if FormInputHandler() then
+  begin
+    isHandled := True;
+    Suffix := Suffix.Replace('\n', #10);
+  end;
+
+  if not isHandled then
+    Text := GenerateTextFromCustomActionOption(Text);
 
   SimpleBOT.AdditionalParameters.Values['FullName'] := Carik.FullName;
 
@@ -578,7 +585,7 @@ begin
   // custom action: button, quickreply
   if IsCustomAction then
   begin
-    SaveActionToUserData;
+    SaveActionToUserData(CustomReplyType, CustomReplyData.Data);
     ButtonCaption := SimpleBOT.SimpleAI.ResponseText.Text;
     if CustomReplyType = 'button' then
     begin
@@ -590,12 +597,15 @@ begin
       canSendQuickReply := True;
       canSendMessage := False;
     end;
-    if CustomReplyType = 'menu' then
+    if ((CustomReplyType = 'menu') or (CustomReplyType = 'list')) then
     begin
       if not CustomActionAsText.IsEmpty then
       begin
         SimpleBOT.SimpleAI.ResponseText.Text := SimpleBOT.SimpleAI.ResponseText.Text.Trim
           + #10 + ACTION_CAPTION + #10 + CustomActionAsText;
+        if CustomActionSuffix.IsNotEmpty then
+          SimpleBOT.SimpleAI.ResponseText.Text := SimpleBOT.SimpleAI.ResponseText.Text.Trim
+            + '\n' + CustomActionSuffix.Replace(#10,'\n');
         Response.Content := SimpleBOT.SimpleAI.ResponseJson;
       end;
     end;
@@ -603,6 +613,10 @@ begin
     begin
       canSendCard := True;
       canSendMessage := False;
+    end;
+    if CustomReplyType = 'form' then
+    begin
+      canSendMessage := True;
     end;
 
   end;
@@ -614,8 +628,13 @@ begin
   end;
   if not Suffix.IsEmpty then
   begin
-    j := SimpleBOT.SimpleAI.ResponseText.Count-1;
-    SimpleBOT.SimpleAI.ResponseText[j] := SimpleBOT.SimpleAI.ResponseText[j] + Suffix;
+    if SimpleBOT.SimpleAI.ResponseText.Count = 0 then
+      SimpleBOT.SimpleAI.ResponseText.Add(Suffix)
+    else
+    begin
+      j := SimpleBOT.SimpleAI.ResponseText.Count-1;
+      SimpleBOT.SimpleAI.ResponseText[j] := SimpleBOT.SimpleAI.ResponseText[j] + Suffix;
+    end;
     Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end;
 

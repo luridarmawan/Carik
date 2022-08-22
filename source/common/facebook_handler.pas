@@ -475,7 +475,13 @@ begin
     end;
   end;
 
-  Text := GenerateTextFromCustomActionOption(Text);
+  if FormInputHandler() then
+  begin
+    isHandled := True;
+  end;
+
+  if not isHandled then
+    Text := GenerateTextFromCustomActionOption(Text);
 
   Text := Text.Replace(',','');
   if not isHandled then
@@ -563,15 +569,22 @@ begin
       generateQuickReplay;
       canSendMessage := False;
     end;
-    if CustomReplyType = 'menu' then
+    if ((CustomReplyType = 'menu') or (CustomReplyType = 'list')) then
     begin
-      SaveActionToUserData;
+      SaveActionToUserData(CustomReplyType, CustomReplyData.Data);
       if not CustomActionAsText.IsEmpty then
       begin
         SimpleBOT.SimpleAI.ResponseText.Text := SimpleBOT.SimpleAI.ResponseText.Text.Trim
           + '\n' + ACTION_CAPTION + '\n' + CustomActionAsText.Replace(#10,'\n');
+        if CustomActionSuffix.IsNotEmpty then
+          SimpleBOT.SimpleAI.ResponseText.Text := SimpleBOT.SimpleAI.ResponseText.Text.Trim
+            + '\n' + CustomActionSuffix.Replace(#10,'\n');
         Response.Content := SimpleBOT.SimpleAI.ResponseJson;
       end;
+    end;
+    if CustomReplyType = 'form' then
+    begin
+      canSendMessage := True;
     end;
   end;
 
@@ -582,8 +595,13 @@ begin
   end;
   if not Suffix.IsEmpty then
   begin
-    j := SimpleBOT.SimpleAI.ResponseText.Count-1;
-    SimpleBOT.SimpleAI.ResponseText[j] := SimpleBOT.SimpleAI.ResponseText[j] + Suffix;
+    if SimpleBOT.SimpleAI.ResponseText.Count = 0 then
+      SimpleBOT.SimpleAI.ResponseText.Add(Suffix)
+    else
+    begin
+      j := SimpleBOT.SimpleAI.ResponseText.Count-1;
+      SimpleBOT.SimpleAI.ResponseText[j] := SimpleBOT.SimpleAI.ResponseText[j] + Suffix;
+    end;
     Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end;
 
