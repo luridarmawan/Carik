@@ -1,5 +1,9 @@
 unit carik_webmodule;
-
+{
+  Remove non-alphanumeric characters?
+  '/[^\p{L}\p{N} ]+/'
+  preg_replace('/[^\p{L}\p{N} ]+/', '', $string);
+}
 {$mode objfpc}{$H+}
 
 interface
@@ -7,31 +11,64 @@ interface
 uses
   fpjson, strutils, md5, sha1,
   common, json_lib, fastplaz_handler, carik_controller, simplebot_controller,
-  logutil_lib, kawalpemilu_integration, zomato_integration, yandextranslate_integration,
-  movie_controller, currencyibacor_integration, cognitiveocr_integration,
+  logutil_lib, zomato_integration, yandextranslate_integration,
+  movie_controller, cognitiveocr_integration,
   cognitivedomainspecific_integration, cognitiveanalyze_integration,
-  clarifai_integration, ibacorpolicenumber_integration, alquranindonesia_integration,
-  telegram_integration, resiibacor_integration, googleplacesearch_integration,
+  clarifai_integration, alquranindonesia_integration,
+  telegram_integration, googleplacesearch_integration,
   kamussunda_integration, bmkg_integration, openweathermap_integration,
-  apixu_integration, jobplanet_integration, bca_integration, witai_integration,
-  maskofajadwalshalat_integration, line_integration, ibacortrainschedule_integration,
+  apixu_integration, bca_integration, witai_integration,
+  line_integration,
   facebookmessenger_integration, portalpulsa_integration,
   googledistancematrix_integration, cognitivecustomvision_integration,
   kloudlesscalendar_integration, rss_lib, http_lib, IniFiles,
   rajaongkir_integration, googleanalytics_integration,
   kamuskemdikbud_integration, thesaurus_integration,
-  process, dateutils, Classes, SysUtils;
+  {$if FPC_FULlVERSION >= 30200}
+  fphttpclient, opensslsockets, fpopenssl, ssockets, sslsockets, sslbase,
+  {$endif}
+  process, dateutils, Classes, SysUtils, string_helpers, datetime_helpers;
 
 {$include carik.inc}
 
 type
 
-  TMessengerMode = (mmNone, mmTelegram, mmLine, mmFacebook, mmSkype, mmSlack);
+  TOnMessageEvent = function (AMessage: String; var Handled: boolean): string of object;
+  TOnSpamEvent = function (AMessage: String; AScore: integer; var Handled: boolean): string of object;
+  TMessengerMode = (mmNone, mmTelegram, mmLine, mmFacebook, mmSkype, mmSlack, mmWhatsapp, mmInstagram, mmDiscord);
 
   { TCarikWebModule }
 
   TCarikWebModule = class(TMyCustomWebModule)
   private
+    FActionCallback: string;
+    FActiveContext: string;
+    FBotID: string;
+    FButtonCaption: string;
+    FClientId: string;
+    FCurrentInputType: string;
+    FCustomActionAsText: string;
+    FCustomActionSuffix: string;
+    FCustomReplyDataFromExternalNLP: TJSONUtil;
+    FCustomReplyName: string;
+    FCustomReplyActionTypeFromExternalNLP: string;
+    FCustomReplyTypeFromExternalNLP: string;
+    FCustomReplyURLFromExternalNLP: string;
+    FDashboardDeviceID: integer;
+    FDeviceId: string;
+    FExternalNLPIntentName: string;
+    FExternalNLPIntentPattern: string;
+    FExternalNLPWeight: integer;
+    FExternalNLPStarted: boolean;
+    FFormInputExpired: boolean;
+    FGenericContent: boolean;
+    FInputOptions: TJSONArray;
+    FInputOptionTitle : string;
+    FMutedUntil: TDateTime;
+    FOperation: string;
+    FReplyDisable: boolean;
+    FBOLD_CODE: string;
+    FBotName: string;
     FCaption: string;
     FErrorCount: integer;
     FFileURL: string;
@@ -42,25 +79,48 @@ type
     FInvitedFullName: string;
     FInvitedUserName: string;
     FIsTranslate: boolean;
+    FITALIC_CODE: string;
+    FIterationParams: string;
+    FIterationParamsPast : TStringList;
+    FKickUser: boolean;
     FLanguage: string;
     FMessengerMode: TMessengerMode;
+    FOnError: TOnMessageEvent;
     forceRespond: boolean;
+    FRestrictUser: boolean;
     FRichContent: string;
     FSendAudio: boolean;
     FSendPhoto: boolean;
+    FSendQuickReplayLocation: boolean;
     FSendRichContent: boolean;
+    FCanSendTemplateCard: boolean;
     FSendVenue: boolean;
+    FToken: string;
     FTriggeredText: string;
     FVenueAddress: string;
     FVenueLatitude: double;
     FVenueLongitude: double;
     FVenueName: string;
+    FGroupData: TIniFile;
 
     // TELEGRAM
+    function getActiveContext: string;
+    function getAutoPrune: boolean;
+    function getCustomActionSuffix: string;
+    function getCustomReplyData: TJSONUtil;
+    function getCustomReplyMode: string;
+    function getCustomReplyType: string;
+    function getCustomReplyURL: string;
+    function getIsCustomAction: boolean;
+    function getIsMuted: boolean;
     function getIsObjectFocusExpired: boolean;
     function getisSpeakingMode: boolean;
+    function getIsSuggest: boolean;
     function getIsTranslate: boolean;
+    function getPrefixID: string;
+    function getReplyType: string;
     function getUniqueID: string;
+    function getWaitingInput: boolean;
     function isGroup: boolean;
     function isTelegramGroup: boolean;
     function getTelegramImageID: string;
@@ -69,8 +129,12 @@ type
     function generateEventName(AEventName: string): string;
 
     // HANDLER
+    function onewordHandler(const IntentName: string; Params: TStrings): string;
     function definisiHandler(const IntentName: string; Params: TStrings): string;
     function defineHandler(const IntentName: string; Params: TStrings): string;
+    function iterationNextHandler(const IntentName: string; Params: TStrings): string;
+    procedure setGroupData(const KeyName: string; AValue: string);
+    function getGroupData(const KeyName: string): string;
     function userProfileHandler(const IntentName: string; Params: TStrings): string;
     function botStartHandler(const IntentName: string; Params: TStrings): string;
     function resiHandler(const IntentName: string; Params: TStrings): string;
@@ -80,8 +144,8 @@ type
     function voucherHandler(const IntentName: string; Params: TStrings): string;
     function movieInfoHandler(const IntentName: string; Params: TStrings): string;
     function moviePlayHandler(const IntentName: string; Params: TStrings): string;
-    function currencyHandler(const IntentName: string; Params: TStrings): string;
     function distanceHandler(const IntentName: string; Params: TStrings): string;
+    function distanceFromToHandler(const IntentName: string; Params: TStrings): string;
     function ocrCognitiveHandler(const IntentName: string; Params: TStrings): string;
     function imageTranslationHandler(const IntentName: string; Params: TStrings): string;
     function imageSpecificCognitiveHandler(const IntentName: string;
@@ -98,6 +162,7 @@ type
     function lokasiKulinerHandler(const IntentName: string; Params: TStrings): string;
     function lokasiKulinerDenganKoordinatHandler(const IntentName: string;
       Params: TStrings): string;
+    function spamReportHandler(const IntentName: string; Params: TStrings): string;
     function carikAdminTambahHandler(const IntentName: string; Params: TStrings): string;
     function carikAdminHapusHandler(const IntentName: string; Params: TStrings): string;
     function carikNewMemberCustomMessageHandler(const IntentName: string;
@@ -107,9 +172,6 @@ type
       Params: TStrings): string;
     function carikMemberBaruSapaHandler(const IntentName: string;
       Params: TStrings): string;
-    function quickCountHandler(const IntentName: string; Params: TStrings): string;
-    function kofaJadwalImsyakHandler(const IntentName: string; Params: TStrings): string;
-    function kofaJadwalSholatHandler(const IntentName: string; Params: TStrings): string;
 
     function alquranTerjemahanHandler(const IntentName: string;
       Params: TStrings): string;
@@ -126,13 +188,6 @@ type
 
     function conversionHashHandler(const IntentName: string; Params: TStrings): string;
 
-    function jobPlanetInfoHandler(const IntentName: string; Params: TStrings): string;
-    function jobPlanetReviewHandler(const IntentName: string; Params: TStrings): string;
-    function jobPlanetSalaryHandler(const IntentName: string; Params: TStrings): string;
-    function jobPlanetVacancyHandler(const IntentName: string; Params: TStrings): string;
-    function jobPlanetInterviewHandler(const IntentName: string;
-      Params: TStrings): string;
-
     function propertySearchHandler(const IntentName: string; Params: TStrings): string;
     function smartHomeGeneralHandler(const IntentName: string; Params: TStrings): string;
     function smartHomeOnHandler(const IntentName: string; Params: TStrings): string;
@@ -145,8 +200,6 @@ type
     function speakingModeOnHandler(const IntentName: string; Params: TStrings): string;
     function speakingModeOffHandler(const IntentName: string; Params: TStrings): string;
 
-    function trainScheduleHandler(const IntentName: string; Params: TStrings): string;
-
     function bcaTestHandler(const IntentName: string; Params: TStrings): string;
 
     function botEnableHandler(const IntentName: string; Params: TStrings): string;
@@ -157,47 +210,116 @@ type
     function mortgageCalculatorHandler(const IntentName: string;
       Params: TStrings): string;
 
-
     function GenerateLineCarouselFromCulinaryData(ATitle, AJson: string): string;
     function LineProperySearch(ATitle, AJson: string): string;
     function LineBerita(ATitle, AJson: string): string;
     function FacebookBerita(ATitle, AJson: string): string;
 
+    procedure DoProgress(Sender: TObject; Const ContentLength, CurrentPos : Int64);
+    procedure DoHeaders(Sender : TObject);
+    procedure DoPassword(Sender: TObject; var RepeatRequest: Boolean);
+    procedure ShowRedirect(ASender : TObject; Const ASrc : String; Var ADest : String);
+
+    procedure HttpClientGetSocketHandler(Sender: TObject;
+      const UseSSL: Boolean; out AHandler: TSocketHandler);
+    function execPost(AURL: string; ACache: boolean = False): string;
+    function execJson(AURL: string; ACache: boolean = False): string;
+    procedure saveContext( const AParams: TStrings);
     procedure SaveUnknownChat(AText: string);
   public
+    ToggleSpammer: boolean;
     MessageID: string;
+    OriginalText: string;
+    ChannelId: string;
     Text: string;
+    SessionPrefix: string;
+    Prefix: string;
+    Suffix: string;
+    AutoDeleteMessage: integer;
     Carik: TCarikController;
     SimpleBOT: TSimpleBotModule;
+    ElementArray: TJSONArray;
     constructor CreateNew(AOwner: TComponent; CreateMode: integer); override;
     destructor Destroy; override;
-
-    function RemoveMarkDown(AText: string): string;
 
     function PrepareTextToSpeech(AText: string): string;
     function SpeechToText(AAudioFile: string; AConvert: boolean = True): string;
 
     function isTriggeredText(Message: string): boolean;
     function IsUserSuspended(AChannelID, AUserID: string): boolean;
-    procedure LogChat(AChannelID: string; AGroupID: string;
-      AUserID: string; AUserName: string; AText: string; AReply: string;
-      AIsGroup: boolean = True; AIsMentioned: boolean = True);
+    function IsBlackListed( AUserName: string; AUserId: string = ''): boolean;
+    function IsSuspected( AUserId: string; AFullName: string): boolean;
+    function IsGlobalUserBlackListed( AUserId: string): boolean;
+    function IsGlobalGroupBlackListed( AGroupId: string): boolean;
+    function isNewMember( AUserID: string; AGroupID: string; AInterval: integer = 10): boolean;
+    function SpamScore( AUserID: string; AText: string; ForceCheck: boolean = False): integer;
+    function IsSpammer( AUserID: string): boolean;
+    function ReportSpam( AUserID: string; AUserName: string = ''; AReportBy: string = ''): string;
+    procedure LogChat(AChannelID: string; AGroupID: string; AGroupName: string;
+      AUserID: string; AUserName: string; AFullName: string; AText: string; AReply: string;
+      AIsGroup: boolean = True; AIsMentioned: boolean = True;
+      AMessageID: integer = 0; AResultMessageID: integer = 0; AReplyFromMessageId: integer = 0);
+    procedure LogJoin(AChannelID: string; AGroupID: string; AGroupName: string;
+      AUserID: string; AUserName: string; AFullName: string; AInvitedBy: string; ARestrict: boolean = false;
+      AUserLeft: boolean = false);
+    procedure LogGroupAdd(AChannelID: string; AGroupID: string; AGroupName: string;
+      AInvitedByID: string; AInvitedByUserName: string; AInvitedByName: string);
     procedure Analytics(AChannel, AIntent, AText, AUserID: string);
     function KnowledgeBase(AKeyword: string): string;
+    function CarikSearch(AKeyword: string): string;
     function ExternalNLP(AText: string): string;
+
+    function IsCommand( AText:string): boolean;
+    function isValidCommand(ACommandString: string): boolean;
+    function ExecCommand(AText: string): string;
+
+    function MaximumRetriesUnknownChat: integer;
+    function GenerateResponseJson: string;
+
+    // auto prune
+    function SavePrune(AMessageID: string): boolean;
+    function GetPrune: string;
+    property GroupData[const KeyName: string]: string read getGroupData write setGroupData;
   published
+    property Operation: string read FOperation;
+    property BotID: string read FBotID;
+    property BotName: string read FBotName write FBotName;
+    property Token: string read FToken write FToken;
+    property ClientId: string read FClientId write FClientId;
+    property DeviceId: string read FDeviceId write FDeviceId;
+    property ReplyDisable: boolean read FReplyDisable write FReplyDisable;
+    property IterationParams: string read FIterationParams write FIterationParams;
+    property PrefixId: string read getPrefixID;
     property UniqueID: string read getUniqueID;
     property MessengerMode: TMessengerMode read FMessengerMode write FMessengerMode;
     property Language: string read FLanguage write FLanguage;
     property SendAudio: boolean read FSendAudio write FSendAudio;
     property SendPhoto: boolean read FSendPhoto write FSendPhoto;
     property SendRichContent: boolean read FSendRichContent;
+    property SendQuickReplayLocation: boolean read FSendQuickReplayLocation;
+    property CanSendTemplateCard: boolean read FCanSendTemplateCard write FCanSendTemplateCard;
+    property ButtonCaption: string read FButtonCaption write FButtonCaption;
+    property RestrictUser: boolean read FRestrictUser write FRestrictUser;
+    property KickUser: boolean read FKickUser write FKickUser;
     property FileURL: string read FFileURL;
     property Caption: string read FCaption;
     property RichContent: string read FRichContent;
+    property GenericContent: boolean read FGenericContent write FGenericContent;
+    property DashboardDeviceID: integer read FDashboardDeviceID write FDashboardDeviceID;
     property TriggeredText: string read FTriggeredText;
+    property BOLD_CODE: string read FBOLD_CODE write FBOLD_CODE;
+    property ITALIC_CODE: string read FITALIC_CODE write FITALIC_CODE;
+    property ExternalNLPIntentName: string read FExternalNLPIntentName write FExternalNLPIntentName;
+    property ExternalNLPIntentPattern: string read FExternalNLPIntentPattern;
+    property ExternalNLPWeight: integer read FExternalNLPWeight;
+    property ExternalNLPStarted: boolean read FExternalNLPStarted;
+
+    property ActionCallback: string read FActionCallback;
+    property IsMuted: boolean read getIsMuted;
+    property MutedUntil: TDateTime read FMutedUntil write FMutedUntil;
 
     // OBJECT
+    property ActiveContext: string read getActiveContext write FActiveContext;
     property isObjectFocusExpired: boolean read getIsObjectFocusExpired;
     function ObjectFocus: string; //deprecated
     function ContextFocus: string;
@@ -220,7 +342,7 @@ type
     function pajakKendaraanHandler(const IntentName: string; Params: TStrings): string;
     function ProcessText(AMessage: string): string;
     procedure BotInit;
-    function OnErrorHandler(const Message: string): string;
+    function OnNLPErrorHandler(const Message: string): string;
 
     function CleanupMessage(const AMessage: string): string;
     function TrimFacebookMessage(const AMessage: string): string;
@@ -230,6 +352,7 @@ type
     property ImageURL: string read FImageURL write FImageURL;
     property ImagePath: string read FImagePath write FImagePath;
     property ImageCaption: string read FImageCaption write FImageCaption;
+    property AutoPrune: boolean read getAutoPrune;
 
     property InvitedUserName: string read FInvitedUserName write FInvitedUserName;
     property InvitedFullName: string read FInvitedFullName write FInvitedFullName;
@@ -243,6 +366,41 @@ type
     property SpeakingMode: boolean read getisSpeakingMode write setisSpeakingMode;
     property IsTranslate: boolean read getIsTranslate;
     property ErrorCount: integer read FErrorCount;
+    property OnError : TOnMessageEvent Read FOnError Write FOnError;
+
+    // Suggestion
+    property IsSuggest: boolean read getIsSuggest;
+    function FindSuggestion(AText: string; AReservedWord: string = ''): string;
+
+    // CustomAction
+    property IsCustomAction: boolean read getIsCustomAction;
+    property ReplayType: string read getReplyType;
+    property CustomActionAsText: string read FCustomActionAsText;
+    property CustomActionSuffix: string read getCustomActionSuffix write FCustomActionSuffix;
+    property CustomReplyName: string read FCustomReplyName;
+    property CustomReplyType: string read getCustomReplyType;
+    property CustomReplyMode: string read getCustomReplyMode;
+    property CustomReplyData: TJSONUtil read getCustomReplyData;
+    property CustomReplyURL: string read getCustomReplyURL;
+    property CustomReplyTypeFromExternalNLP: string read FCustomReplyTypeFromExternalNLP;
+    property CustomReplyURLFromExternalNLP: string read FCustomReplyURLFromExternalNLP;
+    property CustomReplyActionTypeFromExternalNLP: string read FCustomReplyActionTypeFromExternalNLP;
+    property CustomReplyDataFromExternalNLP: TJSONUtil read FCustomReplyDataFromExternalNLP;
+    procedure SaveActionToUserDataFromCard(AData: TJSONObject);
+    procedure SaveActionToUserDataFromForm(AData: TJSONObject);
+    procedure SaveActionToUserData(AActionType: string; AData: TJSONObject = nil);
+    function GenerateTextFromCustomActionOption(AText: string): string;
+    function RemoveDummyImageLink(AText: string): string;
+
+    // Form Input Handler
+    property WaitingInput: boolean read getWaitingInput;
+    property CurrentInputType: string read FCurrentInputType;
+    property FormInputExpired: boolean read FFormInputExpired;
+    property InputOptions: TJSONArray read FInputOptions;
+    function FormInputHandler(): boolean;
+    function GetFormQuestion(AIndex: integer): string;
+    function GetFormAnswerValue(AQuestionIndex: integer; AOptionIndex: integer = 0): string;
+    function GetFormAnswerText(AQuestionIndex: integer; AOptionIndex: integer = 0): string;
   end;
 
   { TSmartHomeTestIntegration }
@@ -286,6 +444,8 @@ const
 
   _TELEGRAM_ERR_GROUP_ONLY = 'Fitur ini hanya bisa dilakukan di *Telegram Group*';
 
+  _CARIK_ONLY = 'Fitur lengkap bisa dilakukan melalui Carìk Bot ';
+
   _OBJECT_DISCUSSION_MAXTIME = 10; // in minutes
   //_ICON_WEKER = '⏰⏱';
   //_ICON_NUMBER = '0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣🔟';
@@ -298,9 +458,11 @@ const
   DEFAULT_RESTAURANT_IMAGE_URL = 'https://fire.carik.id/images/restorant/default2.png';
   DEFAULT_NEWS_IMAGE_URL = 'https://fire.carik.id/images/news/news.png';
   TEXT2SPEECH_MAX_CHAR = 250;
-  ERROR_COUNT_MAX = 2;
 
   AI_CONFIG_TRIGGERWORD = 'ai/default/trigger_word';
+
+  BLACKLIST_FILENAME = 'files/blacklist.txt';
+
 
 { TSmartHomeTestIntegration }
 
@@ -436,6 +598,83 @@ begin
 
 end;
 
+function TCarikWebModule.getIsCustomAction: boolean;
+begin
+  if FCustomReplyTypeFromExternalNLP = 'action' then
+    Result := True
+  else
+    Result := SimpleBOT.IsCustomAction;
+end;
+
+function TCarikWebModule.getIsMuted: boolean;
+var
+  s: string;
+begin
+  Result := False;
+  if ClientId.IsEmpty then
+    s := SimpleBOT.UserData['mute']
+  else
+    s := SimpleBOT.UserData[ClientId + '-mute'];
+  if s.IsEmpty then
+    Exit;
+  FMutedUntil := FMutedUntil.FromString(s);
+  if FMutedUntil > Now then Result := True;
+  if not Result then
+  begin
+    if ClientId.IsEmpty then
+      SimpleBOT.UserData['mute'] := ''
+    else
+      SimpleBOT.UserData[ClientId + '-mute'] := '';
+  end;
+end;
+
+function TCarikWebModule.getCustomReplyData: TJSONUtil;
+begin
+  if Assigned(FCustomReplyDataFromExternalNLP) then
+    Result := FCustomReplyDataFromExternalNLP
+  else
+    Result := SimpleBOT.SimpleAI.CustomReplyData;
+end;
+
+function TCarikWebModule.getAutoPrune: boolean;
+begin
+  Result := SimpleBOT.SimpleAI.AutoPrune;
+end;
+
+function TCarikWebModule.getCustomActionSuffix: string;
+begin
+  Result := SimpleBOT.SimpleAI.CustomReplySuffix;
+  if Result.Trim.IsEmpty then
+    Result := FCustomActionSuffix;
+end;
+
+function TCarikWebModule.getActiveContext: string;
+begin
+  if FActiveContext.IsEmpty then
+    FActiveContext := SimpleBOT.SimpleAI.IntentName;
+  Result := FActiveContext;
+end;
+
+function TCarikWebModule.getCustomReplyMode: string;
+begin
+  Result := SimpleBOT.CustomReplyMode;
+end;
+
+function TCarikWebModule.getCustomReplyType: string;
+begin
+  if FCustomReplyActionTypeFromExternalNLP.IsNotEmpty then
+    Result := FCustomReplyActionTypeFromExternalNLP
+  else
+    Result := SimpleBOT.CustomReplyType;
+end;
+
+function TCarikWebModule.getCustomReplyURL: string;
+begin
+  Result := FCustomReplyURLFromExternalNLP;
+  if FCustomReplyURLFromExternalNLP.IsEmpty then
+    Result := SimpleBOT.CustomReplyURL;
+end;
+
 function TCarikWebModule.getisSpeakingMode: boolean;
 var
   s: string;
@@ -454,7 +693,21 @@ begin
     Result := False;
 end;
 
+function TCarikWebModule.getIsSuggest: boolean;
+var
+  b: boolean;
+  url: string;
+begin
+  try
+    Result := False;
+    Result := Config[SUGGESTION_ENABLE];
+  except
+  end;
+end;
+
 function TCarikWebModule.getIsTranslate: boolean;
+var
+  s: string;
 begin
   Result := False;
 
@@ -474,11 +727,13 @@ begin
 
 end;
 
-function TCarikWebModule.getUniqueID: string;
+function TCarikWebModule.getPrefixID: string;
 begin
-  Result := '';
+  Result := ChannelId;
+  if Result.IsEmpty then
+    Result := '0';
   if FMessengerMode = mmTelegram then
-    Result := 'te';
+    Result := 'tl';
   if FMessengerMode = mmFacebook then
     Result := 'fb';
   if FMessengerMode = mmLine then
@@ -487,6 +742,68 @@ begin
     Result := 'sk';
   if FMessengerMode = mmSlack then
     Result := 'sl';
+  if FMessengerMode = mmWhatsapp then
+    Result := 'wa';
+  if FMessengerMode = mmInstagram then
+    Result := 'in';
+  if FMessengerMode = mmDiscord then
+    Result := 'di';
+
+  // by pass
+  if channelID = 'direct' then
+    Result := DEFAULT_CHANNEL_ID;
+  if channelID = 'android' then
+    Result := ANDROID_CHANNEL_ID;
+  if channelID = 'i' then
+    Result := IOS_CHANNEL_ID;
+  if channelID = 'ios' then
+    Result := IOS_CHANNEL_ID;
+  if channelID = 'whatsapp' then
+    Result := WHATSAPP_CHANNEL_ID;
+  if channelID = 'discord' then
+    Result := DISCORD_CHANNEL_ID;
+  if channelID = 'instagram' then
+    Result := INSTAGRAM_CHANNEL_ID;
+  if channelID = 'telegram_userbot' then
+    Result := TELEGRAM_USERBOT_CHANNEL_ID;
+
+  if channelID = 'sms' then
+    Result := SMS_CHANNEL_ID;
+  if channelID = 'twitter' then
+    Result := TWITTER_CHANNEL_ID;
+  if channelID = 'dualspace' then
+    Result := DUALSPACE_CHANNEL_ID;
+  if channelID = 'signal' then
+    Result := SIGNAL_CHANNEL_ID;
+  if channelID = 'bip' then
+    Result := BIP_CHANNEL_ID;
+  if channelID = 'zoom' then
+    Result := ZOOM_CHANNEL_ID;
+
+end;
+
+function TCarikWebModule.getReplyType: string;
+begin
+  Result := SimpleBOT.ReplayType;
+end;
+
+function TCarikWebModule.getUniqueID: string;
+begin
+  Result := '';
+  if FMessengerMode = mmTelegram then
+    Result := 'tl';
+  if FMessengerMode = mmFacebook then
+    Result := 'fb';
+  if FMessengerMode = mmLine then
+    Result := 'ln';
+  if FMessengerMode = mmSkype then
+    Result := 'sk';
+  if FMessengerMode = mmSlack then
+    Result := 'sl';
+  if FMessengerMode = mmWhatsapp then
+    Result := 'wa';
+  if FMessengerMode = mmInstagram then
+    Result := 'in';
 
   if isGroup then
     Result := Result + Carik.GroupChatID
@@ -495,11 +812,38 @@ begin
 
 end;
 
+function TCarikWebModule.getWaitingInput: boolean;
+var
+  s: string;
+  dt: TDateTime;
+begin
+  try
+    Result := s2b(SimpleBOT.UserData[WAITING_INPUT]);
+  except
+  end;
+  if not Result then Exit;
+
+  s := SimpleBOT.UserData[WAITING_INPUT_DATE];
+  if not s.IsEmpty then
+  begin
+    dt := s.AsDateTime;
+    if dt.MinutesDiff(Now) >= FORM_INPUT_TIMEOUT then
+    begin
+      FFormInputExpired := True;
+      if dt.MinutesDiff(Now) < FORM_INPUT_TIMEOUT_MAX then
+        Prefix := FORM_INPUT_EXPIRED;
+      SimpleBOT.UserData[WAITING_INPUT] := '0';
+      Result := False;
+    end;
+  end;
+end;
+
 function TCarikWebModule.isGroup: boolean;
 begin
   Result := False;
-  if isTelegramGroup then
-    Result := True;
+  if FMessengerMode = mmTelegram then
+    if isTelegramGroup then
+      Result := True;
 end;
 
 procedure TCarikWebModule.setisSpeakingMode(AValue: boolean);
@@ -553,6 +897,14 @@ begin
   Result := generateCalendarID + '|' + AEventName;
 end;
 
+function TCarikWebModule.onewordHandler(const IntentName: string;
+  Params: TStrings): string;
+begin
+  if not SimpleBOT.isFormula then
+    Exit;
+  Result := SimpleBOT.Formula(Text);
+end;
+
 function TCarikWebModule.definisiHandler(const IntentName: string;
   Params: TStrings): string;
 var
@@ -568,8 +920,10 @@ begin
   if Result <> '' then
     Exit;
 
-  // use knowledge basde first
+  // use knowledge base first
   Result := KnowledgeBase(keyName);
+  Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
   //TODO: safe to local thesaurus
   if Result <> '' then
     Exit;
@@ -589,6 +943,23 @@ begin
   begin
     Result := Find(keyName);
     Free;
+  end;
+
+  if Result = '' then
+  begin
+    if ChannelId.IsEmpty or (ChannelId = 'direct') then
+    begin
+      Result := SimpleBOT.SimpleAI.GetResponse('NotFound');
+      Result := Result + '\n' + _CARIK_ONLY;
+      Exit;
+    end;
+
+    Result := CarikSearch(keyName);
+    Result := Result.Replace(#13#10,'\n');
+    Result := Result.Replace(#10#13,'\n');
+    Result := Result.Replace(#13,'\n');
+    Result := Result.Replace(#10,'\n');
+    Result := trim(Result);
   end;
 
   if Result <> '' then
@@ -627,6 +998,70 @@ begin
   //   keyName & keyValue
 end;
 
+function TCarikWebModule.iterationNextHandler(const IntentName: string;
+  Params: TStrings): string;
+var
+  i: Integer;
+  contextAbout, contextAction, s: String;
+begin
+  FIterationParams := Params.Values['keyword'];
+
+  FIterationParamsPast := TStringList.Create;
+  FIterationParamsPast.Text := SimpleBOT.UserData['CONTEXT_PARAM'];
+  FIterationParamsPast.Text := FIterationParamsPast.Text.Replace('|', #10);
+
+  contextAbout := SimpleBOT.UserData['CONTEXT'];
+  contextAbout := contextAbout.Replace('_', ' ');
+  contextAction := SimpleBOT.UserData['CONTEXT_ACTION'];
+
+  for i:=FIterationParamsPast.Count-1 downto 0 do
+  begin
+    s := FIterationParamsPast.Names[i].Trim;
+    if s.Contains('$') then Continue;
+    if s.Contains('_value') then Continue;
+    if s.Contains('pattern') then Continue;
+    if s.IsEmpty then Continue;
+  end;
+  Result := SimpleBOT.IterationHandler( contextAction, FIterationParams);
+end;
+
+procedure TCarikWebModule.setGroupData(const KeyName: string; AValue: string);
+var
+  key: string;
+begin
+  if Carik.GroupChatID.IsEmpty then Exit;
+  key := 'prune-' + KeyName;
+  try
+    FGroupData := TIniFile.Create(GROUP_DATA_FILENAME);
+    FGroupData.WriteString( Carik.GroupChatID, key, AValue);
+  except
+    on E:Exception do
+    begin
+      LogUtil.Add(E.Message, 'GROUPDATA');
+    end;
+  end;
+  FGroupData.Free;
+end;
+
+function TCarikWebModule.getGroupData(const KeyName: string): string;
+var
+  key: string;
+begin
+  Result := '';
+  if Carik.GroupChatID.IsEmpty then Exit;
+  key := 'prune-' + KeyName;
+  try
+    FGroupData := TIniFile.Create(GROUP_DATA_FILENAME);
+    Result := FGroupData.ReadString( Carik.GroupChatID, key, '');
+  except
+    on E:Exception do
+    begin
+      LogUtil.Add(E.Message, 'GROUPDATA');
+    end;
+  end;
+  FGroupData.Free;
+end;
+
 function TCarikWebModule.userProfileHandler(const IntentName: string;
   Params: TStrings): string;
 begin
@@ -657,6 +1092,8 @@ begin
   with TRajaOngkirIntegration.Create do
   begin
     AccountType := atBasic;
+    if not (MessengerMode = mmNone) then
+      BOLD_CODE:= '*';
     Key := Config[RAJAONGKIR_TOKEN];
     if Params.Values['vendor_value'] = '' then
       Result := Track('JNE', Params.Values['nomor_value'])
@@ -694,10 +1131,11 @@ begin
 
   with TPortalPulsaIntegration.Create do
   begin
-    UserID := Config[PORTALPULSA_USERID];
-    Key := Config[PORTALPULSA_KEY];
-    Secret := Config[PORTALPULSA_SECRET];
+    UserID := 'P21765';
+    Key := 'dc40e6d1c4dcd48cd254cc5cc1248ea5';
+    Secret := 'd10fdea4e4085145e63bf5521fe1a2314a30bd67fd047f76891799cf4401ab83';
     TransactionID := FormatDateTime('yyyymmddHHnnss', Now) + _nomor;
+
     if IsiPulsa(_nomor, '5') then
     begin
 
@@ -739,6 +1177,7 @@ begin
     begin
 
     end;
+    LogUtil.Add(Message, 'PULSA');
     Free;
   end;
 
@@ -766,36 +1205,6 @@ begin
     UrlEncode(Params.Values['title_value']);
 end;
 
-function TCarikWebModule.currencyHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  nominal: string;
-begin
-  Result := '';
-  nominal := Params.Values['nominal_value'];
-  if nominal = '' then
-    nominal := '1';
-  with TCurrencyIbacorIntegration.Create do
-  begin
-    Debug := True;
-    Token := Config[IBACOR_TOKEN];
-    if Token <> '' then
-    begin
-      if Params.Values['ke_value'] = 'rupiah' then
-        Params.Values['ke_value'] := 'idr';
-      if Params.Values['ke_value'] = 'dollar' then
-        Params.Values['ke_value'] := 'usd';
-      if Params.Values['ke_value'] = 'dolar' then
-        Params.Values['ke_value'] := 'usd';
-      Result := Converter(Params.Values['dari_value'], Params.Values['ke_value'],
-        s2i(nominal));
-      if Result = '' then
-        Result := _CARIK_CURRENCY_MSG_FAILED;
-    end;
-    Free;
-  end;
-end;
-
 function TCarikWebModule.distanceHandler(const IntentName: string;
   Params: TStrings): string;
 begin
@@ -803,6 +1212,7 @@ begin
 
   with TGoogleDistanceIntegration.Create do
   begin
+    Key := Config[GOOGLE_KEY];
     if not GetDistance(Params.Values['Origin_value'],
       Params.Values['Destination_value']) then
     begin
@@ -817,6 +1227,16 @@ begin
     Result := StringReplace(Result, '%Duration%', DurationAsText, [rfReplaceAll]);
     Free;
   end;
+  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
+end;
+
+function TCarikWebModule.distanceFromToHandler(const IntentName: string;
+  Params: TStrings): string;
+begin
+  Params.Values['Origin_value'] := Params.Values['$1'] + ',' + Params.Values['$2'];
+  Params.Values['Destination_value'] := Params.Values['$3'];
+  Result := distanceHandler(IntentName, Params);
 end;
 
 function TCarikWebModule.ocrCognitiveHandler(const IntentName: string;
@@ -864,8 +1284,15 @@ begin
 
   if Result <> '' then
   begin
+    //Result := RemoveUnicode(Result);
+    //Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
+    //Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
+    Result := AnsiToUtf8(Result);
+    Result := Result.Replace('*', '');
+
     s := SimpleBOT.GetResponse(IntentName + _RESPONSE);
     Result := Format(s, [Result]);
+    LogUtil.Add(Result, 'OCR');
   end
   else
     Result := SimpleBOT.GetResponse(IntentName + 'NoText');
@@ -954,6 +1381,8 @@ begin
     Token := Config[COGNITIVE_OCR_TOKEN];
     Details := 'celebrities';
     Result := Scan(_url);
+    LogUtil.Add(Token, 'Token');
+    LogUtil.Add(ResultText, 'ImageToFigure');
     Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
     Free;
   end;
@@ -1196,10 +1625,38 @@ function TCarikWebModule.lokasiHandler(const IntentName: string;
   Params: TStrings): string;
 const
   LOKASI_RANGE = '(sini|disini|di sini|terdekat|dekat|near me|near by)';
+  LOKASI_RANGE_2 = '(di|deket|dekat)';
 var
   i: integer;
-  s, _keyword, jamBuka: string;
+  s, _keyword, jamBuka, sType: string;
 begin
+
+  // Iteration - check
+  if not FIterationParams.IsEmpty then
+  begin
+    s := SimpleBOT.SimpleAI.SimpleAILib.Intent.Entities.GetKey('Lokasi', FIterationParams);
+    if s.IsEmpty then
+    begin
+      Params.Values['keyword_value'] := FIterationParams;
+      Params.Values['Lokasi'] := FIterationParamsPast.Values['Lokasi_value'];
+      Params.Values['Lokasi_value'] := FIterationParamsPast.Values['Lokasi_value'];
+    end else
+    begin
+      Params.Values['keyword_value'] := FIterationParamsPast.Values['keyword_value'];
+      Params.Values['Lokasi'] := s;
+      Params.Values['Lokasi_value'] := s;
+    end;
+    Params.Values['action'] := FIterationParamsPast.Values['action'];
+    Params.Values['intent_name'] := FIterationParamsPast.Values['intent_name'];
+  end;
+  // Iteration - check - end
+
+  if Params.Values['Lokasi_value'] = '' then
+  begin
+    Params.Values['Lokasi'] := Params.Values['Kuliner'];
+    Params.Values['Lokasi_value'] := Params.Values['Kuliner_value'];
+  end;
+
   _keyword := Params.Values['keyword_value'];
   Result := Params.Values['Lokasi_value'] + ' ' + Params.Values['keyword_value'];
 
@@ -1214,72 +1671,70 @@ begin
     Result := SimpleBOT.GetResponse(IntentName + 'NoLocation');
     Result := StringReplace(Result, '%lokasi%', Params.Values['Lokasi_value'],
       [rfReplaceAll]);
+    FSendQuickReplayLocation := True;
+    FActionCallback := 'location.send|keyword=' + Params.Values['Lokasi_value'];
     Exit;
   end;
 
   _keyword := trim(Params.Values['Lokasi'] + ' ' + Params.Values['keyword_value']);
+  saveContext(Params);
+
+  // START SEARCH
+  // Get Data Array
+  s := '';
   with TGooglePlaceIntegration.Create do
   begin
     Key := Config[GOOGLE_KEY];
-    Result := SearchAsText(_keyword, s2f(Params.Values['lat_value']),
+    ElementArray := SearchAsArray(_keyword, s2f(Params.Values['lat_value']),
       s2f(Params.Values['lon_value']));
 
-    if Count = 1 then
+    if ElementArray.Count = 0 then
+      Result := SimpleBOT.GetResponse(IntentName + 'NotFound') //TODO: #Aup
+    else
+      FCanSendTemplateCard := True;
+
+    FButtonCaption := 'Lihat Map';
+    if MessengerMode = mmFacebook then
+      MarkDown := False;
+    if FMessengerMode = mmNone then
     begin
-      FVenueName := Title;
-      FVenueAddress := Address;
-      FVenueLatitude := Latitude;
-      FVenueLongitude := Longitude;
-      //FSendVenue := True; // data lokasi banyak yg tidak akurat
-      if MessengerMode = mmTelegram then
-        Result := '';
-      if MessengerMode = mmLine then
-        Result := '';
-
-      s := Detail(PlaceID);
-      if s <> '' then
-      begin
-        s := '*' + jsonGetData(Data, 'result/name') + '*';
-        s := s + #10 + jsonGetData(Data, 'result/formatted_address');
-
-        // Jam Buka
-        s := s + #10 + 'Jam buka: ';
-        i := DayOfWeek(Now) - 2;
-        if i = -1 then
-          i := 6;
-        jamBuka := jsonGetData(Data, 'result/opening_hours/periods[' +
-          i2s(i) + ']/open/time');
-
-        if jamBuka <> '' then
-        begin
-          s := s + jamBuka;
-          s := s + ' - ' + jsonGetData(Data, 'result/opening_hours/periods[' +
-            i2s(i) + ']/close/time');
-          s := s + #10;
-        end;
-        if jsonGetData(Data, 'result/opening_hours/open_now') = 'True' then
-          s := s + 'Saat ini buka.';
-
-        s := s + #10 + StringReplace(jsonGetData(Data,
-          'result/international_phone_number'), ' ', '', [rfReplaceAll]);
-
-        s := s + #10#10'maps: ' + jsonGetData(Data, 'result/url');
-        s := s + #10 + jsonGetData(Data, 'result/website');
-        s := Trim(s);
-        s := StringReplace(s, #10, '\n', [rfReplaceAll]);
-        Result := s;
-      end;
-
+      BOLD_CODE := self.BOLD_CODE;
+      MarkDown := true;
     end;
-
-    if Result = '' then
-    begin
-      //Result := SimpleBOT.GetResponse(IntentName + 'NotFound');
-      //Result := StringReplace(Result, '%lokasi%', Params.Values['Lokasi_value'],
-      //  [rfReplaceAll]);
-    end;
+    s := DisplayAsText(ElementArray);  //TODO: wrong logic #Aup
     Free;
   end;
+
+  if ElementArray.Count = 0 then
+    s := SimpleBOT.GetResponse(IntentName + 'NotFound');
+
+  if ((MessengerMode = mmFacebook)or(MessengerMode = mmLine)) then
+  begin
+    //Result := s;
+    //Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
+    //Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
+    Result := '';
+    if ElementArray.Count = 0 then
+      Result := s;
+    Exit;
+  end;
+
+  if MessengerMode = mmNone then
+  begin
+
+    sType := Params.Values['Lokasi_value'];
+    if sType.IsEmpty then
+      sType := Params.Values['keyword_value'];
+
+    FActionCallback := 'display.list|from=data|type='+sType
+      + '|keyword=' + Params.Values['keyword_value'];
+
+  end;
+
+  Result := s;
+  Result := Trim(Result);
+  Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
+  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
 end;
 
 // internal usage
@@ -1316,6 +1771,8 @@ begin
     Result := SimpleBOT.GetResponse(IntentName + 'NoLocation');
     Result := StringReplace(Result, '%lokasi%', Params.Values['Lokasi_value'],
       [rfReplaceAll]);
+    FSendQuickReplayLocation := True;
+    FActionCallback := 'location.send|keyword=' + Params.Values['Lokasi_value'];
     Exit;
   end;
 
@@ -1324,10 +1781,14 @@ begin
   begin
     URL := Config[ZOMATO_URL];
     Key := Config[ZOMATO_KEY];
+    if FMessengerMode = mmFacebook then
+      MarkDown := false;
     EntityType := '';
     EntityID := 94; //Indonesia
     s := SearchAsJson(_keyword, s2f(Params.Values['lat_value']),
       s2f(Params.Values['lon_value']), 5);
+    //LogUtil.Add(ResultText, 'LINE-KULINER');
+    //die( ResultText);
     if s <> '' then
       Result := ConvertJsonToTextInfo(s);
     Free;
@@ -1378,6 +1839,20 @@ begin
   Params.Values['lon_value'] := Params.Values['$2'];
   Params.Values['keyword_value'] := Params.Values['$3'];
   Result := lokasiKulinerHandler(IntentName, Params);
+end;
+
+function TCarikWebModule.spamReportHandler(const IntentName: string;
+  Params: TStrings): string;
+var
+  s : string;
+begin
+  Result := '';
+  if not Carik.IsPermitted then
+    Exit;
+
+  s := Params.Values['username'];
+  s := s.Replace('@', '');
+  Result := ReportSpam(s, '', Carik.UserID);
 end;
 
 function TCarikWebModule.carikAdminTambahHandler(const IntentName: string;
@@ -1434,6 +1909,11 @@ end;
 function TCarikWebModule.carikMemberBaruHandler(const IntentName: string;
   Params: TStrings): string;
 begin
+  if Carik.isCollectiveWelcomeGreeting then
+  begin
+    Exit;
+  end;
+
   Result := Carik.CustomMessage['WELCOME'];
   if Result = '' then
     Result := SimpleBOT.GetResponse(IntentName + 'Response');//ulil
@@ -1457,139 +1937,54 @@ begin
     SimpleBOT.UserData[_GROUP_MEMBERBARU_ABAIKAN] := '0';
 end;
 
-function TCarikWebModule.quickCountHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  provinceCode: string;
-begin
-  provinceCode := '25823';
-  if Params.Values['province_value'] = 'banten' then
-    provinceCode := '51578';
-  if Params.Values['province_value'] = 'aceh' then
-    provinceCode := '1';
-  with TKawalPemiluIntegration.Create do
-  begin
-    Result := ProvinceRealCountInfo(provinceCode);
-    Free;
-  end;
-  if Result = '' then
-    Result := SimpleBOT.GetResponse(IntentName + 'NoResponse')
-  else
-    Result := Result + '\n\n' + SimpleBOT.GetResponse(IntentName + 'Response');
-
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-end;
-
-function TCarikWebModule.kofaJadwalImsyakHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  s, kota, imsyak, maghrib: string;
-begin
-  Result := '';
-  kota := Params.Values['kota_value'];
-  if kota = '' then
-    kota := 'jakarta selatan';
-  if kota = 'jogja' then
-    kota := 'yogyakarta';
-  if kota = 'jogjakarta' then
-    kota := 'yogyakarta';
-
-  with TMasKofaJadwalShalatIntegration.Create do
-  begin
-    Username := '';
-    Password := '';
-    SessionID := Config[MASKOFA_SHALAT_SESSIONID];
-    CityList.LoadFromFile(Config[MASKOFA_SHALAT_CITYLISTS]);
-    Result := Find(kota);
-    if Result <> '' then
-    begin
-      Result := '';
-      s := FormatDateTime('d', Today);
-      imsyak := jsonGetData(Data, 'data/' + s + '/Imsyak');
-      maghrib := jsonGetData(Data, 'data/' + s + '/Maghrib');
-      Result := Result + #10'*Imsyak: ' + jsonGetData(Data, 'data/' +
-        s + '/Imsyak') + '*';
-      Result := Result + #10'Shubuh: ' + jsonGetData(Data, 'data/' + s + '/Shubuh');
-      Result := Result + #10'Dzuhur: ' + jsonGetData(Data, 'data/' + s + '/Dzuhur');
-      Result := Result + #10'Ashr: ' + jsonGetData(Data, 'data/' + s + '/Ashr');
-      Result := Result + #10'*Maghrib: ' + jsonGetData(Data, 'data/' +
-        s + '/Maghrib') + '*';
-      Result := Result + #10'Isya: ' + jsonGetData(Data, 'data/' + s + '/Isya');
-    end;
-    Free;
-  end;
-
-  if Result = '' then
-    Result := SimpleBOT.GetResponse(IntentName + 'NoData')
-  else
-  begin
-    if Params.Values['$2'] = 'imsyak' then
-      Result := '*' + ucwords('Jadwal Imsyak ' + kota + ':*') + #10 + Result
-    else
-      Result := '*' + ucwords('Jadwal Puasa ' + kota + ':*') + #10 + Result;
-    if Time > StrToTime('03:00') then
-    begin
-      if MinutesBetween(Time, StrToTime('03:00')) < 60 then
-        Result := Result + #10#10 + SimpleBOT.GetResponse(IntentName + 'Sahur');
-    end;
-    if Time > StrToTime(imsyak) then
-    begin
-      if MinutesBetween(Time, StrToTime(imsyak)) < 5 then
-        Result := Result + #10#10 + SimpleBOT.GetResponse(IntentName + 'Imsyak');
-    end;
-    if Time > StrToTime(maghrib) then
-    begin
-      if MinutesBetween(Time, StrToTime(maghrib)) < 10 then
-        Result := Result + #10#10 + SimpleBOT.GetResponse(IntentName + 'Maghrib');
-    end;
-  end;
-
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-end;
-
-function TCarikWebModule.kofaJadwalSholatHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  kota: string;
-begin
-  Result := '';
-  kota := Params.Values['kota_value'];
-  kota := CleanupMessage(kota);
-  if kota = '' then
-    kota := 'jakarta selatan';
-  if kota = 'jogja' then
-    kota := 'yogyakarta';
-  if kota = 'jogjakarta' then
-    kota := 'yogyakarta';
-
-  with TMasKofaJadwalShalatIntegration.Create do
-  begin
-    Username := '';
-    Password := '';
-    SessionID := Config[MASKOFA_SHALAT_SESSIONID];
-    CityList.LoadFromFile(Config[MASKOFA_SHALAT_CITYLISTS]);
-    Result := Find(kota);
-    Free;
-  end;
-
-  if Result = '' then
-    Result := SimpleBOT.GetResponse(IntentName + 'NoData')
-  else
-    Result := ucwords('*Jadwal sholat ' + kota + ':*') + #10 + Result;
-
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-end;
-
 function TCarikWebModule.alquranTerjemahanHandler(const IntentName: string;
   Params: TStrings): string;
 var
   lst: TStrings;
+  suratName, suratNo: string;
+  ayat: string;
 begin
   Result := '';
+
+  suratName := Params.Values['NamaSurat_value'];
+  if not suratName.IsEmpty then
+  begin
+    //clean up surat name
+    suratName := suratName.Replace('al-', '');
+    suratName := suratName.Replace('ar-', '');
+    suratName := suratName.Replace('as-', '');
+    suratName := suratName.Replace('al ', '');
+    suratName := suratName.Replace('ar ', '');
+    suratName := suratName.Replace('as ', '');
+    suratName := suratName.Replace('''', '');
+    suratName := suratName.Replace('-', '');
+    suratName := suratName.Replace(' ', '');
+
+    //get nomor surat
+    lst := TStringList.Create;
+    lst.LoadFromFile('files/quran-surat.txt');
+    suratNo := lst.Values[suratName];
+    lst.Free;
+
+    if suratNo.IsEmpty then
+    begin
+      Result := SimpleBOT.GetResponse(IntentName + 'NoData');
+      Exit;
+    end;
+
+    lst := Explode(suratNo, ';');
+    suratNo := lst[0];
+    lst.Free;
+
+    ayat := Params.Values['Angka_value'];
+    Params.Values['surat_value'] := suratNo + ':' + ayat;
+  end;
+
+  Params.Values['surat_value'] := Params.Values['surat_value'].Replace('.', ':');
   lst := Explode(Params.Values['surat_value'], ':');
   if lst.Count <> 2 then
   begin
-    Result := 'cara penulisan salah, seharusnya:\n"terjemahan quran nosurat:noayat"';
+    Result := SimpleBOT.GetResponse(IntentName + 'Penulisan');
     Exit;
   end;
 
@@ -1610,7 +2005,10 @@ begin
   if Result = '' then
     Result := SimpleBOT.GetResponse(IntentName + 'NoData')
   else
+  begin
     Result := SimpleBOT.GetResponse(IntentName + 'Response') + Result;
+    FActionCallback := 'audio.play|title=' + FCaption + '|url=' + FFileURL;
+  end;
 
   Result := StringReplace(Result, #13#10, '\n', [rfReplaceAll]);
   Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
@@ -1632,7 +2030,7 @@ begin
 
   // hari
   startTime := Today;
-  endTime := IncDay(Today, 30);
+  endTime := IncDay(Today, 7);
 
   s := Params.Values['CalendarRange_value'];
   if (s = 'hari ini') or (s = 'sekarang') then
@@ -1666,9 +2064,13 @@ begin
     endTime := IncDay(Today, 360);
   end;
 
-  //Result := FormatDateTime('yyyy/mm/dd HH:nn', startTime) + ' - ' + FormatDateTime('yyyy/mm/dd HH:nn', endTime);
-  //exit;
-
+  if MessengerMode = mmNone then
+  begin
+    Result := '';
+    FActionCallback := 'calendar.list|start=' + FormatDateTime('yyyy/mm/dd HH:nn', startTime)
+    + '|end=' + FormatDateTime('yyyy/mm/dd HH:nn', endTime);
+    exit;
+  end;
 
   with TKlaudlessCalendarIntegration.Create do
   begin
@@ -1699,7 +2101,7 @@ end;
 function TCarikWebModule.kloudlessCalendarEventCreateHandler(const IntentName: string;
   Params: TStrings): string;
 var
-  jam, menit, jamSelesai: integer;
+  jam, menit, jamSelesai, penambahanJam: integer;
   s, eventName: string;
   startTime, endTime: TDateTime;
   jamTime: TTime;
@@ -1731,6 +2133,7 @@ begin
   // jam
   menit := 0;
   jamSelesai := 1;
+  penambahanJam := 0;
   if Params.Values['Nominal_value'] <> '' then
     Params.Values['Jam_value'] := Params.Values['Nominal_value'];
   s := Params.Values['Jam_value'];
@@ -1788,6 +2191,19 @@ begin
     endTime := IncHour(endTime, jamSelesai);
   end;
 
+  if FMessengerMode = mmNone then
+  begin
+    eventName := Params.Values['EventName_value'];
+    if eventName = '' then
+      eventName := 'Meeting';
+    FActionCallback := 'calendar.add|name='+ucwords(eventName)
+      +'|start=' + FormatDateTime('yyyy/mm/dd HH:nn', startTime)
+      + '|end=' + FormatDateTime('yyyy/mm/dd HH:nn', endTime);
+    Result := SimpleBOT.GetResponse('LayananBelumTersedia');
+    Exit;
+  end;
+
+
   // TEST
   //Result := 'x: ' + FormatDateTime('dd/mmm/yyyy HH:nn', startTime) + ' - ' + FormatDateTime('dd/mmm/yyyy HH:nn', endTime);
   //Exit;
@@ -1843,7 +2259,7 @@ end;
 function TCarikWebModule.openweatherInfoHandler(const IntentName: string;
   Params: TStrings): string;
 var
-  _keyword: string;
+  _keyword, keywordTemp: string;
 
   function translateToID(ASource: string): string;
   begin
@@ -1859,6 +2275,8 @@ begin
     _keyword := 'yogyakarta';
   if _keyword = 'jogjakarta' then
     _keyword := 'yogyakarta';
+  keywordTemp := _keyword;
+  if keywordTemp.IsEmpty then keywordTemp := 'NAMAKOTA';
   if Pos(',', _keyword) < 1 then
     _keyword := _keyword + ',id';
   with TOpenWeatherMapIntegration.Create do
@@ -1883,6 +2301,9 @@ begin
       ' derajat';
 
     Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
+    Result += '\nUntuk prakiraan cuaca seminggu ke depan, ketikkan:';
+    Result += '\n `prakiraan cuaca di '+keywordTemp+'`';
+    Result += '\n\nTetap prokes dan jaga diri yaa.';
     Free;
   end;
 end;
@@ -1891,6 +2312,8 @@ function TCarikWebModule.apixuweatherInfoHandler(const IntentName: string;
   Params: TStrings): string;
 var
   _keyword, _suffix: string;
+  _img: string;
+  json: TJSONUtil;
 
   function translateToID(ASource: string): string;
   begin
@@ -1901,6 +2324,7 @@ var
 
 begin
   Result := '';
+  _suffix := '';
   _keyword := Params.Values['keyword_value'];
   if _keyword = 'jogja' then
     _keyword := 'yogyakarta';
@@ -1915,22 +2339,47 @@ begin
     _keyword := _keyword + ',indonesia';
   with TApixuIntegration.Create do
   begin
-    Key := Config[APIXU_KEY];
+    Key := Config[WEATHERSTACK_KEY];
     Result := WeatherAsJson(_keyword);
     if Result <> '' then
     begin
-      Result := 'Cuaca di ' + Data['location.name'] + ':';
+      json := TJSONUtil.Create;
+      json.LoadFromJsonString(Result);
+      if (not json['success']) then
+      begin
+        json.Free;
+        result := openweatherInfoHandler(IntentName, Params);
+        exit;
+      end;
+
+      _img := json.Item['current'].Item['weather_icons'].AsJSON;
+      json.LoadFromJsonString(_img);
+      _img := json.Data.Items[0].AsString;
+      json.Free;
+      //_img := 'http:' + Data['current.condition.weather_icons'];
+
+      Result := 'Cuaca di ' + Data['location.name'] + ', ' + Data['location.region'];
+      if FMessengerMode = mmTelegram then
+        Result := Result + '[:]('+_img+')';
       Result := Result + #10 + translateToID(Data['current.condition.text']);
       Result := Result + #10'Suhu: ' + FormatFloat('#0.0',
-        GetDataFloat('current.temp_c')) + ' °C';
+        GetDataFloat('current.temperature')) + ' °C';
+      Result := Result + #10'terasa seperti ' + FormatFloat('#0.0',
+        GetDataFloat('current.feelslike')) + ' °C';
 
       Result := Result + #10'Kec. Angin: ' + FormatFloat('#0.00',
-        GetDataFloat('current.wind_kph')) + ' kph';
+        GetDataFloat('current.wind_speed')) + ' kph';
       Result := Result + #10'Arah Angin: ' + FormatFloat('#0.00',
         GetDataFloat('current.wind_degree')) + '° (' + Data['current.wind_dir'] + ')';
       Result := Result + #10'Tekanan: ' + FormatFloat('#0.00',
-        GetDataFloat('current.pressure_mb')) + ' mb';
+        GetDataFloat('current.pressure')) + ' mb';
+      Result := Result + #10'Kelembaban: ' + FormatFloat('#0.00',
+        GetDataFloat('current.humidity')) + '';
 
+      Result := Result + #10'Koordinat: '
+        + FormatFloat('#0.0', GetDataFloat('location.lat'))
+        + ','
+        + FormatFloat('#0.0', GetDataFloat('location.lon'));
       Result := Result + _suffix;
     end;
     Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
@@ -2027,141 +2476,6 @@ begin
     Result := 'sha1("' + Params.Values['Source_value'] + '") = ```' +
       SHA1Print(SHA1String(Params.Values['Source_value'])) + '```';
   end;
-end;
-
-function TCarikWebModule.jobPlanetInfoHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  _keyword: string;
-begin
-  Result := '';
-  _keyword := Params.Values['keyword_value'];
-  if _keyword = '' then
-  begin
-    Exit;
-  end;
-
-  with TJobPlanetIntegration.Create do
-  begin
-    Result := Info(_keyword);
-    if CompanyCount > 1 then
-    begin
-      Result := SimpleBOT.GetResponse(IntentName + 'Response', '', 'prefix') + Result;
-      Result := Result + SimpleBOT.GetResponse(IntentName + 'Response', '', 'suffix');
-      Result := Result + SimpleBOT.GetResponse(IntentName + 'Response', '',
-        'visit') + URL;
-      ;
-    end;
-    Free;
-  end;
-  Result := Trim(StringReplace(Result, #10, '\n', [rfReplaceAll]));
-  if Result = '' then
-    Result := SimpleBOT.GetResponse('NotFound');
-end;
-
-function TCarikWebModule.jobPlanetReviewHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  _keyword: string;
-begin
-  Result := '';
-  _keyword := Params.Values['keyword_value'];
-  if _keyword = '' then
-  begin
-    Exit;
-  end;
-
-  with TJobPlanetIntegration.Create do
-  begin
-    Result := Review(_keyword);
-    if CompanyCount > 1 then
-    begin
-      Result := SimpleBOT.GetResponse(IntentName + 'Response', '', 'prefix') + Result;
-      Result := Result + SimpleBOT.GetResponse(IntentName + 'Response', '', 'suffix');
-      Result := Result + SimpleBOT.GetResponse(IntentName + 'Response', '',
-        'visit') + URL;
-      ;
-    end;
-    Free;
-  end;
-  Result := Trim(StringReplace(Result, #10, '\n', [rfReplaceAll]));
-  if Result = '' then
-    Result := SimpleBOT.GetResponse('NotFound');
-end;
-
-function TCarikWebModule.jobPlanetSalaryHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  _keyword: string;
-begin
-  Result := '';
-  _keyword := Params.Values['keyword_value'];
-  if _keyword = '' then
-  begin
-    Exit;
-  end;
-
-  with TJobPlanetIntegration.Create do
-  begin
-    Result := Salaries(_keyword);
-    if CompanyCount > 1 then
-    begin
-      Result := SimpleBOT.GetResponse(IntentName + 'Response', '', 'prefix') + Result;
-      Result := Result + SimpleBOT.GetResponse(IntentName + 'Response', '', 'suffix');
-      Result := Result + SimpleBOT.GetResponse(IntentName + 'Response', '',
-        'visit') + URL;
-      ;
-    end;
-    Free;
-  end;
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-  if Result = '' then
-    Result := SimpleBOT.GetResponse('NotFound');
-end;
-
-function TCarikWebModule.jobPlanetVacancyHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  keyword: string;
-begin
-  keyword := Params.Values['keyword_value'];
-  with TJobPlanetIntegration.Create do
-  begin
-    Result := 'Lowongan ' + keyword + ':\n';
-    Result := Result + Vacancies(keyword);
-    Free;
-  end;
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-end;
-
-function TCarikWebModule.jobPlanetInterviewHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  keyword: string;
-begin
-  keyword := Params.Values['keyword_value'];
-  if keyword = '' then
-  begin
-    Result := SimpleBOT.GetResponse('Incomplete');
-    Exit;
-  end;
-
-  with TJobPlanetIntegration.Create do
-  begin
-    Result := Interview(keyword);
-    if CompanyCount > 1 then
-    begin
-      Result := SimpleBOT.GetResponse(IntentName + 'Response', '', 'prefix') + Result;
-      //Result := '*Interview di ' + keyword + ':*\n' + Result;
-      Result := Result + SimpleBOT.GetResponse(IntentName + 'Response', '', 'suffix');
-    end;
-
-    Free;
-  end;
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-  Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
-  Result := StringReplace(Result, '%', ' persen', [rfReplaceAll]);
-
 end;
 
 function TCarikWebModule.propertySearchHandler(const IntentName: string;
@@ -2409,7 +2723,7 @@ begin
     begin
       Exit;
     end;
-
+    DeleteFile(AAudioFile);
   end;
 
   with TWitAiIntegration.Create do
@@ -2456,7 +2770,7 @@ begin
       strigger_name := Config.GetObject(AI_CONFIG_TRIGGERWORD).Names[i];
       for j := 0 to jData.Items[i].Count - 1 do
       begin
-        strigger := jData.Items[i].Items[j].AsString;
+        strigger := ' ' + jData.Items[i].Items[j].AsString + ' ';
         if preg_match(strigger, LMessage) then
         begin
           s := SafeText(strigger_name);
@@ -2574,16 +2888,325 @@ begin
 
 end;
 
+function TCarikWebModule.IsBlackListed(AUserName: string; AUserId: string
+  ): boolean;
+var
+  i: integer;
+  log_url: string;
+  spamList: TIniFile;
+  http_response: IHTTPResponse;
+  json: TJSONUtil;
+begin
+  Result := False;
+
+  // get info from blacklist repository
+  try
+    log_url := Config[BLACKLISTCHECK_URL] + '?_=1&channel=telegram&id=' + AUserId;
+    with THTTPLib.Create do
+    begin
+      URL := log_url;
+      AddHeader('Cache-Control', 'no-cache');
+      AddHeader('X-Client-Type', 'beta'); //TODO: client type
+      http_response := Get;
+      if http_response.ResultCode = 200 then
+      begin
+        json := TJSONUtil.Create;
+        json.LoadFromJsonString(http_response.ResultText);
+        i := json['code'];
+        if i = 0 then
+        begin
+          Free;
+          Result := True;
+          Exit;
+        end;
+      end;
+      Free;
+    end;
+  except
+  end;
+
+  if not FileExists(BLACKLIST_FILENAME) then
+    Exit;
+
+  spamList := TIniFile.Create(BLACKLIST_FILENAME);
+  if spamList.ValueExists('blacklist', 'tl-' + AUserName) then
+  begin
+    spamList.Free;
+    Result := True;
+    Exit;
+  end;
+
+  // Check from combot
+  if not AUserId.IsEmpty then
+  begin
+    if IsSpammer(AUserId) then
+    begin
+      ReportSpam('+'+AUserId);
+      Result := True;
+    end;
+  end;
+
+  spamList.Free;
+end;
+
+function TCarikWebModule.IsSuspected(AUserId: string; AFullName: string
+  ): boolean;
+begin
+  Result := False;
+  AFullName := AFullName.Replace(' ', '');
+  if AFullName.Length < 3 then
+    Result := True;
+  if not isVowelExists(AFullName) then
+    Result := True;
+end;
+
+function TCarikWebModule.IsGlobalUserBlackListed(AUserId: string): boolean;
+var
+  i: integer;
+  id: string;
+begin
+  Result := False;
+  try
+    //s := Config.GetObject('blacklist/').Find('users').Items[1].Items[0].AsString;
+    if Config.GetObject('blacklist/users').Count = 0 then
+      Exit;
+
+    id := '';
+    for i:=0 to Config.GetObject('blacklist/users').Count-1 do
+    begin
+      id := Config.GetObject('blacklist/').Find('users').Items[i].Items[0].AsString;
+      if id = AUserId then
+      begin
+        Result := True;
+        Break;
+      end;
+    end;
+  except
+  end;
+
+end;
+
+function TCarikWebModule.IsGlobalGroupBlackListed(AGroupId: string): boolean;
+var
+  i: integer;
+  id: string;
+begin
+  Result := False;
+  try
+    if Config.GetObject('blacklist/groups').Count = 0 then
+      Exit;
+
+    id := '';
+    for i:=0 to Config.GetObject('blacklist/groups').Count-1 do
+    begin
+      id := Config.GetObject('blacklist/').Find('groups').Items[i].Items[0].AsString;
+      if id = AGroupId then
+      begin
+        Result := True;
+        Break;
+      end;
+    end;
+  except
+  end;
+
+end;
+
+function TCarikWebModule.isNewMember(AUserID: string; AGroupID: string;
+  AInterval: integer): boolean;
+var
+  s, checkUrl: string;
+  json: TJSONUtil;
+  FS: TFormatSettings;
+begin
+  //AUserID := '842005875';
+  //AGroupID := '-1001081482233';
+
+  Result := False;
+  checkUrl := Config[GROUPMEMBER_URL];
+  if checkUrl.IsEmpty then
+    Exit;
+  checkUrl := checkUrl + '?_=1&channel=telegram&id=' + AUserID
+    + '&gid=' + AGroupID;
+  s := file_get_contents(checkUrl);
+  json := TJSONUtil.Create;
+  json.LoadFromJsonString(s);
+  if (json['code'] <> 0) or (json['count']=0) then
+  begin
+    json.Free;
+    Exit;
+  end;
+  s := json['last_join_date'];
+  s := s.Replace('-','/');
+
+  FS := DefaultFormatSettings;
+  FS.DateSeparator := '/';
+  FS.ShortDateFormat := 'yyyy/mm/dd';
+  FS.ShortTimeFormat := 'hh:mm:ss';
+
+  if MinutesBetween( Now, StrToDateTime(s, FS)) < AInterval then
+    Result := True;
+  json.Free;
+end;
+
+function TCarikWebModule.SpamScore(AUserID: string; AText: string;
+  ForceCheck: boolean): integer;
+var
+  i, j: integer;
+  s, triggerName, triggerWord: string;
+  jData: TJSONData;
+begin
+  Result := 0;
+  if isLookLikeURL(AText) or ForceCheck then
+  begin
+    Result := Result + 10;
+
+    //TODO: add spam score detection
+    s := Config.GetObject(SPAM_WORD).AsJSON;
+    jData := GetJSON(s);
+    for i := 0 to jData.Count - 1 do
+    begin
+      triggerName := Config.GetObject(SPAM_WORD).Names[i];
+      for j := 0 to jData.Items[i].Count - 1 do
+      begin
+        triggerWord := jData.Items[i].Items[j].AsString;
+        if preg_match(triggerWord, AText) then
+        begin
+          Result := Result + 71;
+        end;
+      end;
+    end;
+    jData.Free;
+
+    //exception
+    if preg_match('stackoverflow.com', AText) then
+      Result := Result - 80;
+    if preg_match('.ini ', AText) then
+      Result := Result - 80;
+
+    if isNewMember(AUserID, Carik.GroupChatID, NEW_MEMBER_INTERVAL_POST_PERMITTED) then // last join N minutes ago
+    begin
+      Result := Result + 70;
+    end;
+  end;
+
+  if Result < 80 then
+  begin
+    //TODO: check from spam-score api;
+  end;
+
+  if Result >= SPAM_SCORE_THRESHOLD then
+  begin
+    LogUtil.Add(AUserID + ': ' + AText, 'SPAM('+i2s(Result)+')');
+  end;
+
+end;
+
+function TCarikWebModule.IsSpammer(AUserID: string): boolean;
+var
+  i: integer;
+  s, url: String;
+  json: TJSONUtil;
+  isDataExist: boolean;
+begin
+  Result := False;
+  if AUserID.IsEmpty then
+    Exit;
+  if (FMessengerMode <> mmTelegram) then
+    Exit;
+
+  url := 'https://api.cas.chat/check?user_id=' + AUserID;
+  s := file_get_contents(url, False);
+  if s.IsEmpty then
+    Exit;
+
+  json := TJSONUtil.Create;
+  json.LoadFromJsonString(s);
+  try
+    isDataExist := False;
+    isDataExist := json['ok'];
+  except
+  end;
+  Result := isDataExist;
+  {
+  if isDataExist then
+  begin
+    i := json['result/offenses'];
+    if i > SPAM_CAS_OFFENSE then
+      Result := True;
+  end;
+  }
+
+  json.Free;
+end;
+
+function TCarikWebModule.ReportSpam(AUserID: string; AUserName: string;
+  AReportBy: string): string;
+var
+  log_url: string;
+  spamList: TIniFile;
+  http_response: IHTTPResponse;
+  json: TJSONUtil;
+begin
+  Result := 'Ada kegagalan nih.';
+  if AUserID.IsEmpty then Exit;
+  try
+    log_url := Config[BLACKLISTADD_URL] + '?_=1&channel=telegram';
+    with THTTPLib.Create do
+    begin
+      URL := log_url;
+      AddHeader('Cache-Control', 'no-cache');
+      AddHeader('X-Client-Type', 'beta'); //TODO: client type
+      FormData['UserID'] := AUserID.Replace('+','');
+      FormData['UserName'] := AUserName;
+      FormData['ReportBy'] := AReportBy;
+      http_response := Post;
+      LogUtil.Add( AUserID.Replace('+','') + '/' + AUserName + ': ' + http_response.ResultText, 'SPAMREPORT');
+
+      json:= TJSONUtil.Create;
+      json.LoadFromJsonString(http_response.ResultText);
+      Result:= json['text'];
+      json.Free;
+
+      Result := AUserID + ' reported as spammer';
+      if Result.IsEmpty then
+        Result := 'kegagalan dalam melaporkan spammer';
+
+      Free;
+    end;
+  except
+  end;
+
+  if not FileExists(BLACKLIST_FILENAME) then
+    Exit;
+
+  try
+    spamList := TIniFile.Create(BLACKLIST_FILENAME);
+    spamList.WriteString('blacklist', 'tl-'+AUserID, FormatDateTime('yyyy-mm-dd HH:nn:ss',Now));
+    spamList.Free;
+  except
+  end;
+
+end;
+
 
 procedure TCarikWebModule.Analytics(AChannel, AIntent, AText, AUserID: string);
+var
+  _trackingID: string;
 begin
+  _trackingID := Config[GOOGLEANALYTICS_TRACKING_ID];
+  if _trackingID.IsEmpty then
+    Exit;
+  if AIntent.Equals('GroupInvitationNotMe') then Exit;
+  if AIntent.Equals('Greeting') then Exit;
+  if AIntent.Equals('Menyapa') then Exit;
+
   with TGoogleAnalyticsIntegration.Create do
   begin
     TrackingID := Config[GOOGLEANALYTICS_TRACKING_ID];
     ClientID := AUserID;
     HitType := 'event';
-    Payloads['an'] := Config[CONFIG_BOTNAME];
-    Payloads['ai'] := Config[CONFIG_BOTNAME];
+    Payloads['an'] := FBotName;
+    Payloads['ai'] := FBotName;
     Payloads['av'] := AChannel + '-v0';
     Payloads['ec'] := AChannel;
     Payloads['ea'] := AIntent;
@@ -2646,14 +3269,56 @@ begin
 
 end;
 
-function TCarikWebModule.ExternalNLP(AText: string): string;
+function TCarikWebModule.CarikSearch(AKeyword: string): string;
 var
-  nlp_enable: boolean;
-  nlp_url: string;
-  nlp_json: TJSONData;
+  searchToken: string;
+  search_url: string;
+  search_json: TJSONData;
   http_response: IHTTPResponse;
 begin
   Result := '';
+  try
+    search_url := '';
+    search_url := Config[CARIKSEARCH_URL];
+    searchToken := Config[CARIKSEARCH_TOKEN];
+  except
+  end;
+
+  if search_url = '' then
+    Exit;
+
+  try
+    with THTTPLib.Create do
+    begin
+      URL := search_url;
+      AddHeader('Cache-Control', 'no-cache');
+      AddHeader('X-Client-Type', 'beta'); //TODO: client type
+      FormData['keyword'] := AKeyword;
+      FormData['ChannelId'] := ChannelId;
+      FormData['token'] := searchToken;
+      http_response := Post;
+      if http_response.ResultCode = 200 then
+      begin
+        search_json := GetJSON(http_response.ResultText);
+        Result := trim(jsonGetData(search_json, 'text'));
+      end;
+      Free;
+    end;
+  except
+  end;
+end;
+
+function TCarikWebModule.ExternalNLP(AText: string): string;
+var
+  i: integer;
+  nlp_enable: boolean;
+  nlp_url, nlpAction: string;
+  nlp_json: TJSONData;
+  requestData: TJSONUtil;
+  http_response: IHTTPResponse;
+begin
+  Result := '';
+  FExternalNLPWeight := 0;
   try
     nlp_url := '';
     nlp_url := Config[EXTERNAL_NLP_URL];
@@ -2666,24 +3331,97 @@ begin
   if not nlp_enable then
     Exit;
 
-  nlp_url := nlp_url + '?text=' + UrlEncode(AText);
+  nlp_url := nlp_url + '?client_id='+ClientId+'&text=' + UrlEncode(AText);
+  requestData := TJSONUtil.Create;
   try
     with THTTPLib.Create do
     begin
       URL := nlp_url;
       AddHeader('Cache-Control', 'no-cache');
       AddHeader('X-Client-Type', 'beta'); //TODO: client type
-      http_response := Get;
+      AddHeader('_source', 'carik');
+      AddHeader('User-Agent', 'carik/nlp');
+
+      ContentType := 'application/json';
+      requestData['data/user_id'] := PrefixId + '-' + Carik.UserID;
+      requestData['data/channel_id'] := ChannelId;
+      requestData['data/client_id'] := ClientId;
+      requestData['data/FullName'] := Carik.FullName;
+      requestData['data/full_name'] := Carik.FullName;
+      for i:=0 to SimpleBOT.SimpleAI.Parameters.Count-1 do
+      begin
+        requestData['data/'+SimpleBOT.SimpleAI.Parameters.Names[i]] :=
+            SimpleBOT.SimpleAI.Parameters.ValueFromIndex[i];
+      end;
+      RequestBody := TStringStream.Create(requestData.AsJSON);
+
+      http_response := Post;
       if http_response.ResultCode = 200 then
       begin
-        nlp_json := GetJSON(http_response.ResultText);
+        SimpleBOT.SimpleAI.AdditionalParameters.Values['external'] := 'true';
+        FExternalNLPStarted := True;
+        nlp_json := GetJSON(http_response.ResultText, False);
+        FExternalNLPWeight := s2i(jsonGetData(nlp_json, 'weight'));
         Result := jsonGetData(nlp_json, 'text');
+        Result := Result.Replace(#10, '\n');
+        FExternalNLPIntentName := jsonGetData(nlp_json, 'response/intents/name');
+        FExternalNLPIntentPattern := jsonGetData(nlp_json, 'response/intents/pattern');
+        nlpAction := jsonGetData(nlp_json, 'type');
+        FCustomReplyActionTypeFromExternalNLP := '';
+        FCustomReplyTypeFromExternalNLP := nlpAction;
+        if (nlpAction.IsNotEmpty) then
+        begin
+          FCustomReplyActionTypeFromExternalNLP := jsonGetData(nlp_json, 'action/type');
+          FCustomReplyURLFromExternalNLP := jsonGetData(nlp_json, 'action/url');
+          FCustomReplyName := jsonGetData(nlp_json, 'action/name');
+          SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(nlp_json.GetPath('action.data')));
+          if FCustomActionAsText.IsNotEmpty then
+          begin
+            //Result += '\n'+FCustomActionAsText.Replace(#10, '\n');
+          end;
+        end;
       end;
+
+      //compatibility with form input handler
+      if http_response.ResultCode = 200 then
+      begin
+        FCustomReplyDataFromExternalNLP := TJSONUtil.Create;
+        FCustomReplyDataFromExternalNLP.LoadFromJsonString(http_response.ResultText, False);
+        //Suffix := FCustomReplyDataFromExternalNLP['text'];
+
+        FCustomReplyTypeFromExternalNLP := FCustomReplyDataFromExternalNLP['type'];
+        FCustomReplyActionTypeFromExternalNLP := 'text';
+        if FCustomReplyTypeFromExternalNLP.IsNotEmpty then //action
+        begin
+          FCustomReplyActionTypeFromExternalNLP := FCustomReplyDataFromExternalNLP['action/type'];
+          FCustomReplyURLFromExternalNLP := FCustomReplyDataFromExternalNLP['action/url'];
+          FCustomReplyName := FCustomReplyDataFromExternalNLP['action/name'];
+          SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data')));
+          FCustomReplyDataFromExternalNLP.LoadFromJsonString(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data').AsJSON, False);
+          if FCustomActionAsText.IsNotEmpty then
+          begin
+            {
+            Suffix += '\n'+ACTION_CAPTION+'\n'+FCustomActionAsText.Replace(#10, '\n');
+            s := FCustomReplyDataFromExternalNLP.Data.Items[0].Items[0].GetPath('text').AsString;
+            s := ACTION_SUFFIX.Replace('%s', s);
+            Suffix += '\n' + s;
+            }
+          end;
+
+        end;
+
+      end;
+
       Free;
     end;
   except
+    on E:Exception do
+    begin
+      LogUtil.Add(E.Message, 'ENLP');
+    end;
   end;
 
+  requestData.Free;
 end;
 
 function TCarikWebModule.texttospeechHandler(const IntentName: string;
@@ -2717,157 +3455,6 @@ begin
   Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
 end;
 
-function TCarikWebModule.trainScheduleHandler(const IntentName: string;
-  Params: TStrings): string;
-
-  function generateView(AJsonString: string): string;
-  var
-    i: integer;
-    s, s2: string;
-    json: TJSONData;
-  begin
-    json := GetJSON(AJsonString);
-    s := '';
-    s2 := '';
-    Result := '';
-    try
-      for i := 0 to json.GetPath('data').Count - 1 do
-      begin
-        s2 := jsonGetData(json, 'data[' + i2s(i) + ']/kereta/name') +
-          ' ' + jsonGetData(json, 'data[' + i2s(i) + ']/kereta/class');
-        if s2 <> s then
-        begin
-          s := s2;
-          Result := Result + #10 + s + #10;
-          Result := Result + jsonGetData(json, 'data[' + i2s(i) + ']/berangkat/jam') +
-            ' - ' + jsonGetData(json, 'data[' + i2s(i) + ']/datang/jam') + #10;
-        end;
-        Result := Result + 'Rp. ' + jsonGetData(json, 'data[' + i2s(i) + ']/harga/rp') +
-          ' (SubClass ' + jsonGetData(json, 'data[' + i2s(i) + ']/harga/subclass') + ')';
-        if jsonGetData(json, 'data[' + i2s(i) + ']/tiket') = 'Habis' then
-          Result := Result + ' HABIS';
-        Result := Result + #10;
-      end;
-    except
-    end;
-  end;
-
-var
-  s, asal, tujuan: string;
-  asalKey, tujuanKey: string;
-  asalInfo, tujuanInfo: string;
-  asalLst, tujuanLst: TStrings;
-  d: TDate;
-  indexDate: integer;
-  trainSchedule: TIbacorTrainScheduleController;
-begin
-  Result := 'ga ketemu';
-  d := Today;
-  asal := Params.Values['KotaAsal_value'];
-  tujuan := Params.Values['KotaTujuan_value'];
-  s := Params.Values['Tanggal_value'];
-  if s = 'besok' then
-    d := Tomorrow;
-  if s = 'lusa' then
-    d := Date() + 2;
-  if s = 'besok lusa' then
-    d := Date() + 3;
-
-  s := Params.Values['Tanggal_value'];
-  if s <> '' then
-  begin
-    d := StringHumanToDate(s);
-  end;
-
-  indexDate := DaysBetween(Today, d);
-  if indexDate > 90 then
-  begin
-    Result := SimpleBOT.GetResponse(IntentName + 'TooLong');
-    Exit;
-  end;
-
-  asalLst := Explode(asal, ' ');
-  tujuanLst := Explode(tujuan, ' ');
-
-  trainSchedule := TIbacorTrainScheduleController.Create;
-  trainSchedule.Token := Config[IBACOR_TOKEN];
-
-  // get station list
-  asalInfo := #10'Nama-nama stasiun di ' + ucwords(asalLst[0]) + ':'#10;
-  s := trainSchedule.StationListAsString(asalLst[0]);
-  asalInfo := asalInfo + s;
-  tujuanInfo := #10'Nama-nama stasiun di ' + ucwords(tujuanLst[0]) + ':'#10;
-  s := trainSchedule.StationListAsString(tujuanLst[0]);
-  tujuanInfo := tujuanInfo + s;
-
-  if (asalLst.Count < 2) or (tujuanLst.Count < 2) then
-  begin
-    Result := SimpleBOT.GetResponse('TiketKeretaInfo') + #10;
-
-    if asalLst.Count = 1 then
-    begin
-      Result := Result + #10 + asalInfo;
-    end;
-    Result := Result + #10;
-    if tujuanLst.Count = 1 then
-    begin
-      Result := Result + #10 + tujuanInfo;
-    end;
-    asalLst.Free;
-    tujuanLst.Free;
-    trainSchedule.Free;
-    Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-    Exit;
-  end;
-
-  s := trainSchedule.DateKey(indexDate);
-  if s = '' then
-  begin
-    Result := 'Data tanggal tidak tersedia';
-    trainSchedule.Free;
-    Exit;
-  end;
-
-  // station key
-  asalKey := trainSchedule.StationKey(asalLst[0], asalLst[1]);
-  if asalKey = '' then
-  begin
-    Result := 'Kota/Stasiun Asal tidak ditemukan.' + #10;
-    if trainSchedule.IsValidCity(asalLst[0]) then
-      Result := Result + asalInfo;
-    trainSchedule.Free;
-    Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-    Exit;
-  end;
-
-  // destination station key
-  tujuanKey := trainSchedule.StationKey(tujuanLst[0], tujuanLst[1]);
-  if tujuanKey = '' then
-  begin
-    Result := 'Kota/Stasiun Tujuan tidak ditemukan.' + #10;
-    if trainSchedule.IsValidCity(tujuanLst[0]) then
-      Result := Result + tujuanInfo;
-    trainSchedule.Free;
-    Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-    Exit;
-  end;
-
-  Result := trainSchedule.ScheduleStationToStation(s, asalKey, tujuanKey);
-  if Result = '' then
-  begin
-    Result := 'Data tidak ditemukan';
-    trainSchedule.Free;
-    Exit;
-  end;
-
-  s := generateView(Result);
-  Result := 'Jadwal Kereta dari ' + ucwords(asal) + ' ke ' + ucwords(tujuan) + #10;
-  Result := Result + 'Tanggal: ' + FormatDateTime('dd-mm-yyy', d) + #10;
-  Result := Result + s;
-
-  trainSchedule.Free;
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-end;
 
 function TCarikWebModule.bcaTestHandler(const IntentName: string;
   Params: TStrings): string;
@@ -2903,7 +3490,7 @@ end;
 function TCarikWebModule.yandexSmartTranslateDetectHandler(const IntentName: string;
   Params: TStrings): string;
 var
-  fromLanguage, toLanguage, sourceText: string;
+  s, fromLanguage, toLanguage, sourceText: string;
 begin
   with TYandexTranslateIntegration.Create do
   begin
@@ -2916,6 +3503,15 @@ begin
       sourceText := Params.Values['kalimat_value'];
       fromLanguage := '';
       toLanguage := '';
+    end;
+
+    s := Params.Values['language'];
+    if not s.IsEmpty then
+    begin
+      toLanguage := Params.Values['language'];
+      sourceText := Params.Values['kalimat'];
+      fromLanguage := Detect(sourceText);
+      FLanguage := fromLanguage + '-' + toLanguage;
     end;
 
     if (fromLanguage = '') and (toLanguage = '') then
@@ -2948,7 +3544,8 @@ begin
       '$translated', Result, [rfReplaceAll]);
     Result := StringReplace(Result, '$original', sourceText, [rfReplaceAll]);
     MessageID := '';
-  end;
+  end else
+    Result := 'Maaf, sedang gangguan layanan translasi bahasa.\nCoba lagi nanti yaa.';
 
 end;
 
@@ -3077,6 +3674,135 @@ begin
     [rfReplaceAll]);
 end;
 
+function TCarikWebModule.IsCommand(AText: string): boolean;
+var
+  lst: TStrings;
+begin
+  Result := False;
+  if AText = '' then
+    Exit;
+  lst := Explode(AText, ':');
+  if lst.Count = 1 then
+  begin
+    lst.Free;
+    Exit;
+  end;
+
+  if isValidCommand(lst[0]) then
+    Result := True;
+  lst.Free;
+end;
+
+function TCarikWebModule.isValidCommand(ACommandString: string): boolean;
+var
+  s: string;
+begin
+  Result := False;
+  for s in CommandList do
+  begin
+    if ACommandString = s then
+      Exit(True);
+  end;
+end;
+
+function TCarikWebModule.ExecCommand(AText: string): string;
+var
+  url: string;
+  lst: TStrings;
+begin
+  Result := '';
+  lst := Explode(AText, ':');
+  case lst[0] of
+    CMD_POST_RICH:
+    begin
+      url := Trim(Copy(AText, Pos(':', AText) + 1));
+      Result := execPost(url);
+    end;
+    CMD_JSON_RICH:
+    begin
+      url := Trim(Copy(AText, Pos(':', AText) + 1));
+      Result := execJson(url);
+    end;
+  end;
+  lst.Free;
+end;
+
+function TCarikWebModule.MaximumRetriesUnknownChat: integer;
+var
+  s: string;
+begin
+  Result := s2i(Config[UNKNOWNCHAT_RETRIES]);
+  s := Config[UNKNOWNCHAT_CALLBACK];
+  if s.IsEmpty then
+    Result := 0;
+end;
+
+function TCarikWebModule.GenerateResponseJson: string;
+var
+  jsonOutput: TJSONUtil;
+  customReplyDataAsArray, inputData: TJSONArray;
+begin
+  jsonOutput := TJSONUtil.Create;
+  jsonOutput.LoadFromJsonString(SimpleBOT.SimpleAI.ResponseJson, False);
+  if FExternalNLPIntentName.IsNotEmpty then
+  begin
+    jsonOutput['response/intents/name'] := 'ex:'+FExternalNLPIntentName;
+    jsonOutput['response/intents/external'] := True;;
+  end;
+  if FExternalNLPIntentPattern.IsNotEmpty then
+    jsonOutput['response/intents/pattern'] := ''+FExternalNLPIntentPattern;
+  if Prefix.IsNotEmpty then
+    jsonOutput['response/prefix'] := Prefix;
+  if Suffix.IsNotEmpty then
+    jsonOutput['response/suffix'] := Suffix;
+  if Assigned(FCustomReplyDataFromExternalNLP) then
+  begin
+    jsonOutput['action/action/type'] := CustomReplyType;
+    customReplyDataAsArray := TJSONArray(FCustomReplyDataFromExternalNLP.AsJSON);
+    customReplyDataAsArray := TJSONArray(GetJSON(FCustomReplyDataFromExternalNLP.AsJSON, False));
+    jsonOutput.ValueArray['action/action/data'] := customReplyDataAsArray;
+
+    //compatibility
+    jsonOutput['action/type'] := CustomReplyType;
+    jsonOutput.ValueArray['action/data'] := customReplyDataAsArray;
+  end;
+
+  // Input Type
+  if (FCurrentInputType.IsNotEmpty and (FCurrentInputType <> 'string')) then
+  begin
+    jsonOutput['action/input/type'] := FCurrentInputType;
+    jsonOutput['action/input/title'] := FInputOptionTitle;
+    if Assigned(FInputOptions) then
+    begin
+      inputData := TJSONArray.Create;
+      inputData.Add(FInputOptions);
+      jsonOutput.ValueArray['action/input/data'] := inputData;
+    end;
+  end;
+
+  Result := jsonOutput.AsJSON;
+end;
+
+function TCarikWebModule.SavePrune(AMessageID: string): boolean;
+var
+  key : string;
+begin
+  Result := false;
+  if not Carik.isGroup then Exit;
+  key := SimpleBot.SimpleAI.IntentName + '/' + Text.Replace(' ', '-');
+  GroupData[key] := AMessageID;
+  Result := True;
+end;
+
+function TCarikWebModule.GetPrune: string;
+var
+  key : string;
+begin
+  Result := '';
+  if not Carik.isGroup then Exit;
+  key := SimpleBot.SimpleAI.IntentName + '/' + Text.Replace(' ', '-');
+  Result := GroupData[key];
+end;
 function TCarikWebModule.GenerateLineCarouselFromCulinaryData(
   ATitle, AJson: string): string;
 var
@@ -3285,57 +4011,170 @@ begin
 end;
 
 function TCarikWebModule.FacebookBerita(ATitle, AJson: string): string;
-var
-  i: integer;
-  jData: TJSONData;
-  jElements: TJSONObject;
 begin
   Result := '';
   if AJson = '' then
     Exit;
 
-  jElements := TJSONObject.Create;
+  //TODO: Facebook News
+
+end;
+
+procedure TCarikWebModule.DoProgress(Sender: TObject; const ContentLength,
+  CurrentPos: Int64);
+begin
+  If (ContentLength=0) then
+    Writeln('Reading headers : ',CurrentPos,' Bytes.')
+  else If (ContentLength=-1) then
+    Writeln('Reading data (no length available) : ',CurrentPos,' Bytes.')
+  else
+    Writeln('Reading data : ',CurrentPos,' Bytes of ',ContentLength);
+end;
+
+procedure TCarikWebModule.DoHeaders(Sender: TObject);
+var
+  i: integer;
+begin
+  Writeln('Response headers received:');
+  With (Sender as TFPHTTPClient) do
+    For I:=0 to ResponseHeaders.Count-1 do
+      Writeln(ResponseHeaders[i]);
+end;
+
+// fcl-web/examples/httpclient/httpget.pas
+procedure TCarikWebModule.DoPassword(Sender: TObject; var RepeatRequest: Boolean
+  );
+begin
+
+end;
+
+procedure TCarikWebModule.ShowRedirect(ASender: TObject; const ASrc: String;
+  var ADest: String);
+begin
+  Writeln('Following redirect from ',ASrc,'  ==> ',ADest);
+end;
+
+procedure TCarikWebModule.HttpClientGetSocketHandler(Sender: TObject;
+  const UseSSL: Boolean; out AHandler: TSocketHandler);
+begin
+  AHandler := nil;
+  If UseSSL then begin
+    AHandler := TSSLSocketHandler.Create;
+    TSSLSocketHandler(AHandler).SSLType := stAny;
+  end else begin
+  end;
+end;
+
+function TCarikWebModule.execPost(AURL: string; ACache: boolean): string;
+var
+  i: integer;
+  s: string;
+  lst: TStrings;
+  httpResponse: IHTTPResponse;
+begin
+  Result := '';
+
+  with THTTPLib.Create(AURL) do
+  begin
+    try
+      // set header from nlp config
+      AddHeader('_source', 'carik');
+      s := SimpleBOT.GetResponse(SimpleBOT.SimpleAI.IntentName, '', 'header');
+      s := StringReplace(s, ':', '=', [rfReplaceAll]);
+      lst := Explode(s, '|');
+      for i := 0 to lst.Count - 1 do
+      begin
+        if lst.Names[i] <> '' then
+          AddHeader(lst.Names[i], lst.ValueFromIndex[i]);
+      end;
+      lst.Free;
+
+      // additional parameter
+      for i := 0 to SimpleBOT.SimpleAI.SimpleAILib.Parameters.Count - 1 do
+      begin
+        FormData[SimpleBOT.SimpleAI.SimpleAILib.Parameters.Names[i]] :=
+          UrlEncode(SimpleBOT.SimpleAI.SimpleAILib.Parameters.ValueFromIndex[i]);
+      end;
+      httpResponse := Post();
+      Result := httpResponse.ResultText;
+      if not IsJsonValid(Result) then
+      begin
+        Result := Result.Replace(#13, '\n');
+        Result := Result.Replace(#10, '\n');
+      end;
+    except
+      on e: Exception do
+      begin
+        //
+      end;
+    end;
+
+    Free;
+  end;
+end;
+
+function TCarikWebModule.execJson(AURL: string; ACache: boolean): string;
+var
+  pathName: string;
+  lst: TStrings;
+  json: TJSONUtil;
+  jsonData: TJSONData;
+begin
+  Result := AURL;
+  pathName := 'text';
+  lst := Explode(AURL, '|');
+  if lst.Count > 1 then
+  begin
+    pathName := lst[0];
+    AURL := lst[1];
+    Result := pathName;
+  end;
+  lst.Free;
+
+  Result := execPost( AURL);
+  if Result = '' then
+    Exit;
+
+  //jsonData := GetJSON(Result, True);
+  //Result := jsonData.GetPath(pathName).AsUnicodeString;
+  //exit;
+  json := TJSONUtil.Create;
   try
-    jData := GetJSON(AJson);
-    jData := jData.GetPath('items');
-
-    with TFacebookTemplateElement.Create do
-    begin
-      Title := 'judul';
-      SubTitle := 'desc';
-      ImageURL := 'img:///';
-      ActionURL := 'aaacccc';
-
-      jElements.Add(AsJSON);
-      jElements.Add(AsJSON);
-      //jElements.Arrays['elements'] := GetJSON( AsJSON);
-      //TODO: apa ini?  die(jElements.AsString);
-
-      Free;
-    end;
-
-    for i := 0 to 4 do
-    begin
-
-    end;
-
+    json.LoadFromJsonString(Result, False);
+    Result := json[pathName];
   except
-    on E: Exception do
-    begin
-      LogUtil.Add(E.Message, 'FB-news');
-    end;
+    Result := '';
   end;
 
-  jElements.Free;
+  Result := Result.Replace(#13, '\n');
+  Result := Result.Replace(#10, '\n');
+end;
+
+procedure TCarikWebModule.saveContext(const AParams: TStrings);
+var
+  lst : TStringList;
+begin
+  lst := TStringList.Create;
+  lst.Text := AParams.Text;
+  lst.Values['pattern'] := '';
+  SimpleBOT.UserData['CONTEXT_ACTION'] := lst.Values['action'];
+  //SimpleBOT.UserData['CONTEXT'] := lst.Values['intent_name'];
+  lst.Text := lst.Text.Replace(#13,'|');
+  lst.Text := lst.Text.Replace(#10,'|');
+  SimpleBOT.UserData['CONTEXT_PARAM'] := lst.Text;
+  SimpleBOT.UserData['CONTEXT_DATE'] := DateTimeToStr(Now);
+  lst.Free;
 end;
 
 procedure TCarikWebModule.LogChat(AChannelID: string; AGroupID: string;
-  AUserID: string; AUserName: string; AText: string; AReply: string;
-  AIsGroup: boolean; AIsMentioned: boolean);
+  AGroupName: string; AUserID: string; AUserName: string; AFullName: string;
+  AText: string; AReply: string; AIsGroup: boolean; AIsMentioned: boolean;
+  AMessageID: integer; AResultMessageID: integer; AReplyFromMessageId: integer);
 var
   log_url: string;
-  http_response: IHTTPResponse;
   is_group, is_mentioned: string;
+  httpResponse: IHTTPResponse;
+  requestJson: TJSONUtil;
 begin
   if AText = '' then
     Exit;
@@ -3347,6 +4186,9 @@ begin
   if log_url = '' then
     Exit;
 
+  if AGroupID = AUserID then
+    AGroupID := '';
+
   is_group := '1';
   is_mentioned := '1';
   if AIsGroup then
@@ -3354,29 +4196,131 @@ begin
   if AIsMentioned then
     is_mentioned := '0';
 
+  requestJson := TJSONUtil.Create;
+  with THTTPLib.Create(log_url) do
+  begin
+    AllowRedirect := True;
+    //AddHeader('_source', 'carik');
+    //AddHeader('User-Agent', 'carik/nlp');
+    //AddHeader('Cache-Control', 'no-cache');
+    //AddHeader('X-Client-Type', 'beta'); //TODO: client type
+    if not FClientId.IsEmpty then
+    begin
+      requestJson['data/clientId'] := FClientId;
+      requestJson['data/clientID'] := FClientId;//compatibility
+    end;
+    requestJson['data/channelID'] := AChannelID;
+    requestJson['data/groupID'] := AGroupID;
+    requestJson['data/group_id'] := AGroupID;
+    requestJson['data/groupName'] := AGroupName;
+    requestJson['data/userID'] := AUserID;
+    requestJson['data/userName'] := (AUserName);
+    requestJson['data/fullName'] := AFullName;
+    requestJson['data/text'] := (AText);
+    requestJson['data/reply'] := (AReply);
+    requestJson['data/isGroup'] := is_group;
+    requestJson['data/isMentioned'] := is_mentioned;
+    requestJson['data/messageID'] := AMessageID.ToString;
+    requestJson['data/resultMessageID'] := AResultMessageID.ToString;
+    requestJson['data/replyFromMessageID'] := AReplyFromMessageId.ToString;
+
+    //requestJson['data/context'] := SimpleBOT.SimpleAI.IntentName;
+    requestJson['data/context'] := ActiveContext;
+
+    requestJson['data/intentName'] := SimpleBOT.SimpleAI.IntentName;
+    requestJson['data/dashboard_device_id'] := DashboardDeviceID;
+    ContentType := 'application/json';
+    RequestBody := TStringStream.Create(requestJson.AsJSON);
+    httpResponse := Post;
+    //die(httpResponse.ResultText);
+    Free;
+  end;
+  requestJson.Free;
+
+end;
+
+procedure TCarikWebModule.LogJoin(AChannelID: string; AGroupID: string;
+  AGroupName: string; AUserID: string; AUserName: string; AFullName: string;
+  AInvitedBy: string; ARestrict: boolean; AUserLeft: boolean);
+var
+  log_url: string;
+  http_response: IHTTPResponse;
+begin
+  if AChannelID <> TELEGRAM_CHANNEL_ID then // Telegram only
+    Exit;
+  try
+    log_url := '';
+    log_url := Config[JOINLOG_URL]  + '?channel=telegram';
+  except
+    exit;
+  end;
+  if log_url = '' then
+    Exit;
+
   with THTTPLib.Create do
   begin
     URL := log_url;
     AddHeader('Cache-Control', 'no-cache');
     AddHeader('X-Client-Type', 'beta'); //TODO: client type
-    FormData['channelID'] := AChannelID;
-    FormData['groupID'] := AGroupID;
-    FormData['userID'] := AUserID;
-    FormData['userName'] := AUserName;
-    FormData['text'] := AText;
-    FormData['reply'] := AReply;
-    FormData['isGroup'] := is_group;
-    FormData['isMentioned'] := is_mentioned;
-    http_response := Post;
+    FormData['ChannelID'] := AChannelID;
+    FormData['GroupID'] := AGroupID;
+    FormData['GroupName'] := AGroupName;
+    FormData['UserID'] := AUserID;
+    FormData['UserName'] := AUserName;
+    FormData['FullName'] := AFullName;
+    FormData['MessageID'] := MessageID;
+    FormData['InvitedBy'] := AInvitedBy;
+    if ARestrict then
+      FormData['Restrict'] := 'yes';
+    if AUserLeft then
+      FormData['LeftFromGroup'] := 'yes';
+    try
+      http_response := Post;
+    except
+    end;
+    //die //ulil
     Free;
   end;
+end;
 
+procedure TCarikWebModule.LogGroupAdd(AChannelID: string; AGroupID: string;
+  AGroupName: string; AInvitedByID: string; AInvitedByUserName: string;
+  AInvitedByName: string);
+var
+  log_url: string;
+begin
+  if AChannelID <> TELEGRAM_CHANNEL_ID then // Telegram only
+    Exit;
+  try
+    log_url := '';
+    log_url := Config[GROUPADDLOG_URL] + '?channel=telegram';
+  except
+    exit;
+  end;
+  if log_url = '' then
+    Exit;
+
+  with THTTPLib.Create do
+  begin
+    URL := log_url;
+    AddHeader('Cache-Control', 'no-cache');
+    AddHeader('X-Client-Type', 'beta'); //TODO: client type
+    FormData['ChannelID'] := AChannelID;
+    FormData['GroupID'] := AGroupID;
+    FormData['GroupName'] := AGroupName;
+    FormData['InvitedByID'] := AInvitedByID;
+    FormData['InvitedByUserName'] := AInvitedByUserName;
+    FormData['InvitedByName'] := AInvitedByName;
+    Post;
+    Free;
+  end;
 end;
 
 procedure TCarikWebModule.SaveUnknownChat(AText: string);
 var
   log_url: string;
-  http_response: IHTTPResponse;
+  httpResponse: IHTTPResponse;
+  requestJson: TJSONUtil;
 begin
   if AText = '' then
     Exit;
@@ -3388,51 +4332,138 @@ begin
   if log_url = '' then
     Exit;
 
+  requestJson := TJSONUtil.Create;
   with THTTPLib.Create do
   begin
     URL := log_url;
     AddHeader('Cache-Control', 'no-cache');
     AddHeader('X-Client-Type', 'beta'); //TODO: client type
-    FormData['text'] := AText;
-    http_response := Post;
+    //FormData['text'] := AText;
+    //FormData['client_id'] := ClientId;
+    requestJson['data/text'] := AText;
+    requestJson['data/client_id'] := ClientId;
+    ContentType := 'application/json';
+    RequestBody := TStringStream.Create(requestJson.AsJSON);
+    httpResponse := Post;
     Free;
   end;
+  requestJson.Free;
 
 end;
 
 constructor TCarikWebModule.CreateNew(AOwner: TComponent; CreateMode: integer);
+var
+  s: string;
 begin
   inherited CreateNew(AOwner, CreateMode);
+  FGenericContent := True;
+  FDashboardDeviceID := 0;
+  FOperation := _GET['op'];
+  //if FOperation.IsEmpty then FOperation := _POST['op'];
+  FBotID := _GET['botid'];
+  FBotName := _GET['name'];
+  FToken := _GET['token'];
+  FClientId := _GET['clientid'];
+
+  FDeviceId:= _GET['DeviceID'];
+  if FDeviceId.IsEmpty then
+    FDeviceId := Header['DeviceID'];
+  if not FBotID.IsEmpty then
+  begin
+    s := 'config/config-'+FBotID+'.json';
+    if FileExists(s) then
+      Config.Filename := s;
+  end;
+  if FClientId.IsEmpty then
+    FClientId := Config[CONFIG_CLIENT_ID];
+  if FClientId.IsEmpty then FClientId := _POST['clientid'];
+  if FClientId.IsNotEmpty then
+    LogUtil.Prefix := FClientId + '-';
+
+  if FBotName.IsEmpty then
+    FBotName := Config[CONFIG_BOTNAME];
+  try
+    s := Config[CONFIG_REPLY_DISABLE];
+    FReplyDisable := False;
+    FReplyDisable := s2b(s);
+  except
+  end;
+  s := _GET['reply'];
+  if s.IsNotEmpty then
+  begin
+    FReplyDisable := not s2b(s);
+  end;
+  s := _GET['generic'].Trim;
+  if s.IsNotEmpty then
+    FGenericContent := s2b(s);
+
   SimpleBOT := TSimpleBotModule.Create;
+  SimpleBOT.FirstSessionResponse := False;
+  SimpleBOT.BotName := FBotName;
+  //TODO: if FOperation.IsEmpty then
+    SimpleBOT.LoadConfig;
   SimpleBOT.StorageType := stFile;
   SimpleBOT.StorageFileName := 'files/carik/carik-userdata.dat';
+  s := Config[_NLP_CONFIG_USERDATA_STORAGE];
+  if s = 'redis' then
+  begin
+    SimpleBOT.StorageType := stRedis;
+  end;
   Carik := TCarikController.Create;
   FLanguage := 'en-id';
   FSendAudio := False;
   FSendPhoto := False;
   FSendVenue := False;
-  FIsTranslate := False;
+  FKickUser  := False;
+  FRestrictUser := False;
   FSendRichContent := False;
+  FSendQuickReplayLocation := False;
+  FCanSendTemplateCard := False;
+  FCustomActionAsText := '';
+  FCustomActionSuffix := '';
+  FIsTranslate := False;
   FLanguage := '';
   FFileURL := '';
   FCaption := '';
+  FButtonCaption := 'More';
   FTriggeredText := '';
   FErrorCount := 0;
   FMessengerMode := mmNone;
+  ChannelId := '';
+  SessionPrefix := '';
+
+  FBOLD_CODE := '*';
+  FITALIC_CODE := '_';
+  FActionCallback := '';
+  FIterationParams := '';
+
+  ToggleSpammer := False;
+  Prefix := '';
+  Suffix := '';
+  AutoDeleteMessage := 0; // disable
+  ElementArray := nil;
+
+  FFormInputExpired := False;
+  FCurrentInputType := '';
+  FCustomReplyName := '';
+  FCustomReplyTypeFromExternalNLP := '';
+  FCustomReplyURLFromExternalNLP := '';
+  FCustomReplyActionTypeFromExternalNLP := '';
+  FExternalNLPStarted := False;
 end;
 
 destructor TCarikWebModule.Destroy;
 begin
+  if Assigned(FInputOptions) then FInputOptions.Free;
+  if Assigned(ElementArray) then
+    ElementArray.Free;
+  if Assigned(FIterationParamsPast) then
+    FIterationParamsPast.Free;
+  if Assigned(FCustomReplyDataFromExternalNLP) then
+    FCustomReplyDataFromExternalNLP.Free;
   Carik.Free;
   SimpleBOT.Free;
   inherited Destroy;
-end;
-
-function TCarikWebModule.RemoveMarkDown(AText: string): string;
-begin
-  Result := StringReplace(AText, '```', '', [rfReplaceAll]);
-  Result := StringReplace(Result, '_', '', [rfReplaceAll]);
-  Result := Trim(Result);
 end;
 
 function TCarikWebModule.ObjectFocus: string; // deprecated
@@ -3523,17 +4554,62 @@ end;
 
 function TCarikWebModule.ProcessText(AMessage: string): string;
 var
-  s: string;
+  s, externalResult: string;
+  json: TJSONUtil;
 begin
-  SimpleBOT.OnError := @OnErrorHandler;  // Your Custom Message
-  SimpleBOT.TrimMessage := False;
+  SimpleBOT.ConnectTimeout := EXTERNAL_ACCESS_TIMEOUT;
+  SimpleBOT.TimeOutMessage := ERR_TIMEOUT_MESSAGE;
   try
     SimpleBOT.IsStemming := Config[STEMMING_ENABLED];
     SimpleBOT.StandardWordCheck := Config[STANDARDWORD_CHECKING];
   except
   end;
 
+  if not Carik.UserID.IsEmpty then
+  begin
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['UserID'] := PrefixId + '-' + Carik.UserID;
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['user_id'] := PrefixId + '-' + Carik.UserID;
+  end;
+  SimpleBOT.SimpleAI.AdditionalParameters.Values['OriginalText'] := OriginalText;
+  SimpleBOT.SimpleAI.AdditionalParameters.Values['original_text'] := OriginalText;
+  if not ChannelId.IsEmpty then
+  begin
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['ChannelId'] := ChannelId;
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['channel_id'] := ChannelId;
+  end;
+  if ClientId.IsNotEmpty then
+  begin
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['ClientId'] := ClientId;;
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['client_id'] := ClientId;;
+  end;
+  if Carik.IsGroup then
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['GroupID_'] := Carik.GroupChatID;
+  if Carik.IsInvitation then
+  begin
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['UserID'] := PrefixId + '-' + Carik.InvitedUserId;
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['user_id'] := PrefixId + '-' + Carik.InvitedUserId;
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['UserID_'] := Carik.InvitedUserId;
+  end
+  else
+  begin
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['UserID_'] := Carik.UserID;
+  end;
+  if not FGenericContent then
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['generic'] := 'false';
+  if DeviceId.IsNotEmpty then
+    SimpleBOT.SimpleAI.AdditionalHeaders.Values['DeviceID'] := DeviceId;
   Result := SimpleBOT.Exec(AMessage);
+  if SimpleBOT.Weight > 0 then
+  begin
+    externalResult := ExternalNLP(AMessage);
+    if externalResult.IsNotEmpty then
+      if FExternalNLPWeight < SimpleBOT.Weight then
+      begin
+        Result := externalResult;
+        SimpleBOT.ResponseText.Text := externalResult;
+        SimpleBOT.SimpleAI.Parameters.Values['external_nlp'] := '1';
+      end;
+  end;
   if (SimpleBOT.ResponseText.Text = '') and not (FSendAudio or
     FSendPhoto or FSendRichContent or FSendVenue) then
   begin
@@ -3545,6 +4621,15 @@ begin
     end;
   end;
 
+  if not SimpleBOT.SimpleAI.ImageURL.IsEmpty then
+  begin
+    FSendPhoto := True;
+    FFileURL := SimpleBOT.SimpleAI.ImageURL;
+    FImageCaption := SimpleBOT.SimpleAI.ImageCaption;
+    FImageCaption := FImageCaption.Replace('\n', #10);
+    FCaption := FImageCaption;
+  end;
+
   if getIsTranslate then
   begin
     s := SimpleBOT.SimpleAI.ResponseText[0];
@@ -3552,14 +4637,25 @@ begin
     LogUtil.Add(s + '|' + SimpleBOT.SimpleAI.ResponseText[0], 'RESP');
 
     //TODO: lali
-    Result := SimpleBOT.SimpleAI.ResponseJson;
+    json := TJSONUtil.Create;
+    json.LoadFromJsonString(SimpleBOT.SimpleAI.ResponseJson);
+    Result := json.AsJSONFormated;
+    json.Free;
   end;
+
+  if SimpleBOT.SimpleAI.IntentName.IsNotEmpty then
+    SimpleBOT.UserData[LABEL_NLP_ERROR_COUNT] := '0';
 end;
 
 procedure TCarikWebModule.BotInit;
 begin
+  SimpleBOT.OnError := @OnNLPErrorHandler;  // Your Custom Message
+  SimpleBOT.TrimMessage := False;
+
+  SimpleBOT.Handler['oneword'] := @onewordHandler;
   SimpleBOT.Handler['define'] := @defineHandler;
   SimpleBOT.Handler['definisi'] := @definisiHandler;
+  SimpleBOT.Handler['iteration_next'] := @iterationNextHandler;
   SimpleBOT.Handler['user_profile'] := @userProfileHandler;
 
   SimpleBOT.Handler['bot_start'] := @botStartHandler;
@@ -3568,8 +4664,8 @@ begin
   SimpleBOT.Handler['voucher'] := @voucherHandler;
   SimpleBOT.Handler['movie_play'] := @moviePlayHandler;
   SimpleBOT.Handler['movie_info'] := @movieInfoHandler;
-  SimpleBOT.Handler['currency'] := @currencyHandler;
   SimpleBOT.Handler['jarak'] := @distanceHandler;
+  SimpleBOT.Handler['distance_fromto'] := @distanceFromToHandler;
   SimpleBOT.Handler['tebak_gambar'] := @tebakGambarHandler;
   SimpleBOT.Handler['image_to_text'] := @ocrCognitiveHandler;
   SimpleBOT.Handler['image_translation'] := @imageTranslationHandler;
@@ -3594,25 +4690,18 @@ begin
 
   SimpleBOT.Handler['mortgage_calculator'] := @mortgageCalculatorHandler;
   SimpleBOT.Handler['bmkg_simpleinfo'] := @bmkgSimpleInfoHandler;
-  //SimpleBOT.Handler['openweather_info'] := @openweatherInfoHandler;
-  SimpleBOT.Handler['openweather_info'] := @apixuweatherInfoHandler;
+  SimpleBOT.Handler['openweather_info'] := @openweatherInfoHandler;
+  //SimpleBOT.Handler['openweather_info'] := @apixuweatherInfoHandler;
   SimpleBOT.Handler['berita_hariini'] := @beritaHariIniHandler;
 
   SimpleBOT.Handler['conversion_hash'] := @conversionHashHandler;
 
-  // JobPlanet
-  SimpleBOT.Handler['jobplanet_info'] := @jobPlanetInfoHandler;
-  SimpleBOT.Handler['jobplanet_review'] := @jobPlanetReviewHandler;
-  SimpleBOT.Handler['jobplanet_salary'] := @jobPlanetSalaryHandler;
-  SimpleBOT.Handler['jobplanet_vacancy'] := @jobPlanetVacancyHandler;
-  SimpleBOT.Handler['jobplanet_interview'] := @jobPlanetInterviewHandler;
-
   if FMessengerMode = mmTelegram then
   begin
-    SimpleBOT.Handler['carik_start'] := @Carik.StartHandler;
-    SimpleBOT.Handler['carik_stop'] := @Carik.StopHandler;
+    //SimpleBOT.Handler['carik_start'] := @Carik.StartHandler;
+    //SimpleBOT.Handler['carik_stop'] := @Carik.StopHandler;
     SimpleBOT.Handler['carik_check'] := @Carik.CheckHandler;
-    SimpleBOT.Handler['carik_topic'] := @Carik.TopicHandler;
+    //SimpleBOT.Handler['carik_topic'] := @Carik.TopicHandler;
     SimpleBOT.Handler['carik_send'] := @Carik.SendHandler;
     SimpleBOT.Handler['carik_admin_tambah'] := @carikAdminTambahHandler;
     SimpleBOT.Handler['carik_admin_hapus'] := @carikAdminHapusHandler;
@@ -3623,6 +4712,7 @@ begin
     SimpleBOT.Handler['group_memberbaru_custommessage'] :=
       @carikNewMemberCustomMessageHandler;
 
+    SimpleBOT.Handler['spam_report'] := @spamReportHandler;
 
     //todo: line: share location
   end;
@@ -3632,13 +4722,7 @@ begin
   SimpleBOT.Handler['speaking_mode_on'] := @speakingModeOnHandler;
   SimpleBOT.Handler['speaking_mode_off'] := @speakingModeOffHandler;
 
-  // Tiket
-  SimpleBOT.Handler['keretaapi_jadwal'] := @trainScheduleHandler;
-
   SimpleBOT.Handler['bca_test'] := @bcaTestHandler;
-  SimpleBOT.Handler['quickcount'] := @quickCountHandler;
-  SimpleBOT.Handler['kofa_jadwal_sholat'] := @kofaJadwalSholatHandler;
-  SimpleBOT.Handler['kofa_jadwal_imsyak'] := @kofaJadwalImsyakHandler;
 
   // Property Search
   SimpleBOT.Handler['property_search'] := @propertySearchHandler;
@@ -3656,23 +4740,831 @@ end;
 function TCarikWebModule.TrimFacebookMessage(const AMessage: string): string;
 begin
   Result := RemoveMarkDown(AMessage);
+  Result := preg_replace('\*(.*?)\*', '$1', Result);
 end;
 
 function TCarikWebModule.TrimLineMessage(const AMessage: string): string;
 begin
   Result := RemoveMarkDown(AMessage);
+  Result := preg_replace('\*(.*?)\*', '$1', Result);
+  Result := Result.Replace('\n', #10);
 end;
 
-function TCarikWebModule.OnErrorHandler(const Message: string): string;
+function TCarikWebModule.FindSuggestion(AText: string; AReservedWord: string
+  ): string;
 var
-  s: string;
+  s, url: string;
+  json: TJSONUtil;
+
 begin
+  Result := '';
+  s := '';
+  url := Config[SUGGESTION_URL];
+  if url.IsEmpty then
+    Exit;
+  url := url + UrlEncode(AText) + '&reserved=' + AReservedWord;
+  //s := file_get_contents(url, False);
+
+  With TFPHTTPClient.Create(Nil) do
+  begin
+    try
+      AllowRedirect := True;
+      //OnRedirect := @ShowRedirect;
+      //OnDataReceived := @DoProgress;
+      //OnHeaders := @DoHeaders;
+      //OnGetSocketHandler := @HttpClientGetSocketHandler;
+      s := Get(url);
+    except
+      on E: Exception do
+      begin
+      end;
+    end;
+    Free;
+  end;
+
+  json := TJSONUtil.Create;
+  json.LoadFromJsonString(s);
+  Result := json['result/text'];
+
+  json.Free;
+end;
+
+procedure TCarikWebModule.SaveActionToUserDataFromCard(AData: TJSONObject);
+var
+  i, j, indexAction: integer;
+  s, s2, actionData, buttonTitle, captionDisplay, actionURL, quoteMark : string;
+  buttonAsArray: TJSONArray;
+  lst: TStrings;
+begin
+  quoteMark := '*';
+  if MessengerMode = mmInstagram then
+    quoteMark := '';
+  FCustomActionAsText := '';
+  //if not (CustomReplyType = 'card') then Exit;
+
+  SimpleBOT.UserData[MESSAGE_TYPE] := 'action';
+  SimpleBOT.UserData[MESSAGE_ACTION_DATE] := Now.AsString;
+  SimpleBOT.UserData[MESSAGE_ACTION_TYPE] := 'card';
+
+  buttonAsArray := TJSONArray(AData);
+  indexAction := 0;
+  buttonTitle := SimpleBOT.SimpleAI.CustomReply['action/button_title'];
+  if buttonTitle.IsEmpty then
+    buttonTitle := 'Detail';
+  for i := 0 to buttonAsArray.Count-1 do
+  begin
+    actionData := jsonGetData(buttonAsArray.Items[i], 'title') + '|';
+    actionURL := jsonGetData(buttonAsArray.Items[i], 'url');
+    captionDisplay := '[Detail]('+actionURL+')';
+    s := jsonGetData(buttonAsArray.Items[i], 'callback_data');
+    if s.IsEmpty then
+    begin
+      s := 'url=' + UrlEncode(actionURL) + '&text=Kunjungi ' + actionURL;
+    end
+    else
+    begin
+      captionDisplay := 'Ketik angka "'+i2s(i+1)+'"';
+    end;
+    actionData := actionData + s;
+    SimpleBOT.UserData[MESSAGE_ACTION_DATA_+indexAction.ToString] := actionData;
+
+    indexAction := indexAction + 1;
+    FCustomActionAsText := FCustomActionAsText
+      + #10 + quoteMark + jsonGetData(buttonAsArray.Items[i], 'title') + quoteMark;
+    s := jsonGetData(buttonAsArray.Items[i], 'sub_title');
+    if not s.IsEmpty then
+      FCustomActionAsText := FCustomActionAsText + #10 + s;
+    FCustomActionAsText := FCustomActionAsText
+      + #10 + captionDisplay
+      + #10;
+  end;
+
+  SimpleBOT.UserData[MESSAGE_ACTION_COUNT] := indexAction.ToString;
+  FCustomActionAsText := FCustomActionAsText.Trim;
+end;
+
+procedure TCarikWebModule.SaveActionToUserDataFromForm(AData: TJSONObject);
+
+var
+  i, questionCount: integer;
+  fileName: string;
+  formAsArray: TJSONArray;
+  tmpSuffix, formUrl: string;
+begin
+  FCustomActionAsText := '';
+  //if not (CustomReplyType = 'form') then Exit;
+
+  SimpleBOT.UserData[MESSAGE_TYPE] := 'action';
+  SimpleBOT.UserData[MESSAGE_ACTION_DATE] := Now.AsString;
+  SimpleBOT.UserData[MESSAGE_ACTION_TYPE] := 'form';
+  SimpleBOT.UserData[MESSAGE_ACTION_URL] := CustomReplyURL;
+  if FCustomReplyName.IsNotEmpty then
+    SimpleBOT.UserData[MESSAGE_ACTION_NAME] := FCustomReplyName;
+  formAsArray := TJSONArray(AData);
+
+  fileName := getPrefixID() + '-' + Carik.UserID + '-' + SimpleBOT.SimpleAI.IntentName + '.json';
+  SimpleBOT.UserData[FORM_INPUT_FILENAME] := fileName;
+  SimpleBOT.UserData[FORM_SESSION] := SHA1Print(SHA1String(Carik.UserID+Now.AsString));
+  SimpleBOT.UserData[FORM_TOPIC] := '1';
+  SimpleBOT.UserData[FORM_QUESTION] := '1';
+  fileName := AppData.tempDir + FORM_PATH + fileName;
+  if not DirectoryExists(AppData.tempDir + FORM_PATH) then
+    ForceDirectories(AppData.tempDir + FORM_PATH);
+  string(formAsArray.FormatJSON()).SaveToFile(fileName);
+
+  questionCount := 0;
+  for i:=0 to formAsArray.Count-1 do
+  begin
+    questionCount += formAsArray.Items[i].Count;
+  end;
+  SimpleBOT.UserData[FORM_QUESTION_TOTAL] := questionCount.ToString;
+
+  tmpSuffix := '';
+  if questionCount > 1 then
+  begin
+    tmpSuffix := '\nTerdapat ';
+    if formAsArray.Count > 1 then
+      tmpSuffix += formAsArray.Count.ToString + ' kategori, dan ';
+    tmpSuffix += 'total ' + questionCount.ToString + ' pertanyaan.';
+  end;
+  tmpSuffix += FORM_INPUT_HASHTAG_CANCEL;
+
+  tmpSuffix += '\n\n' + GetFormQuestion(1);
+
+  Suffix := tmpSuffix;
+  if FMessengerMode = mmLine then Suffix := Suffix.Replace('\n', #10);
+
+  SimpleBOT.UserData[WAITING_INPUT] := '1';
+  SimpleBOT.UserData[WAITING_INPUT_DATE] := Now.AsString;
+end;
+
+procedure TCarikWebModule.SaveActionToUserData(AActionType: string;
+  AData: TJSONObject);
+var
+  i, j, indexAction: integer;
+  s, actionData, firstMenuTitle: string;
+  buttonAsArray: TJSONArray;
+begin
+  FCustomActionAsText := '';
+
+  if AActionType='card' then
+  begin
+    if ((FMessengerMode = mmFacebook)or(FMessengerMode = mmFacebook)) then
+      Exit;
+    SaveActionToUserDataFromCard(AData);
+    Exit;
+  end;
+
+  if AActionType='form' then
+  begin
+    SaveActionToUserDataFromForm(AData);
+    Exit;
+  end;
+
+  if not ((AActionType='button')
+    or (AActionType='quickreply')
+    or (AActionType='menu')
+    or (AActionType='list')
+    ) then
+    Exit;
+  SimpleBOT.UserData[MESSAGE_TYPE] := 'action';
+  SimpleBOT.UserData[MESSAGE_ACTION_DATE] := Now.AsString;
+  SimpleBOT.UserData[MESSAGE_ACTION_TYPE] := AActionType;
+  if FCustomReplyName.IsNotEmpty then
+    SimpleBOT.UserData[MESSAGE_ACTION_NAME] := FCustomReplyName;
+
+  buttonAsArray := TJSONArray(AData);
+  indexAction := 0;
+  firstMenuTitle := '';
+  for i := 0 to buttonAsArray.Count-1 do
+  begin
+    for j := 0 to buttonAsArray.Items[i].Count-1 do
+    begin
+      try
+        s := buttonAsArray.Items[i].Items[j].GetPath('callback_data').AsString;
+        actionData := buttonAsArray.Items[i].Items[j].GetPath('text').AsString
+          + '|' + s;
+      except
+        actionData := '';
+        try
+          s := buttonAsArray.Items[i].Items[j].GetPath('url').AsString;
+          actionData := buttonAsArray.Items[i].Items[j].GetPath('text').AsString
+            + '|url=' + s;
+        except
+        end;
+      end;
+      if actionData.IsEmpty then
+      begin
+        s := jsonGetData( buttonAsArray.Items[i].Items[j], 'request_location');
+        if s = 'True' then
+        begin
+          actionData := jsonGetData( buttonAsArray.Items[i].Items[j], 'text')
+            + '|location=true';
+        end;
+      end;
+      SimpleBOT.UserData[MESSAGE_ACTION_DATA_+indexAction.ToString] := actionData;
+
+      indexAction := indexAction + 1;
+      FCustomActionAsText := FCustomActionAsText + #10 + '*' + indexAction.ToString + '*'
+       + '. ' + buttonAsArray.Items[i].Items[j].GetPath('text').AsString;
+      if firstMenuTitle.IsEmpty then
+        firstMenuTitle := buttonAsArray.Items[i].Items[j].GetPath('text').AsString;
+    end;
+
+  end;
+
+  SimpleBOT.UserData[MESSAGE_ACTION_COUNT] := indexAction.ToString;
+  FCustomActionAsText := FCustomActionAsText.Trim;
+  firstMenuTitle:= firstMenuTitle.RemoveEmoji().RemoveUnicode().RemoveMarkDown();
+  if FGenericContent then
+  begin
+    FCustomActionSuffix := ACTION_SUFFIX.Replace('%s', firstMenuTitle.Replace(#13,'').Replace(#10,''));
+  end
+  else
+  begin
+    FCustomActionAsText := '';
+  end;
+end;
+
+function TCarikWebModule.FormInputHandler: boolean;
+  procedure resetForm;
+  begin
+    SimpleBOT.UserData[WAITING_INPUT] := '0';
+    SimpleBOT.UserData[FORM_QUESTION] := '0';
+    SimpleBOT.UserData[FORM_QUESTION_TOTAL] := '0';
+    SimpleBOT.UserData[MESSAGE_ACTION_NAME] := '';
+  end;
+  function submitFormCancel: string;
+  var
+    postData: TJSONUtil;
+    httpResponse: IHTTPResponse;
+  begin
+    Result := '';
+    postData := TJSONUtil.Create;
+    postData['post_date'] := Now.AsString;
+    postData['user_id'] := PrefixId + '-' + Carik.UserID;
+    postData['full_name'] := Carik.FullName;
+    postData['client_id'] := ClientId;
+    postData['session'] := SimpleBOT.UserData[FORM_SESSION];
+    postData['data/submit'] := CANCEL;
+    with THTTPLib.Create(SimpleBOT.UserData[MESSAGE_ACTION_URL]) do
+    begin
+      try
+        AddHeader('_source', 'carik');
+        AddHeader('Cache-Control', 'no-cache');
+        ContentType := 'application/json';
+        RequestBody := TStringStream.Create(postData.AsJSON);
+        httpResponse := Post();
+        if httpResponse.ResultCode = 200 then
+        begin
+          FCustomReplyDataFromExternalNLP := TJSONUtil.Create;
+          FCustomReplyDataFromExternalNLP.LoadFromJsonString(httpResponse.ResultText, False);
+          Suffix := FCustomReplyDataFromExternalNLP['text'];
+          Result := Suffix;
+
+          //TODO: build custom action
+          FCustomReplyTypeFromExternalNLP := FCustomReplyDataFromExternalNLP['type'];
+          FCustomReplyActionTypeFromExternalNLP := 'text';
+          if FCustomReplyTypeFromExternalNLP.IsNotEmpty then
+          begin
+            FCustomReplyActionTypeFromExternalNLP := FCustomReplyDataFromExternalNLP['action/type'];
+            FCustomReplyURLFromExternalNLP := FCustomReplyDataFromExternalNLP['action/url'];
+            FCustomReplyName := FCustomReplyDataFromExternalNLP['action/name'];
+            SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data')));
+            FCustomReplyDataFromExternalNLP.LoadFromJsonString(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data').AsJSON, False);
+            if FCustomActionAsText.IsNotEmpty then
+            begin
+              {
+              Suffix += '\n'+ACTION_CAPTION+'\n'+FCustomActionAsText.Replace(#10, '\n');
+              s := FCustomReplyDataFromExternalNLP.Data.Items[0].Items[0].GetPath('text').AsString;
+              s := ACTION_SUFFIX.Replace('%s', s);
+              Suffix += '\n' + s;
+              }
+            end;
+          end;
+
+        end;
+      except
+      end;
+      Free;
+    end;
+
+    postData.Free;
+  end;
+
+  function submitForm:boolean;
+  var
+    formSession: string;
+  begin
+    formSession := SimpleBOT.UserData[FORM_SESSION];
+
+
+  end;
+
+var
+  i, j, questionIndex, questionTotal: integer;
+  s, inputType, inputName, url, answerText: string;
+  lst: TStrings;
+  postData: TJSONUtil;
+  httpResponse: IHTTPResponse;
+begin
+  Result := False;
+  answerText := '';
+
+  // check reset form
+  if ((Text = FORM_INPUT_RESET_CODE)or
+    (Text = '"'+FORM_INPUT_RESET_CODE+'"')) then
+  begin
+    s := SimpleBOT.UserData[MESSAGE_ACTION_NAME];
+    resetForm();
+    Text := '';
+    Suffix := submitFormCancel();
+    if Suffix.IsEmpty then
+      Suffix := Format(FORM_INPUT_CANCEL, [s]);
+    Result := True;
+    Exit;
+  end;
+
+  if not WaitingInput then Exit;
+
+  questionIndex := s2i(SimpleBOT.UserData[FORM_QUESTION]);
+  questionTotal := s2i(SimpleBOT.UserData[FORM_QUESTION_TOTAL]);
+
+  // reload last question
+  if ((Text = FORM_INPUT_RELOAD_CODE)or
+    (Text = '"'+FORM_INPUT_RELOAD_CODE+'"')) then
+  begin
+    SimpleBOT.UserData[FORM_QUESTION] := questionIndex.ToString;
+    SimpleBOT.UserData[WAITING_INPUT_DATE] := Now.AsString;
+    Suffix := GetFormQuestion(questionIndex);
+    Result := True;
+    Exit;
+  end;
+
+  inputType := SimpleBOT.UserData[FORM_INPUT_TYPE];
+  inputName := SimpleBOT.UserData[FORM_INPUT_NAME];
+  // check date
+  if inputType = 'date' then
+  begin
+    if not Text.isDate('/') then
+    begin
+      Suffix := FORM_ERR_FORMAT_DATE + FORM_INPUT_HASHTAG_CANCEL2;
+      Result := True;
+      Exit;
+    end;
+  end;
+  // check email
+  if inputType = 'email' then
+  begin
+    if not Text.IsEmail then
+    begin
+      Suffix := FORM_ERR_FORMAT_EMAIL + FORM_INPUT_HASHTAG_CANCEL2;
+      Result := True;
+      Exit;
+    end;
+  end;
+  // check numeric
+  if (inputType = 'numeric') or (inputType = 'number') then
+  begin
+    Text := Text.Replace('.','').ToLower;
+    Text := Text.Replace('rp', '').Trim;
+    Text := StringHumanToNominal(Text);
+    if not Text.IsNumeric then
+    begin
+      Suffix := FORM_ERR_FORMAT_NUMERIC + FORM_INPUT_HASHTAG_CANCEL2;
+      Result := True;
+      Exit;
+    end;
+  end;
+  // check boolean
+  if inputType = 'boolean' then
+  begin
+    Text := Text.ToUpper;
+    if (Text in YES_COMMAND) then
+      Text := 'Y'
+    else if (Text in NO_COMMAND) then
+      Text := 'N'
+    else
+    begin
+      Suffix := FORM_ERR_FORMAT_BOOLEAN + FORM_INPUT_HASHTAG_CANCEL2;
+      Result := True;
+      Exit;
+    end;
+  end;
+  // check option
+  if ((inputType = 'option') or (inputType = 'list')) then
+  begin
+    Text := StringHumanToNominal(Text);
+    if not Text.IsNumeric then
+    begin
+      Suffix := FORM_ERR_FORMAT_OPTION + FORM_INPUT_HASHTAG_CANCEL2;
+      Result := True;
+      Exit;
+    end;
+    i := s2i(SimpleBOT.UserData[FORM_INPUT_OPTION_COUNT]);
+    if ((Text.ToInteger=0)or(Text.ToInteger > i)) then
+    begin
+      Suffix := FORM_ERR_FORMAT_OPTION_INVALID + ' ' + FORM_INPUT_HASHTAG_CANCEL2;
+      Result := True;
+      Exit;
+    end;
+    s := GetFormAnswerValue(questionIndex, Text.AsInteger);
+    answerText := GetFormAnswerText(questionIndex, Text.AsInteger);
+    if s.IsNotEmpty then
+    begin
+      Text := s;
+    end;
+  end;
+  // save data
+  if inputName.IsEmpty then inputName := 'a'+questionIndex.ToString;
+  if answerText.IsNotEmpty then
+    SimpleBOT.UserData[FORM_DATA+'t'+questionIndex.ToString] := answerText;
+  SimpleBOT.UserData[FORM_DATA+questionIndex.ToString] := inputName+'|'+Text;
+
+  // cek kirim result
+  if questionIndex >= questionTotal then
+  begin
+    // generate json data
+    s := SimpleBOT.UserData[FORM_SESSION];
+    postData := TJSONUtil.Create;
+    postData['post_date'] := Now.AsString;
+    postData['user_id'] := PrefixId + '-' + Carik.UserID;
+    postData['full_name'] := Carik.FullName;
+    postData['client_id'] := ClientId;
+    postData['session'] := s;
+    for j:=0 to SimpleBOT.SimpleAI.Parameters.Count-1 do
+    begin
+      s := SimpleBOT.SimpleAI.Parameters.Names[j];
+      postData[s] := SimpleBOT.SimpleAI.Parameters.ValueFromIndex[j];
+    end;
+    for j:=0 to SimpleBOT.AdditionalParameters.Count-1 do
+    begin
+      s := SimpleBOT.AdditionalParameters.Names[j];
+      postData[s] := SimpleBOT.AdditionalParameters.ValueFromIndex[j];
+    end;
+    postData['data/user_id'] := PrefixId + '-' + Carik.UserID;
+    postData['data/channel_id'] := ChannelId;
+    postData['data/client_id'] := ClientId;
+    postData['data/FullName'] := Carik.FullName;
+    postData['data/full_name'] := Carik.FullName;
+    for i:=1 to questionTotal do
+    begin
+      s := SimpleBOT.UserData[FORM_DATA+i.ToString];
+      answerText := SimpleBOT.UserData[FORM_DATA+'t'+i.ToString];
+      lst := Explode(s, '|');
+      if answerText.IsNotEmpty then
+        postData['data/'+lst[0]+'_t'] := answerText;
+      //postData['data/'+lst[0]+'t'] := answerText; //TODO: remove for  compatibility
+      postData['data/'+lst[0]] := lst[1];
+      lst.Free;
+    end;
+    postData['data/submit'] := OK;
+    //die(postData.AsJSONFormated); //ulil
+
+    // Submit
+    url := SimpleBOT.UserData[MESSAGE_ACTION_URL];
+    with THTTPLib.Create(url) do
+    begin
+      try
+        AddHeader('_source', 'carik');
+        AddHeader('Cache-Control', 'no-cache');
+        ContentType := 'application/json';
+        RequestBody := TStringStream.Create(postData.AsJSON);
+        httpResponse := Post();
+        if httpResponse.ResultCode <> 200 then
+        begin
+          Suffix := FORM_ERR_SUBMIT_FAILED + '(#'+httpResponse.ResultCode.ToString+')';
+        end
+        else
+        begin
+          FCustomReplyDataFromExternalNLP := TJSONUtil.Create;
+          FCustomReplyDataFromExternalNLP.LoadFromJsonString(httpResponse.ResultText, False);
+          Suffix := FCustomReplyDataFromExternalNLP['text'];
+
+          //TODO: build custom action
+          FCustomReplyTypeFromExternalNLP := FCustomReplyDataFromExternalNLP['type'];
+          FCustomReplyActionTypeFromExternalNLP := 'text';
+          if FCustomReplyTypeFromExternalNLP.IsNotEmpty then
+          begin
+            FCustomReplyActionTypeFromExternalNLP := FCustomReplyDataFromExternalNLP['action/type'];
+            FCustomReplyURLFromExternalNLP := FCustomReplyDataFromExternalNLP['action/url'];
+            FCustomReplyName := FCustomReplyDataFromExternalNLP['action/name'];
+            SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data')));
+            FCustomReplyDataFromExternalNLP.LoadFromJsonString(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data').AsJSON, False);
+            if FCustomActionAsText.IsNotEmpty then
+            begin
+              {
+              Suffix += '\n'+ACTION_CAPTION+'\n'+FCustomActionAsText.Replace(#10, '\n');
+              s := FCustomReplyDataFromExternalNLP.Data.Items[0].Items[0].GetPath('text').AsString;
+              s := ACTION_SUFFIX.Replace('%s', s);
+              Suffix += '\n' + s;
+              }
+            end;
+          end;
+
+        end;
+      except
+        on e: Exception do
+        begin
+          Suffix := FORM_ERR_SUBMIT_EXCEPTION;
+        end;
+      end;
+
+      Free;
+    end;//THTTPLib
+
+    resetForm();
+    Result := True;
+    Exit;
+  end;
+
+  // get new question
+  questionIndex += 1;
+  SimpleBOT.UserData[FORM_LAST_MESSAGE_ID] := MessageID;
+  SimpleBOT.UserData[FORM_QUESTION] := questionIndex.ToString;
+  SimpleBOT.UserData[WAITING_INPUT_DATE] := Now.AsString;
+  Suffix := GetFormQuestion(questionIndex);
+  Result := True;
+end;
+
+function TCarikWebModule.GetFormQuestion(AIndex: integer): string;
+var
+  i, topic, subCount, currentCount, index: integer;
+  s, fileName, inputTitle, inputName, inputType, optionList: string;
+  lst: TStringList;
+  formAsArray: TJSONArray;
+  formAsJson: TJSONData;
+  oItem: TJSONObject;
+begin
+  Result := '';
+  inputTitle := '';
+  fileName := SimpleBOT.UserData[FORM_INPUT_FILENAME];
+  fileName := AppData.tempDir + FORM_PATH + fileName;
+  if not FileExists(fileName) then Exit;
+  lst := TStringList.Create;
+  lst.LoadFromFile(fileName);
+
+  formAsArray := GetJSON(lst.Text,False) as TJSONArray;
+
+  topic := 0;
+  subCount := 0;
+  index := 0;
+  for i:=0 to formAsArray.Count-1 do
+  begin
+    currentCount := formAsArray.Items[i].Count;
+    subCount += currentCount;
+    if AIndex <= subCount then
+    begin
+      index := AIndex - (subCount-currentCount) - 1;
+      break;
+    end;
+    topic := topic + 1;
+  end;
+  try
+    inputTitle := formAsArray.Items[topic].Items[index].GetPath('title').AsString;
+    FInputOptionTitle := inputTitle;
+  except
+    on E:Exception do
+    begin
+      die('err: ' + topic.ToString + '/' + index.ToString + #10 + formAsArray.AsJSON);
+    end;
+  end;
+  inputName := formAsArray.Items[topic].Items[index].GetPath('name').AsString;
+  inputType := formAsArray.Items[topic].Items[index].GetPath('type').AsString;
+  FCurrentInputType := inputType;
+
+  if inputTitle.StrPos('#') = 1 then begin
+    s := '('+AIndex.ToString+'/'+SimpleBOT.UserData[FORM_QUESTION_TOTAL]+') ';
+    inputTitle := inputTitle.Replace('#', s);
+  end;
+
+  SimpleBOT.UserData[FORM_INPUT_TITLE] := inputTitle.Replace(#13,'\n').Replace(#10,'\n');
+  SimpleBOT.UserData[FORM_INPUT_NAME] := inputName;
+  SimpleBOT.UserData[FORM_INPUT_TYPE] := inputType;
+
+  if inputType = 'date' then
+  begin
+    inputTitle += FORM_INPUT_DATE_FORMAT;
+  end;
+  if inputType = 'option' then
+  begin
+    optionList := '';
+    FInputOptions := TJSONArray.Create;
+    for i:=1 to formAsArray.Items[topic].Items[index].GetPath('options').Count do
+    begin
+      s := formAsArray.Items[topic].Items[index].GetPath('options').Items[i-1].AsString;
+      optionList += '\n'+i.ToString+'. ' + s;
+
+      oItem := TJSONObject.Create;
+      oItem.Add('text', s);
+      oItem.Add('callback_data', 'text='+i2s(i));
+      FInputOptions.Add( oItem);
+    end;
+    inputTitle += optionList;
+    inputTitle += FORM_INPUT_OPTION_FORMAT;
+    SimpleBOT.UserData[FORM_INPUT_OPTION_COUNT] := formAsArray.Items[topic].Items[index].GetPath('options').Count.ToString;
+  end;
+  if inputType = 'list' then
+  begin
+    optionList := '';
+    FInputOptions := TJSONArray.Create;
+    for i:=1 to formAsArray.Items[topic].Items[index].GetPath('options').Count do
+    begin
+      s := formAsArray.Items[topic].Items[index].GetPath('options').Items[i-1].AsString;
+      optionList += '\n'+i.ToString+'. ' + s;
+
+      oItem := TJSONObject.Create;
+      oItem.Add('text', s);
+      oItem.Add('callback_data', 'text='+i2s(i));
+      FInputOptions.Add( oItem);
+    end;
+    inputTitle += optionList;
+    inputTitle += FORM_INPUT_OPTION_FORMAT;
+    SimpleBOT.UserData[FORM_INPUT_OPTION_COUNT] := formAsArray.Items[topic].Items[index].GetPath('options').Count.ToString;
+  end;
+  formAsArray.Free;
+  Result := inputTitle + ':';
+end;
+
+function TCarikWebModule.GetFormAnswerValue(AQuestionIndex: integer;
+  AOptionIndex: integer): string;
+var
+  i, index, topic, subCount, currentCount: integer;
+  fileName: string;
+  lst: TStringList;
+  formAsArray: TJSONArray;
+begin
+  Result := '';
+  fileName := SimpleBOT.UserData[FORM_INPUT_FILENAME];
+  fileName := AppData.tempDir + FORM_PATH + fileName;
+  if not FileExists(fileName) then Exit;
+  lst := TStringList.Create;
+  lst.LoadFromFile(fileName);
+
+  formAsArray := GetJSON(lst.Text,False) as TJSONArray;
+
+  index := 0;
+  topic := 0;
+  subCount := 0;
+  for i:=0 to formAsArray.Count-1 do
+  begin
+    currentCount := formAsArray.Items[i].Count;
+    subCount += currentCount;
+    if AQuestionIndex <= subCount then
+    begin
+      index := AQuestionIndex - (subCount-currentCount) - 1;
+      break;
+    end;
+    topic := topic + 1;
+  end;
+  try
+    Result := formAsArray.Items[topic].Items[index].GetPath('values').Items[AOptionIndex-1].AsString;
+  except
+  end;
+
+  formAsArray.Free;
+  lst.Free;
+end;
+
+function TCarikWebModule.GetFormAnswerText(AQuestionIndex: integer;
+  AOptionIndex: integer): string;
+var
+  i, index, topic, subCount, currentCount: integer;
+  fileName: string;
+  lst: TStringList;
+  formAsArray: TJSONArray;
+begin
+  Result := '';
+  fileName := SimpleBOT.UserData[FORM_INPUT_FILENAME];
+  fileName := AppData.tempDir + FORM_PATH + fileName;
+  if not FileExists(fileName) then Exit;
+  lst := TStringList.Create;
+  lst.LoadFromFile(fileName);
+
+  formAsArray := GetJSON(lst.Text,False) as TJSONArray;
+
+  index := 0;
+  topic := 0;
+  subCount := 0;
+  for i:=0 to formAsArray.Count-1 do
+  begin
+    currentCount := formAsArray.Items[i].Count;
+    subCount += currentCount;
+    if AQuestionIndex <= subCount then
+    begin
+      index := AQuestionIndex - (subCount-currentCount) - 1;
+      break;
+    end;
+    topic := topic + 1;
+  end;
+  try
+    Result := formAsArray.Items[topic].Items[index].GetPath('options').Items[AOptionIndex-1].AsString;
+  except
+  end;
+
+  formAsArray.Free;
+  lst.Free;
+end;
+
+function TCarikWebModule.GenerateTextFromCustomActionOption(AText: string
+  ): string;
+var
+  i: integer;
+  s: string;
+  actionText: TStrings;
+  dt: TDateTime;
+begin
+  Result := AText;
+  if not AText.IsNumeric then Exit;
+  s := SimpleBOT.UserData[MESSAGE_ACTION_DATE];
+  if not s.IsEmpty then
+  begin
+    dt := s.AsDateTime;
+    if dt.MinutesDiff(Now) >= CALLBACK_QUERY_TIMEOUT then
+    begin
+      if dt.MinutesDiff(Now) < CALLBACK_QUERY_TIMEOUT_PREFIX then
+      begin
+        Prefix := 'Maaf, kalau jawaban ini untuk memilih menu, sepertinya waktunya sudah habis. Silakan coba ulangi lagi.\nTerima kasih\n';
+      end;
+      Exit;
+    end;
+  end;
+
+  if SimpleBOT.UserData[MESSAGE_ACTION_COUNT].IsEmpty then
+    Exit;
+  i := SimpleBOT.UserData[MESSAGE_ACTION_COUNT].AsInteger;
+  if AText.AsInteger > i then
+  begin
+    Result := ACTION_ERR_NLP_TOOBIG;
+    Exit;
+  end;
+
+  s := MESSAGE_ACTION_DATA_ + i2s(AText.AsInteger-1);
+  s := SimpleBOT.UserData[s];
+  actionText := Explode(s,'|'); //#0: title #1:content formatted
+  s := actionText[1];
+  actionText.Free;
+  actionText := Explode(s,'&');
+  s := actionText.Values['text'];
+  if s.IsEmpty then
+  begin
+    s := actionText.Values['url'];
+    if s.IsNotEmpty then
+      s := 'icho Kunjungi: ' + s;
+  end;
+  Result := s;
+  actionText.Free;
+
+end;
+
+function TCarikWebModule.RemoveDummyImageLink(AText: string): string;
+begin
+  // check markdown #1: /\[[^\]]*\]\([^)]*\)*/
+  // check markdown #2: (?:__|[*#])|\[(.*?)\]\(.*?\)
+  Result := preg_replace('\[.\]\(.*?\)', '', AText);
+end;
+
+function TCarikWebModule.OnNLPErrorHandler(const Message: string): string;
+var
+  nec, retries: integer;
+  s, defaultReplay, muteDuration, callbackIntent: string;
+  isHandled: boolean;
+begin
+  Result := '';
+  FErrorCount := FErrorCount + 1;
+  if (FErrorCount > NLP_ERROR_COUNT_MAX) then
+  begin
+    Exit;
+  end;
+  nec := SimpleBOT.UserData[LABEL_NLP_ERROR_COUNT].AsInteger;
+
+  // check if any custom handler
+  If Assigned(FOnError) then
+  begin
+    isHandled := False;
+    Result := FOnError(OriginalText, isHandled);
+    if isHandled then
+    begin
+      Exit;
+    end;
+  end;
+
+  if ((ChannelId='') or (ChannelId='direct')) then Exit;
   s := Trim(Message);
-  s := StringReplace(SimpleBOT.GetResponse('InginTahu', ''), '%word%',
-    s, [rfReplaceAll]);
+  //s := StringReplace(SimpleBOT.GetResponse('InginTahu', ''), '%word%', s, [rfReplaceAll]);
+  s := StringReplace(SimpleBOT.GetResponse('none', ''), '%word%', s, [rfReplaceAll]);
+  defaultReplay := s;
   Result := s;
 
-  if ((IsTranslate) and (FErrorCount < ERROR_COUNT_MAX)) then
+  if SimpleBOT.isFormula then
+  begin
+    Result := SimpleBOT.Formula(Message);
+    SaveUnknownChat(Message);
+    Analytics('global', 'unknown', Message, Carik.UserID);
+    Exit;
+  end;
+
+  if ((IsTranslate) and (FErrorCount < NLP_ERROR_COUNT_MAX)) then
   begin
     s := translate(Message, FLanguage, 'id', True);
     if s <> Message then
@@ -3681,17 +5573,54 @@ begin
       SimpleBOT.SimpleAI.ResponseText.Clear;
       s := ProcessText(s);
       Result := SimpleBOT.SimpleAI.ResponseText.Text;
+      Exit;
     end;
 
+  end
+  else
+  begin
+    if IsSuggest then
+    begin
+      Result := defaultReplay;
+      s := FindSuggestion(Message);
+      if not s.IsEmpty then
+      begin
+        SimpleBOT.OnError := nil;
+        SimpleBOT.OriginalMessage := Message;
+        SimpleBOT.SimpleAI.ResponseText.Clear;
+        s := ProcessText(s);
+        Result := SimpleBOT.SimpleAI.ResponseText.Text;
+      end;
+    end;//IsSuggest
   end;
 
-  Result := ExternalNLP(Message);
-  if Result = '' then
+  s := ExternalNLP(Message);
+  if s.IsEmpty then
   begin
+    nec += 1;
+    retries := MaximumRetriesUnknownChat;
+    if ((retries > 0)and(nec>=retries)) then
+    begin
+      muteDuration := Config[UNKNOWNCHAT_MUTE_DURATION];
+      if (muteDuration.ToInteger>0) then
+      begin
+        muteDuration := Now.IncMinute(muteDuration.ToInteger).AsString;
+        SimpleBOT.UserData[ClientId + '-mute'] := muteDuration;
+      end;
+      callbackIntent := Config[UNKNOWNCHAT_CALLBACK];
+      Result := SimpleBOT.GetResponse(callbackIntent, '');
+    end;
+    SimpleBOT.UserData[LABEL_NLP_ERROR_COUNT] := nec.ToString;
     SaveUnknownChat(Message);
     Analytics('global', 'unknown', Message, Carik.UserID);
-    FErrorCount := FErrorCount + 1;
+  end else
+  begin
+    SimpleBOT.UserData[LABEL_NLP_ERROR_COUNT] := '0';
+    Result := s;
   end;
+
+  LogUtil.Add(Carik.UserID + ':' + Carik.FullName + ':' + Message + '/' + Carik.GroupChatID
+    + '-' + Carik.GroupName, 'NLPERROR');
 end;
 
 function TCarikWebModule.CleanupMessage(const AMessage: string): string;

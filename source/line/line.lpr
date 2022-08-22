@@ -6,7 +6,7 @@ uses
   {$IFNDEF Windows}
   cthreads,
   {$ENDIF}
-  fpcgi, sysutils, fastplaz_handler, common, main, routes, carik_webmodule;
+  fpcgi, sysutils, fastplaz_handler, common, main, routes, line_handler;
 
 begin
   Application.Title:='Carik - LINE Bot';
@@ -19,7 +19,8 @@ begin
 
   Application.OnGetModule := @FastPlasAppandler.OnGetModule;
   Application.PreferModuleName := True;
-  {$if (fpc_version=3) and (fpc_release>=0) and (fpc_patch>=4)}
+  //{$if (fpc_version=3) and (fpc_release>=0) and (fpc_patch>=4)}
+  {$if FPC_FULlVERSION >= 30004}
   Application.LegacyRouting := True;
   {$endif}
 
