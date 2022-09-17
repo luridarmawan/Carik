@@ -238,6 +238,7 @@ begin
       SimpleBOT.AdditionalParameters.Values['GroupName'] := groupName;
   end;
   SimpleBOT.AdditionalParameters.Values['FullName'] := fullName;
+  SimpleBOT.AdditionalParameters.Values['full_name'] := fullName;
   if (_GET['_DEBUG'] = '1') then
   begin
     SimpleBOT.AdditionalParameters.Values['ClientID'] := Config[CONFIG_CLIENT_ID];

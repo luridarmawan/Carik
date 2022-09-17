@@ -863,11 +863,13 @@ begin
   SimpleBOT.AdditionalParameters.Values['UserID'] := 'tl-' + TELEGRAM.UserID; //TODO: tambahkan ke messenger lain
   SimpleBOT.AdditionalParameters.Values['ChatID'] := 'tl-' + TELEGRAM.ChatID; //TODO: tambahkan ke messenger lain
   SimpleBOT.AdditionalParameters.Values['FullName'] := TELEGRAM.FullName; //TODO: tambahkan ke messenger lain
+  SimpleBOT.AdditionalParameters.Values['full_name'] := TELEGRAM.FullName;
   SimpleBOT.AdditionalParameters.Values['MessageID'] := MessageID;
   if TELEGRAM.IsInvitation then
   begin
     SimpleBOT.AdditionalParameters.Values['UserID'] := TELEGRAM.InvitedUserId;
     SimpleBOT.AdditionalParameters.Values['FullName'] := TELEGRAM.InvitedFullName;
+    SimpleBOT.AdditionalParameters.Values['full_name'] := TELEGRAM.InvitedFullName;
   end;
   if TELEGRAM.IsGroup then
   begin

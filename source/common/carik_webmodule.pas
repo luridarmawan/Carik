@@ -4598,6 +4598,7 @@ begin
     SimpleBOT.SimpleAI.AdditionalParameters.Values['generic'] := 'false';
   if DeviceId.IsNotEmpty then
     SimpleBOT.SimpleAI.AdditionalHeaders.Values['DeviceID'] := DeviceId;
+  //SimpleBOT.DefaultSearchPattern := '\w+';
   Result := SimpleBOT.Exec(AMessage);
   if SimpleBOT.Weight > 0 then
   begin
@@ -5219,7 +5220,7 @@ begin
       lst.Free;
     end;
     postData['data/submit'] := OK;
-    //die(postData.AsJSONFormated); //ulil
+    //die(postData.AsJSONFormated); //ulil formpost
 
     // Submit
     url := SimpleBOT.UserData[MESSAGE_ACTION_URL];

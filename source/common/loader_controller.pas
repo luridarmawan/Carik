@@ -77,16 +77,8 @@ end;
 
 // GET Method Handler
 procedure TLoaderController.Get;
-var
-  url, fileName: string;
 begin
-  url := 'https://mmg.whatsapp.net/d/f/Ahgc1NQrfRSYWy4e3ktRVPmODxyCO25g37OwRfRRXBqR.enc';
-  fileName := '/Users/ulil/course/donlod/dungplakdungdung';
-  if DownloadFile(url, fileName) then
-  begin
-    //
-    die('oke');
-  end;
+  OutputJson(0, 'Invalid Method');
 end;
 
 procedure TLoaderController.Put;
