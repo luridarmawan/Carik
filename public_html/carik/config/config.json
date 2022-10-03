@@ -60,20 +60,13 @@
       ],
       "intents": [
         "chat-intents.txt",
-        "kdrt-intents.txt",
-        "property-intents.txt",
-        "smarthome-intents.txt",
         "lokasi-intents.txt",
         "tiket-intents.txt",
-        "pulsa-intents.txt",
         "cs-intents.txt",
         "ai-intents.txt"
       ],
       "response": [
         "chat-response.txt",
-        "kdrt-response.txt",
-        "property-response.txt",
-        "smarthome-response.txt",
         "lokasi-response.txt",
         "tiket-response.txt",
         "cs-response.txt",

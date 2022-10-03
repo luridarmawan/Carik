@@ -563,6 +563,7 @@ begin
     Text := GenerateTextFromCustomActionOption(Text);
 
   SimpleBOT.AdditionalParameters.Values['FullName'] := Carik.FullName;
+  SimpleBOT.AdditionalParameters.Values['full_name'] := Carik.FullName;
 
   if not isHandled then
   begin

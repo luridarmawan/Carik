@@ -461,6 +461,7 @@ begin
     SimpleBOT.AdditionalParameters.Values['ChatID'] := 'fb-' + Facebook.MessageID;
 
   SimpleBOT.AdditionalParameters.Values['FullName'] := Facebook.FullName;
+  SimpleBOT.AdditionalParameters.Values['full_name'] := Facebook.FullName;
 
   // check if any custom handler
   isHandled := False;
