@@ -402,7 +402,11 @@ end;
 // GET Method Handler
 procedure TTelegramHandler.Get;
 begin
-  OutputJson(0, 'Invalid Method');
+  Response.Content:= '{"msg":"Token not exists."}';
+  if not TELEGRAM.Token.IsEmpty then
+  begin
+    Response.Content:= '{"msg":"Invalid method."}';
+  end;
 end;
 
 // POST Method Handler
@@ -605,7 +609,7 @@ begin
   if updateID < lastUpdateID then
   begin
     Response.Content := '{"status":"expired"}';
-    Exit;
+    //Exit; //TODO: unmark
   end;
   SimpleBOT.UserData[BotID+'_UPDATE_ID'] := updateID.ToString;
 

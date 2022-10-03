@@ -1,21 +1,26 @@
 {
   "systems": {
-    "sitename": "SimpleBOT",
+    "sitename": "CarikBOT",
     "slogan": "SimpleBOT with SimpleAI and FastPlaz",
     "baseurl": "",
-    "admin_email": "webmaster@coba.com",
-    "development": true,
-    "debug": true,
+    "admin_email": "webmaster@carik.id",
+    "development": false,
+    "debug": false,
     "module_default": "main",
     "language_default": "id",
     "theme_enable": false,
     "theme": "default",
     "cache": "none",
     "temp": "ztemp",
-    "error_url": "/",
+    "error_url": "",
+    "session_autostart": false,
     "session_timeout": 0,
     "ffmpeg_path": "./ffmpeg",
     "error_redirect": false
+  },
+  "stemming" : {
+    "dictionary_file" : "files/dictionary.csv",
+    "nonstandardword_file" : "files/word-nonstandard.txt"
   },
   "external_nlp": {
     "enable": false,
@@ -32,22 +37,69 @@
       }
     ]
   },
-  "knowledge_base": {
+  "suggestion":{
+    "enable": false,
     "url": ""
+  },
+  "services": {
+    "knowledgebase_url": "",
+    "chatlog_url": "",
+    "joinlog_url": "",
+    "groupaddlog_url": "",
+    "groupinfo_url": "",
+    "groupmember_url": "",
+    "blacklistcheck_url": "",
+    "blacklistadd_url": ""
+  },
+  "knowledge_base": {
+    "url": "",
+    "chatlog_url": "",
+    "joinlog_url": "",
+    "groupaddlog_url": "",
+    "blacklistcheck_url": "",
+    "blacklistadd_url": ""
+  },
+  "carik_search": {
+    "method": "post",
+    "url": ""
+  },
+  "blacklist": {
+    "users": [
+      {"id": "telegram_user_id", "nama": "Full Name"}
+    ],
+    "groups": [
+      {"id": "telegram_group_id", "nama": "Group Name"}
+    ]
+  },
+  "redis": {
+    "loader_path": "/Users/user/app/redis-loader.sh",
+    "default": {
+      "server": "localhost",
+      "port": 6379,
+      "timeout": 2500
+    }
   },
   "ai": {
     "default": {
       "name": "Carik",
+      "client_id": 1,
       "datasource": "file",
+      "userdata_storage": "file",
       "debug": false,
-      "stemming": false,
+      "stemming": true,
       "standard_word_check": true,
+      "reply_disable": false,
+      "first_session_response": false,
       "basedir": "files/nlp/",
       "unknown_stats_url": "",
-      "chatlog_url": "",
       "user_status": {
         "client_id": "carik",
         "url": ""
+      },
+      "unknown_chat": {
+        "maximum_retries": 3,
+        "callback_intent": "UnknownChatCarik",
+        "mute_duration": 0
       },
       "external_nlp": {
         "enable": false,
@@ -55,71 +107,55 @@
         "key": ""
       },
       "entities": [
-        "lokasi-entities.txt",
-        "ai-entities.txt"
+        "main-entities.txt"
       ],
       "intents": [
-        "chat-intents.txt",
-        "lokasi-intents.txt",
-        "tiket-intents.txt",
-        "cs-intents.txt",
-        "ai-intents.txt"
+        "main-intents.txt",
+        "others-intents.txt"
       ],
       "response": [
-        "chat-response.txt",
-        "lokasi-response.txt",
-        "tiket-response.txt",
-        "cs-response.txt",
-        "ai-response.txt",
-        "ai-questions.txt"
+        "main-response.txt",
+        "others-response.txt"
       ],
       "trigger_word": {
-        "bot_call": ["Carik", "Bot"],
-        "meninggal": ["(telah|telah|kemaren|kemarin|tadi|yang) meninggal", "innalillahi"],
+        "bot_call": ["carik", "bot"],
+        "meninggal": ["(telah|telah|kemaren|kemarin|tadi|yang) (meninggal|wafat)", "innalillahi"],
         "sakit": ["lagi sakit"],
         "makan2": ["makan2", "makan-makan"],
         "ulang_tahun": ["ulang tahun", "hbd", "birthday", "milad", "met ultah"],
         "aamiin": ["aamiin|amiin|aamin|aamien|آمين"]
+      },
+      "spam_word": {
+        "link": ["\\.cn/","?ref=","t.me/joinchat","shorturl.at","t.me/binaryprofittrader","t.me/etheriumfundsbot",".me/EasyMakeMoneyBot", "clickkkgo.site/"],
+        "domain": ["akcapitaltrade.com","binanciexchange.com","bitcointrade.com","bitcoinhubbell.com","get.cryptobrowser.site","uermoney.icu","info-dex.com"],
+        "blockchain": ["mining/"],
+        "referral": ["referral/","referal/"],
+        "kuota": ["\\.cf"],
+        "other_group": ["t.me/ngodingbikinasik"],
+        "black_word": ["Earn (.*) ether every"]
       }
     }
   },
   "telegram": {
     "default": {
-      "token": "tour_telegram_token"
+      "token": "",
+      "reply_disable": false,
+      "first_session_response": false,
+      "whitelist": ""
     }
   },
   "line": {
     "default": {
-      "token": "your_line_token"
+      "token": "",
+      "reply_disable": false,
+      "first_session_response": false
     }
   },
   "facebook": {
     "default": {
-      "token": "your_facebook_token"
-    }
-  },
-  "omdb": {
-    "default": {
-      "key": ""
-    }
-  },
-  "PortalPulsa": {
-    "default": {
-      "userid": "",
-      "key": "",
-      "secret": ""
-    }
-  },
-  "ibacor": {
-    "default": {
-      "token": ""
-    }
-  },
-  "clarifai": {
-    "default": {
-      "client_id": "",
-      "client_secret": "",
-      "token": ""
+      "token": "",
+      "reply_disable": false,
+      "first_session_response": false
     }
   },
   "google": {
@@ -166,7 +202,7 @@
       "key": ""
     }
   },
-  "apixu": {
+  "weatherstack": {
     "default": {
       "key": ""
     }
@@ -177,12 +213,6 @@
       "apikey": "",
       "calendar_accountid": "",
       "calendar_id": ""
-    }
-  },
-  "maskofa": {
-    "jadwalshalat": {
-      "sessionid": "",
-      "citylists": ""
     }
   },
   "msbotframework": {
@@ -200,12 +230,11 @@
     "kapanlagi": "https://www.kapanlagi.com/feed/",
     "republika": "http://www.republika.co.id/rss"
   },
-  "pajakmotor": {
-    "api_url": ""
-  },
   "carik": {
     "path": "files/carik/",
-    "tts_url": ""
+    "tts_url": "",
+    "groups": {
+    }
   },
   "database" : {
     "default" : {
