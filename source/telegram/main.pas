@@ -75,6 +75,7 @@ begin
 
   Result := 'Pesan ini terdeteksi sebagai spamming, abaikan jika bukan.';
   Result := Result + '\nSaya colek admin: ' + suffixMessage;
+  Result := Result + '\n_('+Score.ToString+')_';
   Handled:= True;
 end;
 

@@ -3051,7 +3051,7 @@ end;
 function TCarikWebModule.SpamScore(AUserID: string; AText: string;
   ForceCheck: boolean): integer;
 var
-  i, j: integer;
+  i, j, additionScore: integer;
   s, triggerName, triggerWord: string;
   jData: TJSONData;
 begin
@@ -3059,23 +3059,8 @@ begin
   if isLookLikeURL(AText) or ForceCheck then
   begin
     Result := Result + 10;
-
-    //TODO: add spam score detection
-    s := Config.GetObject(SPAM_WORD).AsJSON;
-    jData := GetJSON(s);
-    for i := 0 to jData.Count - 1 do
-    begin
-      triggerName := Config.GetObject(SPAM_WORD).Names[i];
-      for j := 0 to jData.Items[i].Count - 1 do
-      begin
-        triggerWord := jData.Items[i].Items[j].AsString;
-        if preg_match(triggerWord, AText) then
-        begin
-          Result := Result + 71;
-        end;
-      end;
-    end;
-    jData.Free;
+    if StringsExists('t.me/', AText) then
+      Result := Result + 71;
 
     //exception
     if preg_match('stackoverflow.com', AText) then
@@ -3088,6 +3073,25 @@ begin
       Result := Result + 70;
     end;
   end;
+
+  //TODO: add spam score detection
+  if AText.IsExists('$') then Result := Result + 10;
+  s := Config.GetObject(SPAM_WORD).AsJSON;
+  jData := GetJSON(s);
+  for i := 0 to jData.Count - 1 do
+  begin
+    additionScore := 30;
+    triggerName := Config.GetObject(SPAM_WORD).Names[i];
+    for j := 0 to jData.Items[i].Count - 1 do
+    begin
+      triggerWord := jData.Items[i].Items[j].AsString;
+      if preg_match(triggerWord, AText) then
+      begin
+        Result := Result + additionScore;
+      end;
+    end;
+  end;
+  jData.Free;
 
   if Result < 80 then
   begin
@@ -4400,6 +4404,8 @@ begin
   SimpleBOT := TSimpleBotModule.Create;
   SimpleBOT.FirstSessionResponse := False;
   SimpleBOT.BotName := FBotName;
+  if not FBotID.IsEmpty then SimpleBOT.AdditionalParameters.Values['bot_id'] := FBotID;
+
   //TODO: if FOperation.IsEmpty then
     SimpleBOT.LoadConfig;
   SimpleBOT.StorageType := stFile;

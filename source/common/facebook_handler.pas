@@ -239,6 +239,8 @@ begin
   // _GET['hub.mode'] <== subscribe
   // _GET['hub.verify_token']
   Response.Content := _GET['hub.challenge'];
+  if isEmpty(Response.Content) then
+    OutputJson(400, ERR_INVALID_PARAMETER);
 end;
 
 // POST Method Handler

@@ -158,6 +158,7 @@ const
   EXTERNAL_ACCESS_TIMEOUT = 3000;
   ERR_TIMEOUT_MESSAGE = 'Maaf, saat ini layanan belum bisa diakses. Coba lagi nanti yaa.';
   ERR_INVALID_PARAMETER = 'Invalid parameter.';
+  ERR_INVALID_METHOD = 'Invalid method.';
 
   OPERATION_USERSET = 'userset';
   SPAM_CHECK_GREETING = '"Hi Human, silakan klik tombol ini agar anda tidak dianggap sebagai spammer."';

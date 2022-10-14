@@ -402,7 +402,11 @@ end;
 // GET Method Handler
 procedure TTelegramHandler.Get;
 begin
-  OutputJson(0, 'Invalid Method');
+  Response.Content:= '{"msg":"Token not exists."}';
+  if not TELEGRAM.Token.IsEmpty then
+  begin
+    Response.Content:= '{"msg":"Invalid method."}';
+  end;
 end;
 
 // POST Method Handler
@@ -605,7 +609,7 @@ begin
   if updateID < lastUpdateID then
   begin
     Response.Content := '{"status":"expired"}';
-    Exit;
+    //Exit; //TODO: unmark
   end;
   SimpleBOT.UserData[BotID+'_UPDATE_ID'] := updateID.ToString;
 
@@ -768,26 +772,27 @@ begin
               //if (TELEGRAM.IsPicture or isURL(Text)) and Assigned(FOnSpam) then //simple force checking
               if Assigned(FOnSpam) then //simple force checking
               begin
-                //if Carik.isSpamChecking then
-                s := '';
-                if s.IsNotEmpty then //TODO: fix function isSpamChecking
+                if Carik.isSpamChecking then
                 begin
-                  spamScoreTotal := spamScoreTotal + SpamScore(Carik.UserID, Text, TELEGRAM.IsPicture);
-                  //spamScoreTotal := spamScoreTotal + SpamScore(Carik.UserID, Text, True);//force check
-                  //spamScoreTotal := 0;
-                  if spamScoreTotal >= SPAM_SCORE_THRESHOLD then
+                  //if s.IsNotEmpty then //TODO: fix function isSpamChecking
                   begin
-                    isHandled := False;
-                    s := FOnSpam(Text, spamScoreTotal, isHandled);
-                    if isHandled then
+                    spamScoreTotal := spamScoreTotal + SpamScore(Carik.UserID, Text, TELEGRAM.IsPicture);
+                    //spamScoreTotal := spamScoreTotal + SpamScore(Carik.UserID, Text, True);//force check
+                    //spamScoreTotal := 0;
+                    if spamScoreTotal >= SPAM_SCORE_THRESHOLD then
                     begin
-                      TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID);
-                      LogChat(TELEGRAM_CHANNEL_ID, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, '', s, True, False, s2i(TELEGRAM.MessageID), s2i(TELEGRAM.ResultMessageID), s2i(TELEGRAM.ReplyFromMessageID));
-                      LogUtil.Add(TELEGRAM.ResultText, 'SPAM-SENT'); //todo: remove
+                      isHandled := False;
+                      s := FOnSpam(Text, spamScoreTotal, isHandled);
+                      if isHandled then
+                      begin
+                        TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID);
+                        LogChat(TELEGRAM_CHANNEL_ID, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, '', s, True, False, s2i(TELEGRAM.MessageID), s2i(TELEGRAM.ResultMessageID), s2i(TELEGRAM.ReplyFromMessageID));
+                        LogUtil.Add(TELEGRAM.ResultText, 'SPAM-SENT'); //todo: remove
+                      end;
+                      //die('spamming ...: ' + Carik.UserID + '/' + Carik.FullName);
                     end;
-                    //die('spamming ...: ' + Carik.UserID + '/' + Carik.FullName);
                   end;
-                end;
+                end;//if Carik.isSpamChecking
 
               end;
 
