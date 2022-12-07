@@ -910,7 +910,7 @@ begin
     OutputJson(11, 'muted: ' + SimpleBOT.UserData['mute']);
   end;
 
-  Text := Text.Replace(',','');
+  //Text := Text.Replace(',',''); //koma
   if preg_match('(\/start )(.+)$', Text) then
   begin
     Text := Text.Replace('_',' ').Replace('/start ', '').Trim;

@@ -126,6 +126,7 @@ begin
       json['data/client_id'] := ClientId;
     json['data/channel_id'] := ChannelId;
     json['data/user_id'] := FUserId;
+    json['data/prefix'] := SessionPrefix;
     json['data/mute'] := validateMuteDate(SimpleBOT.UserData[SessionPrefix + 'mute']);
     json['data/last_visit'] := SimpleBOT.UserData['NLP_VISITLAST'];
 
@@ -135,9 +136,6 @@ begin
   end;
 
   OutputJson(1, FAILED);
-
-
-  die(FUserId + '/' + ClientId);
 end;
 
 // POST Method Handler
@@ -148,13 +146,15 @@ begin
   Response.ContentType := 'application/json';
 
   FUserId := _POST['userId'];
+  if ClientId = '0' then ClientId := _POST['clientid'];
+  if ClientId.IsEmpty then ClientId := '0';
   if FUserId.IsEmpty then OutputJson(400, ERR_INVALID_PARAMETER);
   prepareData;
 
   if Operation = OPERATION_USERSET then
   begin
     commandUserset();
-    OutputJson(0, OK + ' ' + Now.AsString);
+    OutputJson(0, OK + ' ' + Now.AsString + '/' + SessionPrefix);
   end;
 
   OutputJson(1, FAILED);

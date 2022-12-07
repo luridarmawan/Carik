@@ -44,6 +44,7 @@ const
   UNKNOWN_STATS_URL = 'ai/default/unknown_stats_url';
   EXTERNAL_NLP_ENABLE = 'ai/default/external_nlp/enable';
   EXTERNAL_NLP_URL = 'ai/default/external_nlp/url';
+  EXTERNAL_NLP_USEGPT = 'ai/default/external_nlp/use_gpt';
   SUGGESTION_ENABLE = 'suggestion/enable';
   SUGGESTION_URL = 'suggestion/url';
 
@@ -150,12 +151,13 @@ const
   // Pilihan menu:
   //ACTION_CAPTION = '\nᴩɪʟɪʜᴀɴ:';
   ACTION_CAPTION = '\nKetik *Nomor* sesuai dengan pilihan berikut:';
-  ACTION_SUFFIX = '\nContoh, untuk memilih menu "*%s*", ketik: 1';
+  ACTION_SUFFIX = '\nContoh, untuk memilih menu *%s*, ketik: *1*';
   NLP_ERROR_COUNT_MAX = 2;
   NLP_DEFAULT_WEIGHT = 100;
   LABEL_NLP_ERROR_COUNT = 'nec';
 
   EXTERNAL_ACCESS_TIMEOUT = 3000;
+  EXTERNAL_NLP_TIMEOUT = 30000;
   ERR_TIMEOUT_MESSAGE = 'Maaf, saat ini layanan belum bisa diakses. Coba lagi nanti yaa.';
   ERR_INVALID_PARAMETER = 'Invalid parameter.';
   ERR_INVALID_METHOD = 'Invalid method.';
@@ -164,6 +166,8 @@ const
   SPAM_CHECK_GREETING = '"Hi Human, silakan klik tombol ini agar anda tidak dianggap sebagai spammer."';
 
   // Form Input Handler
+  PREVIOUS_ACTION = 'previous_action';
+  CURRENT_ACTION = 'current_action';
   WAITING_INPUT = 'waiting_input';
   WAITING_INPUT_DATE = 'waiting_input_date';
   FORM_INPUT_TIMEOUT = 5; // 5 minutes

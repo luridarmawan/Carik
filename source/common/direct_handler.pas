@@ -272,7 +272,7 @@ begin
     OutputJson(11, 'muted: ' + MutedUntil.AsString);
   end;
 
-  Text := Text.Replace(',','');
+  //Text := Text.Replace(',',''); //koma
   if not isHandled then
   begin
     BotInit;
