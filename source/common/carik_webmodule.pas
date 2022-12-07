@@ -3059,7 +3059,11 @@ begin
   if isLookLikeURL(AText) or ForceCheck then
   begin
     Result := Result + 10;
-    if StringsExists('t.me/', AText) then
+    //if StringsExists('t.me/', AText) then
+    //  Result := Result + 71;
+    if StringsExists('t.me/joinchat', AText) then
+      Result := Result + 71;
+    if StringsExists('telegram.me/joinchat', AText) then
       Result := Result + 71;
 
     //exception
@@ -3315,7 +3319,7 @@ end;
 function TCarikWebModule.ExternalNLP(AText: string): string;
 var
   i: integer;
-  nlp_enable: boolean;
+  nlp_enable, use_gpt: boolean;
   nlp_url, nlpAction: string;
   nlp_json: TJSONData;
   requestData: TJSONUtil;
@@ -3323,10 +3327,12 @@ var
 begin
   Result := '';
   FExternalNLPWeight := 0;
+  use_gpt := False;
   try
     nlp_url := '';
     nlp_url := Config[EXTERNAL_NLP_URL];
     nlp_enable := Config[EXTERNAL_NLP_ENABLE];
+    use_gpt := Config[EXTERNAL_NLP_USEGPT];
   except
   end;
   if nlp_url = '' then
@@ -3336,10 +3342,12 @@ begin
     Exit;
 
   nlp_url := nlp_url + '?client_id='+ClientId+'&text=' + UrlEncode(AText);
+  if use_gpt then nlp_url += '&gpt=1';
   requestData := TJSONUtil.Create;
   try
     with THTTPLib.Create do
     begin
+      ConnectTimeout := EXTERNAL_NLP_TIMEOUT;
       URL := nlp_url;
       AddHeader('Cache-Control', 'no-cache');
       AddHeader('X-Client-Type', 'beta'); //TODO: client type
@@ -4363,7 +4371,7 @@ begin
   FGenericContent := True;
   FDashboardDeviceID := 0;
   FOperation := _GET['op'];
-  //if FOperation.IsEmpty then FOperation := _POST['op'];
+  if FOperation.IsEmpty then FOperation := _POST['op'];
   FBotID := _GET['botid'];
   FBotName := _GET['name'];
   FToken := _GET['token'];
@@ -4612,6 +4620,10 @@ begin
     if externalResult.IsNotEmpty then
       if FExternalNLPWeight < SimpleBOT.Weight then
       begin
+        if SimpleBOT.IsMerge then
+        begin
+          externalResult += '\n\n' + SimpleBOT.ResponseText.Text;
+        end;
         Result := externalResult;
         SimpleBOT.ResponseText.Text := externalResult;
         SimpleBOT.SimpleAI.Parameters.Values['external_nlp'] := '1';
@@ -4909,7 +4921,7 @@ procedure TCarikWebModule.SaveActionToUserData(AActionType: string;
   AData: TJSONObject);
 var
   i, j, indexAction: integer;
-  s, actionData, firstMenuTitle: string;
+  s, actionData, firstMenuTitle, previousAction, currentAction: string;
   buttonAsArray: TJSONArray;
 begin
   FCustomActionAsText := '';
@@ -4934,6 +4946,14 @@ begin
     or (AActionType='list')
     ) then
     Exit;
+
+  previousAction := SimpleBOT.UserData[CURRENT_ACTION];
+  if (previousAction <> Text) then
+  begin
+    SimpleBOT.UserData[PREVIOUS_ACTION] := previousAction;
+    SimpleBOT.UserData[CURRENT_ACTION] := Text;
+  end;
+
   SimpleBOT.UserData[MESSAGE_TYPE] := 'action';
   SimpleBOT.UserData[MESSAGE_ACTION_DATE] := Now.AsString;
   SimpleBOT.UserData[MESSAGE_ACTION_TYPE] := AActionType;
@@ -5134,7 +5154,10 @@ begin
   if (inputType = 'numeric') or (inputType = 'number') then
   begin
     Text := Text.Replace('.','').ToLower;
-    Text := Text.Replace('rp', '').Trim;
+    Text := Text.Replace('rp', '');
+    Text := RemoveEmoji(Text);
+    Text := RemoveUnicode(Text);
+    Text := StripNonAscii(Text).Trim;
     Text := StringHumanToNominal(Text);
     if not Text.IsNumeric then
     begin
@@ -5161,6 +5184,11 @@ begin
   // check option
   if ((inputType = 'option') or (inputType = 'list')) then
   begin
+    Text := RemoveEmoji(Text);
+    Text := RemoveUnicode(Text);
+    Text := StripNonAscii(Text);
+    Text := Text.Replace('??', '');
+    Text := Text.Trim;
     Text := StringHumanToNominal(Text);
     if not Text.IsNumeric then
     begin
@@ -5226,10 +5254,17 @@ begin
       lst.Free;
     end;
     postData['data/submit'] := OK;
+    if (_GET['_FORMDEBUG'] = '1') then
+    begin
+      //url := SimpleBOT.UserData[MESSAGE_ACTION_URL];
+      //die(postData.AsJSONFormated+#13+url); //ulil formpost
+    end;
     //die(postData.AsJSONFormated); //ulil formpost
 
     // Submit
     url := SimpleBOT.UserData[MESSAGE_ACTION_URL];
+    LogUtil.Add(postData.AsJSON, 'FORM-DATA');
+    LogUtil.Add(url, 'FORM-URL');
     with THTTPLib.Create(url) do
     begin
       try
@@ -5238,6 +5273,11 @@ begin
         ContentType := 'application/json';
         RequestBody := TStringStream.Create(postData.AsJSON);
         httpResponse := Post();
+        if (_GET['_FORMDEBUG'] = '1') then
+        begin
+          //die(httpResponse.ResultText);
+        end;
+        LogUtil.Add(httpResponse.ResultText, 'FORM-RESULT');
         if httpResponse.ResultCode <> 200 then
         begin
           Suffix := FORM_ERR_SUBMIT_FAILED + '(#'+httpResponse.ResultCode.ToString+')';
@@ -5257,7 +5297,10 @@ begin
             FCustomReplyURLFromExternalNLP := FCustomReplyDataFromExternalNLP['action/url'];
             FCustomReplyName := FCustomReplyDataFromExternalNLP['action/name'];
             SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data')));
-            FCustomReplyDataFromExternalNLP.LoadFromJsonString(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data').AsJSON, False);
+            try
+              FCustomReplyDataFromExternalNLP.LoadFromJsonString(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data').AsJSON, False);
+            except
+            end;
             if FCustomActionAsText.IsNotEmpty then
             begin
               {
@@ -5274,6 +5317,8 @@ begin
         on e: Exception do
         begin
           Suffix := FORM_ERR_SUBMIT_EXCEPTION;
+          if (_GET['_DEBUG'] = '1') then
+            Suffix += '\n' + e.Message;
         end;
       end;
 
@@ -5483,6 +5528,16 @@ var
 begin
   Result := AText;
   if not AText.IsNumeric then Exit;
+
+  // check get previous menu
+  if AText = '0' then
+  begin
+    s := trim(SimpleBOT.UserData[PREVIOUS_ACTION]);
+    if s.IsNotEmpty then
+      Result := s;
+    Exit;
+  end;
+
   s := SimpleBOT.UserData[MESSAGE_ACTION_DATE];
   if not s.IsEmpty then
   begin
@@ -5622,7 +5677,10 @@ begin
     Analytics('global', 'unknown', Message, Carik.UserID);
   end else
   begin
-    SimpleBOT.UserData[LABEL_NLP_ERROR_COUNT] := '0';
+    try
+      SimpleBOT.UserData[LABEL_NLP_ERROR_COUNT] := '0';
+    except
+    end;
     Result := s;
   end;
 
