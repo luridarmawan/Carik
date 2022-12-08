@@ -154,3 +154,6 @@ bisa langsung dimention, atau dengan me-reply comment bot sebelumnya.
 
 - [Natural Language Processing (NLP) sederhana dari Carik Bot](https://medium.com/@luridarmawan/natural-language-processing-nlp-sederhana-dari-carik-bot-78952b618695)
 - [Stemming Word dalam Carik](https://medium.com/@luridarmawan/stemming-word-dalam-carik-da3b802038c8)
+- [GPT-3](https://en.wikipedia.org/wiki/GPT-3)
+- [ChatGPT-API](https://github.com/transitive-bullshit/chatgpt-api)
+- [OpenAI](https://en.wikipedia.org/wiki/OpenAI)
