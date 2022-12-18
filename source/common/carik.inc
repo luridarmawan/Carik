@@ -143,6 +143,8 @@ const
   MESSAGE_ACTION_TYPE = 'action_type';
   MESSAGE_ACTION_DATE = 'action_date';
   MESSAGE_ACTION_NAME = 'action_name';
+  MESSAGE_ACTION_LEVEL = 'action_level';
+  MESSAGE_ACTION_IS_MAIN = 'action_is_main';
   MESSAGE_ACTION_URL = 'action_url';
   MESSAGE_ACTION_DATA_ = 'action_data_';
   MESSAGE_ACTION_COUNT = 'action_count';
@@ -177,9 +179,9 @@ const
   FORM_INPUT_RELOAD_CODE = '!';
   FORM_INPUT_EXPIRED = '\nSebelumnya kamu sempat melakukan pengisian form, tapi sayang batas waktu pengisian sudah berakhir.\n\n';
   FORM_INPUT_HASHTAG_CANCEL = '\n*Kirim # untuk membatalkan.*'
-      + '\n*Ulangi* jawaban jika Carik lama memberikan respon, atau ketik "*'+FORM_INPUT_RELOAD_CODE+'*" (tanda seru).';
+      + '\n*Ulangi* jawaban jika %botname% lama memberikan respon, atau ketik "*'+FORM_INPUT_RELOAD_CODE+'*" (tanda seru).';
   FORM_INPUT_HASHTAG_CANCEL2 = '\nAtau ketik # untuk membatalkan.'
-      + '\n*Ulangi* jawaban jika Carik lama memberikan respon, atau ketik "*'+FORM_INPUT_RELOAD_CODE+'*" (tanda seru).';
+      + '\n*Ulangi* jawaban jika %botname% lama memberikan respon, atau ketik "*'+FORM_INPUT_RELOAD_CODE+'*" (tanda seru).';
   FORM_INPUT_CANCEL = 'Baik, pengisian form %s telah dibatalkan.\nTerima kasih.';
   FORM_INPUT_DATE_FORMAT = '\nTulis dalam format tgl/bln/tahun\nMisal: 17/08/1945';
   FORM_INPUT_OPTION_FORMAT = '\n\nTulis dalam angka sesuai pilihan di atas';
