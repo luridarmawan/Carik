@@ -64,6 +64,7 @@ type
     FFormatNumber: string;
     FFormInputExpired: boolean;
     FGenericContent: boolean;
+    FGPTTimeout: integer;
     FInputOptions: TJSONArray;
     FInputOptionTitle : string;
     FMutedUntil: TDateTime;
@@ -319,6 +320,7 @@ type
     property ExternalNLPIntentPattern: string read FExternalNLPIntentPattern;
     property ExternalNLPWeight: integer read FExternalNLPWeight;
     property ExternalNLPStarted: boolean read FExternalNLPStarted;
+    property GPTTimeout: integer read FGPTTimeout write FGPTTimeout;
 
     property ActionCallback: string read FActionCallback;
     property IsMuted: boolean read getIsMuted;
@@ -3439,6 +3441,8 @@ begin
     with THTTPLib.Create do
     begin
       ConnectTimeout := EXTERNAL_NLP_TIMEOUT;
+      if ((use_gpt = True) and (FGPTTimeout > 0)) then
+        ConnectTimeout := FGPTTimeout;
       URL := nlp_url;
       AddHeader('Cache-Control', 'no-cache');
       AddHeader('X-Client-Type', 'beta'); //TODO: client type
@@ -4568,6 +4572,7 @@ begin
   FCustomReplyURLFromExternalNLP := '';
   FCustomReplyActionTypeFromExternalNLP := '';
   FExternalNLPStarted := False;
+  FGPTTimeout := 0;
 end;
 
 destructor TCarikWebModule.Destroy;

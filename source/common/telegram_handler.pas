@@ -20,6 +20,7 @@ uses
 
 {$include ../common/carik.inc}
 _DEVELOPMENT_ = False;
+_GPT_TIMEOUT_DEFAULT = 60000;
 
 type
 
@@ -921,6 +922,7 @@ begin
   if not isHandled then
   begin
     BotInit;
+    GPTTimeout := _GPT_TIMEOUT_DEFAULT;
     SimpleBOT.Handler['group_user_kick_request'] := @groupUserKickRequestHandler;
     SimpleBOT.Handler['group_user_ban_request'] := @groupUserBanRequestHandler;
     SimpleBOT.Handler['carik_topic'] := @kulgramTopicHandler;
