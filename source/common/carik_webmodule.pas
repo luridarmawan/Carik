@@ -67,6 +67,7 @@ type
     FGPTTimeout: integer;
     FInputOptions: TJSONArray;
     FInputOptionTitle : string;
+    FIsDebug: boolean;
     FMutedUntil: TDateTime;
     FOperation: string;
     FReplyDisable: boolean;
@@ -287,6 +288,7 @@ type
     function GetPrune: string;
     property GroupData[const KeyName: string]: string read getGroupData write setGroupData;
   published
+    property IsDebug: boolean read FIsDebug write FIsDebug;
     property FormatNumber: string read FFormatNumber write FFormatNumber;
     property Operation: string read FOperation;
     property BotID: string read FBotID;
@@ -3899,7 +3901,10 @@ begin
     end;
   end;
 
-  Result := jsonOutput.AsJSON;
+  if FIsDebug then
+    Result := jsonOutput.AsJSONFormated
+  else
+    Result := jsonOutput.AsJSON;
 end;
 
 function TCarikWebModule.SavePrune(AMessageID: string): boolean;
@@ -4475,6 +4480,8 @@ var
   s: string;
 begin
   inherited CreateNew(AOwner, CreateMode);
+  FIsDebug := False;
+  if (_GET['_DEBUG'] = '1') then FIsDebug:= True;
   FGenericContent := True;
   FDashboardDeviceID := 0;
   FOperation := _GET['op'];
