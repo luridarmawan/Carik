@@ -109,6 +109,7 @@ const
   CMD_IMAGE_TRANSLATION = 'image translation';
 
   CARIK_TTS_URL = 'carik/tts_url';
+  CARIK_TTS_TOKEN = 'carik/tts_token';
 
   RUMAH123_API_URL = 'rumah123/default/api_url';
   RUMAH123_API_CLIENT_TYPE = 'rumah123/default/api_client_type';
@@ -160,6 +161,7 @@ const
 
   EXTERNAL_ACCESS_TIMEOUT = 3000;
   EXTERNAL_NLP_TIMEOUT = 30000;
+  GPT_TIMEOUT_DEFAULT = 60000;
   ERR_TIMEOUT_MESSAGE = 'Maaf, saat ini layanan belum bisa diakses. Coba lagi nanti yaa.';
   ERR_INVALID_PARAMETER = 'Invalid parameter.';
   ERR_INVALID_METHOD = 'Invalid method.';

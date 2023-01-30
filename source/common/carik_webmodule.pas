@@ -239,6 +239,8 @@ type
     OriginalText: string;
     ChannelId: string;
     Text: string;
+    MessageType: string;
+    FileList: TJSONArray;
     SessionPrefix: string;
     Prefix: string;
     Suffix: string;
@@ -2779,8 +2781,8 @@ begin
   Result := ReplaceAll(Result, ['*'], '');
   Result := StringReplace(Result, '. ', '., ', [rfReplaceAll]);
   Result := StringReplace(Result, '.'#10, '., ', [rfReplaceAll]);
-  Result := StringReplace(Result, ' ', '_', [rfReplaceAll]);
-  Result := StringReplace(Result, '\n', '._', [rfReplaceAll]);
+  //Result := StringReplace(Result, ' ', '_', [rfReplaceAll]);
+  Result := StringReplace(Result, '\n', '. ', [rfReplaceAll]);
   Result := StringReplace(Result, #13, '.', [rfReplaceAll]);
   Result := StringReplace(Result, #10, '.', [rfReplaceAll]);
 
@@ -3484,6 +3486,7 @@ begin
           FCustomReplyURLFromExternalNLP := jsonGetData(nlp_json, 'action/url');
           FCustomReplyName := jsonGetData(nlp_json, 'action/name');
           FCustomActionSuffix:= jsonGetData(nlp_json, 'action/suffix');
+          //ulil -----
           SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(nlp_json.GetPath('action.data')));
           if FCustomActionAsText.IsNotEmpty then
           begin
@@ -3542,9 +3545,9 @@ begin
   if Config[CARIK_TTS_URL] = '' then
     Exit;
 
-  FFileURL := PrepareTextToSpeech(Params.Values['text_value']);
+  FFileURL := PrepareTextToSpeech(Params.Values['sentence_value']).UrlEncode;
+  FFileURL := Config[CARIK_TTS_URL] + FFileURL + '?token=' + Config[CARIK_TTS_TOKEN];
 
-  FFileURL := Config[CARIK_TTS_URL] + FFileURL;
   FSendAudio := True;
 end;
 
@@ -4353,6 +4356,13 @@ begin
 
     requestJson['data/intentName'] := SimpleBOT.SimpleAI.IntentName;
     requestJson['data/dashboard_device_id'] := DashboardDeviceID;
+    if MessageType.IsNotEmpty then
+      requestJson['data/message_type'] := MessageType;
+    if MessageType.IsEqualTo('image') then
+    begin
+      requestJson.ValueArray['data/files'] := FileList;
+    end;
+    die(url);
     ContentType := 'application/json';
     RequestBody := TStringStream.Create(requestJson.AsJSON);
     httpResponse := Post;
@@ -4700,8 +4710,8 @@ begin
     SimpleBOT.SimpleAI.AdditionalParameters.Values['UserID'] := PrefixId + '-' + Carik.UserID;
     SimpleBOT.SimpleAI.AdditionalParameters.Values['user_id'] := PrefixId + '-' + Carik.UserID;
   end;
-  SimpleBOT.SimpleAI.AdditionalParameters.Values['OriginalText'] := OriginalText;
-  SimpleBOT.SimpleAI.AdditionalParameters.Values['original_text'] := OriginalText;
+  SimpleBOT.SimpleAI.AdditionalParameters.Values['OriginalText'] := OriginalText.Trim;
+  SimpleBOT.SimpleAI.AdditionalParameters.Values['original_text'] := OriginalText.Trim;
   if not ChannelId.IsEmpty then
   begin
     SimpleBOT.SimpleAI.AdditionalParameters.Values['ChannelId'] := ChannelId;
