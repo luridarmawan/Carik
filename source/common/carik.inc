@@ -109,6 +109,7 @@ const
   CMD_IMAGE_TRANSLATION = 'image translation';
 
   CARIK_TTS_URL = 'carik/tts_url';
+  CARIK_TTS_TOKEN = 'carik/tts_token';
 
   RUMAH123_API_URL = 'rumah123/default/api_url';
   RUMAH123_API_CLIENT_TYPE = 'rumah123/default/api_client_type';
@@ -143,6 +144,8 @@ const
   MESSAGE_ACTION_TYPE = 'action_type';
   MESSAGE_ACTION_DATE = 'action_date';
   MESSAGE_ACTION_NAME = 'action_name';
+  MESSAGE_ACTION_LEVEL = 'action_level';
+  MESSAGE_ACTION_IS_MAIN = 'action_is_main';
   MESSAGE_ACTION_URL = 'action_url';
   MESSAGE_ACTION_DATA_ = 'action_data_';
   MESSAGE_ACTION_COUNT = 'action_count';
@@ -158,6 +161,7 @@ const
 
   EXTERNAL_ACCESS_TIMEOUT = 3000;
   EXTERNAL_NLP_TIMEOUT = 30000;
+  GPT_TIMEOUT_DEFAULT = 60000;
   ERR_TIMEOUT_MESSAGE = 'Maaf, saat ini layanan belum bisa diakses. Coba lagi nanti yaa.';
   ERR_INVALID_PARAMETER = 'Invalid parameter.';
   ERR_INVALID_METHOD = 'Invalid method.';
@@ -177,9 +181,9 @@ const
   FORM_INPUT_RELOAD_CODE = '!';
   FORM_INPUT_EXPIRED = '\nSebelumnya kamu sempat melakukan pengisian form, tapi sayang batas waktu pengisian sudah berakhir.\n\n';
   FORM_INPUT_HASHTAG_CANCEL = '\n*Kirim # untuk membatalkan.*'
-      + '\n*Ulangi* jawaban jika Carik lama memberikan respon, atau ketik "*'+FORM_INPUT_RELOAD_CODE+'*" (tanda seru).';
+      + '\n*Ulangi* jawaban jika %botname% lama memberikan respon, atau ketik "*'+FORM_INPUT_RELOAD_CODE+'*" (tanda seru).';
   FORM_INPUT_HASHTAG_CANCEL2 = '\nAtau ketik # untuk membatalkan.'
-      + '\n*Ulangi* jawaban jika Carik lama memberikan respon, atau ketik "*'+FORM_INPUT_RELOAD_CODE+'*" (tanda seru).';
+      + '\n*Ulangi* jawaban jika %botname% lama memberikan respon, atau ketik "*'+FORM_INPUT_RELOAD_CODE+'*" (tanda seru).';
   FORM_INPUT_CANCEL = 'Baik, pengisian form %s telah dibatalkan.\nTerima kasih.';
   FORM_INPUT_DATE_FORMAT = '\nTulis dalam format tgl/bln/tahun\nMisal: 17/08/1945';
   FORM_INPUT_OPTION_FORMAT = '\n\nTulis dalam angka sesuai pilihan di atas';

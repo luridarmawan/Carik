@@ -132,6 +132,19 @@ begin
   except
   end;
 
+  try
+    MessageType := jsonData.Value['message/chat/type'];
+  except
+  end;
+
+  if MessageType.IsEqualTo('image') then
+  begin
+    try
+      FileList := TJSONArray(jsonData.GetPath('message').GetPath('files'));
+    except
+    end;
+  end;
+
   // maybe submitted from post data
   //if Text = '' then
   //  Text := _POST['text'];
@@ -179,7 +192,7 @@ begin
   Carik.UserPrefix := channelID;
 
   // remove mention from text
-  OriginalText := Text;
+  OriginalText := Text.Trim;
   Text := Text.ToLower;
   {
   if Pos('@' + BOTNAME_DEFAULT, Text) = 1 then
@@ -239,7 +252,7 @@ begin
   end;
   SimpleBOT.AdditionalParameters.Values['FullName'] := fullName;
   SimpleBOT.AdditionalParameters.Values['full_name'] := fullName;
-  if (_GET['_DEBUG'] = '1') then
+  if IsDebug then
   begin
     SimpleBOT.AdditionalParameters.Values['ClientID'] := Config[CONFIG_CLIENT_ID];
   end;

@@ -24,6 +24,7 @@ uses
   kloudlesscalendar_integration, rss_lib, http_lib, IniFiles,
   rajaongkir_integration, googleanalytics_integration,
   kamuskemdikbud_integration, thesaurus_integration,
+  fpexprpars, // formula
   {$if FPC_FULlVERSION >= 30200}
   fphttpclient, opensslsockets, fpopenssl, ssockets, sslsockets, sslbase,
   {$endif}
@@ -60,10 +61,13 @@ type
     FExternalNLPIntentPattern: string;
     FExternalNLPWeight: integer;
     FExternalNLPStarted: boolean;
+    FFormatNumber: string;
     FFormInputExpired: boolean;
     FGenericContent: boolean;
+    FGPTTimeout: integer;
     FInputOptions: TJSONArray;
     FInputOptionTitle : string;
+    FIsDebug: boolean;
     FMutedUntil: TDateTime;
     FOperation: string;
     FReplyDisable: boolean;
@@ -108,6 +112,8 @@ type
     function getAutoPrune: boolean;
     function getCustomActionSuffix: string;
     function getCustomReplyData: TJSONUtil;
+    function getCustomReplyIsMainMenu: boolean;
+    function getCustomReplyMenuLevel: string;
     function getCustomReplyMode: string;
     function getCustomReplyType: string;
     function getCustomReplyURL: string;
@@ -187,6 +193,7 @@ type
     function beritaHariIniHandler(const IntentName: string; Params: TStrings): string;
 
     function conversionHashHandler(const IntentName: string; Params: TStrings): string;
+    function customMathHandler(const IntentName: string; Params: TStrings): string;
 
     function propertySearchHandler(const IntentName: string; Params: TStrings): string;
     function smartHomeGeneralHandler(const IntentName: string; Params: TStrings): string;
@@ -232,6 +239,8 @@ type
     OriginalText: string;
     ChannelId: string;
     Text: string;
+    MessageType: string;
+    FileList: TJSONArray;
     SessionPrefix: string;
     Prefix: string;
     Suffix: string;
@@ -281,6 +290,8 @@ type
     function GetPrune: string;
     property GroupData[const KeyName: string]: string read getGroupData write setGroupData;
   published
+    property IsDebug: boolean read FIsDebug write FIsDebug;
+    property FormatNumber: string read FFormatNumber write FFormatNumber;
     property Operation: string read FOperation;
     property BotID: string read FBotID;
     property BotName: string read FBotName write FBotName;
@@ -313,6 +324,7 @@ type
     property ExternalNLPIntentPattern: string read FExternalNLPIntentPattern;
     property ExternalNLPWeight: integer read FExternalNLPWeight;
     property ExternalNLPStarted: boolean read FExternalNLPStarted;
+    property GPTTimeout: integer read FGPTTimeout write FGPTTimeout;
 
     property ActionCallback: string read FActionCallback;
     property IsMuted: boolean read getIsMuted;
@@ -379,6 +391,8 @@ type
     property CustomActionSuffix: string read getCustomActionSuffix write FCustomActionSuffix;
     property CustomReplyName: string read FCustomReplyName;
     property CustomReplyType: string read getCustomReplyType;
+    property CustomReplyMenuLevel: string read getCustomReplyMenuLevel;
+    property CustomReplyIsMainMenu: boolean read getCustomReplyIsMainMenu;
     property CustomReplyMode: string read getCustomReplyMode;
     property CustomReplyData: TJSONUtil read getCustomReplyData;
     property CustomReplyURL: string read getCustomReplyURL;
@@ -462,7 +476,8 @@ const
   AI_CONFIG_TRIGGERWORD = 'ai/default/trigger_word';
 
   BLACKLIST_FILENAME = 'files/blacklist.txt';
-
+  REGEX_EQUATION =
+    '^[cos|sin|tan|tangen|sqr|sqrt|log|ln|sec|cosec|arctan|abs|exp|frac|int|round|trunc|shl|shr|ifs|iff|ifd|ifi|0-9*+ ().,-/:]+$';
 
 { TSmartHomeTestIntegration }
 
@@ -634,6 +649,16 @@ begin
     Result := FCustomReplyDataFromExternalNLP
   else
     Result := SimpleBOT.SimpleAI.CustomReplyData;
+end;
+
+function TCarikWebModule.getCustomReplyIsMainMenu: boolean;
+begin
+  Result := SimpleBOT.SimpleAI.CustomReplyIsMainMenu;
+end;
+
+function TCarikWebModule.getCustomReplyMenuLevel: string;
+begin
+  Result := SimpleBOT.SimpleAI.CustomReplyMenuLevel;
 end;
 
 function TCarikWebModule.getAutoPrune: boolean;
@@ -2478,6 +2503,78 @@ begin
   end;
 end;
 
+function TCarikWebModule.customMathHandler(const IntentName: string;
+  Params: TStrings): string;
+var
+  mathParser: TFPExpressionParser;
+  resultValue: double;
+const
+  AllowedOperator = ['+', '-', '/', '*', '^'];
+begin
+  Result := Params.Values['Formula_value'];
+  Result := StringReplace(Result, ':', '/', [rfReplaceAll]);
+  Result := StringReplace(Result, 'x', '*', [rfReplaceAll]);
+  Result := StringReplace(Result, 'dibagi', '/', [rfReplaceAll]);
+  Result := StringReplace(Result, 'bagi', '/', [rfReplaceAll]);
+  Result := StringReplace(Result, 'dikali', '*', [rfReplaceAll]);
+  Result := StringReplace(Result, 'kali', '*', [rfReplaceAll]);
+  Result := StringReplace(Result, 'ditambah', '+', [rfReplaceAll]);
+  Result := StringReplace(Result, 'tambah', '+', [rfReplaceAll]);
+  Result := StringReplace(Result, 'dikurangi', '-', [rfReplaceAll]);
+  Result := StringReplace(Result, 'dikurang', '-', [rfReplaceAll]);
+  Result := StringReplace(Result, '_', '-', [rfReplaceAll]);
+  Result := StringReplace(Result, 'koma', '.', [rfReplaceAll]);
+  Result := StringReplace(Result, 'rp.', '', [rfReplaceAll]);
+  Result := StringReplace(Result, 'rp', '', [rfReplaceAll]);
+  Result := StringReplace(Result, '=', '', [rfReplaceAll]);
+  Result := StringReplace(Result, '?', '', [rfReplaceAll]);
+  Result := StringReplace(Result, 'nol', '0', [rfReplaceAll]);
+  Result := Result.Replace('sama dengan', '');
+  Result := Result.Replace('berapa', '');
+  Result := Result.Replace('sama', '+');
+  Result := Result.Trim;
+  if Result.IsEmpty then
+    Exit;
+  if Result[1] = ',' then
+    Result := Copy(Result, 2);
+  if Result[1] = '.' then
+    Result := Copy(Result, 2);
+  Result := Result.Trim;
+  Result := StringHumanToNominal(Result);
+  Result := Result.Replace(' ' , '');
+  if (Result[1] in AllowedOperator) then
+  begin
+    if SimpleBOT.UserData['math_result'].IsEmpty then
+    begin
+      Result := '..... :( ';
+      Exit;
+    end;
+    Result := SimpleBOT.UserData['math_result'] + Result;
+  end;
+  Result := '(' + Result + ')';
+  if not preg_match(REGEX_EQUATION, Result) then
+  begin
+    Result := ExternalNLP(Params.Values['Formula_value']);
+    if Result.IsEmpty then Result := '..... :( ';
+    Exit;
+  end;
+
+  mathParser := TFPExpressionParser.Create(nil);
+  try
+    mathParser.BuiltIns := [bcMath, bcBoolean];
+    mathParser.Expression := Result;
+    resultValue := ArgToFloat(mathParser.Evaluate);
+    SimpleBOT.UserData['math_result'] := f2s(resultValue);
+    ThousandSeparator:='.';
+    DecimalSeparator:=',';
+    Result := FloatToStr(resultValue);
+    Result := Format(FFormatNumber,[resultValue]);
+    Result := Result.Replace(',000','');
+  except
+  end;
+  mathParser.Free;
+end;
+
 function TCarikWebModule.propertySearchHandler(const IntentName: string;
   Params: TStrings): string;
 var
@@ -2684,8 +2781,8 @@ begin
   Result := ReplaceAll(Result, ['*'], '');
   Result := StringReplace(Result, '. ', '., ', [rfReplaceAll]);
   Result := StringReplace(Result, '.'#10, '., ', [rfReplaceAll]);
-  Result := StringReplace(Result, ' ', '_', [rfReplaceAll]);
-  Result := StringReplace(Result, '\n', '._', [rfReplaceAll]);
+  //Result := StringReplace(Result, ' ', '_', [rfReplaceAll]);
+  Result := StringReplace(Result, '\n', '. ', [rfReplaceAll]);
   Result := StringReplace(Result, #13, '.', [rfReplaceAll]);
   Result := StringReplace(Result, #10, '.', [rfReplaceAll]);
 
@@ -3348,6 +3445,8 @@ begin
     with THTTPLib.Create do
     begin
       ConnectTimeout := EXTERNAL_NLP_TIMEOUT;
+      if ((use_gpt = True) and (FGPTTimeout > 0)) then
+        ConnectTimeout := FGPTTimeout;
       URL := nlp_url;
       AddHeader('Cache-Control', 'no-cache');
       AddHeader('X-Client-Type', 'beta'); //TODO: client type
@@ -3386,6 +3485,8 @@ begin
           FCustomReplyActionTypeFromExternalNLP := jsonGetData(nlp_json, 'action/type');
           FCustomReplyURLFromExternalNLP := jsonGetData(nlp_json, 'action/url');
           FCustomReplyName := jsonGetData(nlp_json, 'action/name');
+          FCustomActionSuffix:= jsonGetData(nlp_json, 'action/suffix');
+          //ulil -----
           SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(nlp_json.GetPath('action.data')));
           if FCustomActionAsText.IsNotEmpty then
           begin
@@ -3408,6 +3509,7 @@ begin
           FCustomReplyActionTypeFromExternalNLP := FCustomReplyDataFromExternalNLP['action/type'];
           FCustomReplyURLFromExternalNLP := FCustomReplyDataFromExternalNLP['action/url'];
           FCustomReplyName := FCustomReplyDataFromExternalNLP['action/name'];
+          FCustomActionSuffix := FCustomReplyDataFromExternalNLP['action/suffix'];
           SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data')));
           FCustomReplyDataFromExternalNLP.LoadFromJsonString(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data').AsJSON, False);
           if FCustomActionAsText.IsNotEmpty then
@@ -3443,9 +3545,9 @@ begin
   if Config[CARIK_TTS_URL] = '' then
     Exit;
 
-  FFileURL := PrepareTextToSpeech(Params.Values['text_value']);
+  FFileURL := PrepareTextToSpeech(Params.Values['sentence_value']).UrlEncode;
+  FFileURL := Config[CARIK_TTS_URL] + FFileURL + '?token=' + Config[CARIK_TTS_TOKEN];
 
-  FFileURL := Config[CARIK_TTS_URL] + FFileURL;
   FSendAudio := True;
 end;
 
@@ -3776,7 +3878,17 @@ begin
 
     //compatibility
     jsonOutput['action/type'] := CustomReplyType;
+    jsonOutput['action/suffix'] := CustomActionSuffix;
     jsonOutput.ValueArray['action/data'] := customReplyDataAsArray;
+  end;
+  if CustomActionSuffix.IsNotEmpty then
+    jsonOutput['action/suffix'] := CustomActionSuffix;
+  if CustomReplyIsMainMenu then
+    jsonOutput['action/main'] := True;
+  if CustomReplyMenuLevel.IsNotEmpty then
+  begin
+    jsonOutput['action/level'] := CustomReplyMenuLevel;
+    jsonOutput['level'] := CustomReplyMenuLevel;
   end;
 
   // Input Type
@@ -3792,7 +3904,10 @@ begin
     end;
   end;
 
-  Result := jsonOutput.AsJSON;
+  if FIsDebug then
+    Result := jsonOutput.AsJSONFormated
+  else
+    Result := jsonOutput.AsJSON;
 end;
 
 function TCarikWebModule.SavePrune(AMessageID: string): boolean;
@@ -4241,6 +4356,13 @@ begin
 
     requestJson['data/intentName'] := SimpleBOT.SimpleAI.IntentName;
     requestJson['data/dashboard_device_id'] := DashboardDeviceID;
+    if MessageType.IsNotEmpty then
+      requestJson['data/message_type'] := MessageType;
+    if MessageType.IsEqualTo('image') then
+    begin
+      requestJson.ValueArray['data/files'] := FileList;
+    end;
+    die(url);
     ContentType := 'application/json';
     RequestBody := TStringStream.Create(requestJson.AsJSON);
     httpResponse := Post;
@@ -4368,6 +4490,8 @@ var
   s: string;
 begin
   inherited CreateNew(AOwner, CreateMode);
+  FIsDebug := False;
+  if (_GET['_DEBUG'] = '1') then FIsDebug:= True;
   FGenericContent := True;
   FDashboardDeviceID := 0;
   FOperation := _GET['op'];
@@ -4445,6 +4569,7 @@ begin
   FMessengerMode := mmNone;
   ChannelId := '';
   SessionPrefix := '';
+  FFormatNumber := '%5.3N';
 
   FBOLD_CODE := '*';
   FITALIC_CODE := '_';
@@ -4464,6 +4589,7 @@ begin
   FCustomReplyURLFromExternalNLP := '';
   FCustomReplyActionTypeFromExternalNLP := '';
   FExternalNLPStarted := False;
+  FGPTTimeout := 0;
 end;
 
 destructor TCarikWebModule.Destroy;
@@ -4584,8 +4710,8 @@ begin
     SimpleBOT.SimpleAI.AdditionalParameters.Values['UserID'] := PrefixId + '-' + Carik.UserID;
     SimpleBOT.SimpleAI.AdditionalParameters.Values['user_id'] := PrefixId + '-' + Carik.UserID;
   end;
-  SimpleBOT.SimpleAI.AdditionalParameters.Values['OriginalText'] := OriginalText;
-  SimpleBOT.SimpleAI.AdditionalParameters.Values['original_text'] := OriginalText;
+  SimpleBOT.SimpleAI.AdditionalParameters.Values['OriginalText'] := OriginalText.Trim;
+  SimpleBOT.SimpleAI.AdditionalParameters.Values['original_text'] := OriginalText.Trim;
   if not ChannelId.IsEmpty then
   begin
     SimpleBOT.SimpleAI.AdditionalParameters.Values['ChannelId'] := ChannelId;
@@ -4714,6 +4840,7 @@ begin
   SimpleBOT.Handler['berita_hariini'] := @beritaHariIniHandler;
 
   SimpleBOT.Handler['conversion_hash'] := @conversionHashHandler;
+  SimpleBOT.Handler['custom_math'] := @customMathHandler;
 
   if FMessengerMode = mmTelegram then
   begin
@@ -4906,7 +5033,7 @@ begin
       tmpSuffix += formAsArray.Count.ToString + ' kategori, dan ';
     tmpSuffix += 'total ' + questionCount.ToString + ' pertanyaan.';
   end;
-  tmpSuffix += FORM_INPUT_HASHTAG_CANCEL;
+  tmpSuffix += FORM_INPUT_HASHTAG_CANCEL.Replace('%botname%', SimpleBOT.BotName);
 
   tmpSuffix += '\n\n' + GetFormQuestion(1);
 
@@ -4957,6 +5084,11 @@ begin
   SimpleBOT.UserData[MESSAGE_TYPE] := 'action';
   SimpleBOT.UserData[MESSAGE_ACTION_DATE] := Now.AsString;
   SimpleBOT.UserData[MESSAGE_ACTION_TYPE] := AActionType;
+  SimpleBOT.UserData[MESSAGE_ACTION_LEVEL] := CustomReplyMenuLevel;
+  if CustomReplyIsMainMenu then
+    SimpleBOT.UserData[MESSAGE_ACTION_IS_MAIN] := '1'
+  else
+    SimpleBOT.UserData[MESSAGE_ACTION_IS_MAIN] := '0';
   if FCustomReplyName.IsNotEmpty then
     SimpleBOT.UserData[MESSAGE_ACTION_NAME] := FCustomReplyName;
 
@@ -5135,7 +5267,7 @@ begin
   begin
     if not Text.isDate('/') then
     begin
-      Suffix := FORM_ERR_FORMAT_DATE + FORM_INPUT_HASHTAG_CANCEL2;
+      Suffix := FORM_ERR_FORMAT_DATE + FORM_INPUT_HASHTAG_CANCEL2.Replace('%botname%', SimpleBOT.BotName);
       Result := True;
       Exit;
     end;
@@ -5145,7 +5277,7 @@ begin
   begin
     if not Text.IsEmail then
     begin
-      Suffix := FORM_ERR_FORMAT_EMAIL + FORM_INPUT_HASHTAG_CANCEL2;
+      Suffix := FORM_ERR_FORMAT_EMAIL + FORM_INPUT_HASHTAG_CANCEL2.Replace('%botname%', SimpleBOT.BotName);
       Result := True;
       Exit;
     end;
@@ -5161,7 +5293,7 @@ begin
     Text := StringHumanToNominal(Text);
     if not Text.IsNumeric then
     begin
-      Suffix := FORM_ERR_FORMAT_NUMERIC + FORM_INPUT_HASHTAG_CANCEL2;
+      Suffix := FORM_ERR_FORMAT_NUMERIC + FORM_INPUT_HASHTAG_CANCEL2.Replace('%botname%', SimpleBOT.BotName);
       Result := True;
       Exit;
     end;
@@ -5176,7 +5308,7 @@ begin
       Text := 'N'
     else
     begin
-      Suffix := FORM_ERR_FORMAT_BOOLEAN + FORM_INPUT_HASHTAG_CANCEL2;
+      Suffix := FORM_ERR_FORMAT_BOOLEAN + FORM_INPUT_HASHTAG_CANCEL2.Replace('%botname%', SimpleBOT.BotName);
       Result := True;
       Exit;
     end;
@@ -5192,14 +5324,14 @@ begin
     Text := StringHumanToNominal(Text);
     if not Text.IsNumeric then
     begin
-      Suffix := FORM_ERR_FORMAT_OPTION + FORM_INPUT_HASHTAG_CANCEL2;
+      Suffix := FORM_ERR_FORMAT_OPTION + FORM_INPUT_HASHTAG_CANCEL2.Replace('%botname%', SimpleBOT.BotName);
       Result := True;
       Exit;
     end;
     i := s2i(SimpleBOT.UserData[FORM_INPUT_OPTION_COUNT]);
     if ((Text.ToInteger=0)or(Text.ToInteger > i)) then
     begin
-      Suffix := FORM_ERR_FORMAT_OPTION_INVALID + ' ' + FORM_INPUT_HASHTAG_CANCEL2;
+      Suffix := FORM_ERR_FORMAT_OPTION_INVALID + ' ' + FORM_INPUT_HASHTAG_CANCEL2.Replace('%botname%', SimpleBOT.BotName);
       Result := True;
       Exit;
     end;
@@ -5523,16 +5655,34 @@ function TCarikWebModule.GenerateTextFromCustomActionOption(AText: string
 var
   i: integer;
   s: string;
-  actionText: TStrings;
+  actionText, levels: TStrings;
   dt: TDateTime;
 begin
   Result := AText;
   if not AText.IsNumeric then Exit;
+  if AText.IsExists('.') then Exit;
 
   // check get previous menu
   if AText = '0' then
   begin
     s := trim(SimpleBOT.UserData[PREVIOUS_ACTION]);
+    //if s.IsEmpty then
+    begin
+      s := trim(SimpleBOT.UserData[MESSAGE_ACTION_LEVEL]);
+      if s.IsNotEmpty then
+      begin
+        levels := Explode(s, '.');
+        i := levels.Count;
+        if i = 1 then s := 'menu';
+        if i = 2 then s := trim(SimpleBOT.UserData[PREVIOUS_ACTION]);
+        if i > 2 then
+        begin
+          levels.Delete(i-1);
+          s := Implode(TStringList(levels), '.');
+        end;
+      end;
+    end;
+
     if s.IsNotEmpty then
       Result := s;
     Exit;

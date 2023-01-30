@@ -31,6 +31,8 @@ type
     FOnSpam: TOnSpamEvent;
     forceRespond: boolean;
     replyFrom, replyFromUsername, replyFromName: string;
+    currentThreadId: integer;
+    currentThreadIdAsString: string;
 
     function isWhiteListed(AUserName: string): boolean;
     function isMentioned(AMessage: string): boolean;
@@ -377,7 +379,7 @@ begin
     Exit;
 
   captionText := ACaption.Replace('\n', #10);
-  if TELEGRAM.SendInlineKeyboard( TELEGRAM.ChatID, captionText, ADataAsJson) then
+  if TELEGRAM.SendInlineKeyboard( TELEGRAM.ChatID, captionText, ADataAsJson, TELEGRAM.ThreadId.ToString) then
   begin
     Result := True;
   end;
@@ -393,7 +395,7 @@ begin
     Exit;
 
   captionText := ACaption.Replace('\n', #10);
-  if TELEGRAM.SendKeyboard( TELEGRAM.ChatID, captionText, ADataAsJson) then
+  if TELEGRAM.SendKeyboard( TELEGRAM.ChatID, captionText, ADataAsJson, TELEGRAM.ThreadId.ToString) then
   begin
     Result := True;
   end;
@@ -442,6 +444,8 @@ begin
 
   TELEGRAM.RequestContent := Request.Content;
   OriginalText := TELEGRAM.Text;
+  currentThreadId := TELEGRAM.ThreadId;
+  currentThreadIdAsString := currentThreadId.ToString;
   //if TELEGRAM.ChatID = '-1001240569966' then
   //  LogUtil.Add(Request.Content.Replace(#13,'').Replace(#10,''), 'JAVASCRIPT');
 
@@ -785,7 +789,7 @@ begin
                       s := FOnSpam(Text, spamScoreTotal, isHandled);
                       if isHandled then
                       begin
-                        TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID);
+                        TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID, currentThreadIdAsString);
                         LogChat(TELEGRAM_CHANNEL_ID, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, '', s, True, False, s2i(TELEGRAM.MessageID), s2i(TELEGRAM.ResultMessageID), s2i(TELEGRAM.ReplyFromMessageID));
                         LogUtil.Add(TELEGRAM.ResultText, 'SPAM-SENT'); //todo: remove
                       end;
@@ -881,6 +885,8 @@ begin
     SimpleBOT.AdditionalParameters.Values['GroupID'] := 'tl-' + TELEGRAM.ChatID;
     SimpleBOT.AdditionalParameters.Values['GroupName'] := TELEGRAM.GroupName;
   end;
+  if TELEGRAM.ThreadId > 0 then
+    SimpleBOT.AdditionalParameters.Values['thread_id'] := TELEGRAM.ThreadId.ToString;
 
   // check if any custom handler
   //remove LogUtil.Add('B: ' + TimeUsage.ToString + ' | ' + Text, 'LD');
@@ -914,13 +920,14 @@ begin
   if preg_match('(\/start )(.+)$', Text) then
   begin
     Text := Text.Replace('_',' ').Replace('/start ', '').Trim;
-    TELEGRAM.SendMessage(TELEGRAM.ChatID, 'Anda mengirimkan perintah "*'+Text+'*" dari tautan luar.\nMohon ditunggu');
+    TELEGRAM.SendMessage(TELEGRAM.ChatID, 'Anda mengirimkan perintah "*'+Text+'*" dari tautan luar.\nMohon ditunggu', '', currentThreadIdAsString);
   end;
 
 
   if not isHandled then
   begin
     BotInit;
+    GPTTimeout := GPT_TIMEOUT_DEFAULT;
     SimpleBOT.Handler['group_user_kick_request'] := @groupUserKickRequestHandler;
     SimpleBOT.Handler['group_user_ban_request'] := @groupUserBanRequestHandler;
     SimpleBOT.Handler['carik_topic'] := @kulgramTopicHandler;
@@ -1098,7 +1105,7 @@ begin
           begin
             SimpleBOT.SimpleAI.ResponseText.Text := SimpleBOT.SimpleAI.ResponseText.Text.Trim
               + '\n\n' + CustomActionAsText.Replace(#10,'\n');
-            TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID);
+            TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID, currentThreadIdAsString);
           end;
           if ((CustomReplyType = 'menu') or (CustomReplyType = 'list')) then
           begin
@@ -1111,18 +1118,18 @@ begin
                   + '\n' + CustomActionSuffix.Replace(#10,'\n');
               Response.Content := SimpleBOT.SimpleAI.ResponseJson;
             end;
-            TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID);
+            TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID, currentThreadIdAsString);
           end;
           if CustomReplyType = 'form' then
           begin
-            if not TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID) then
+            if not TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID, currentThreadIdAsString) then
             begin
               LogUtil.Add('FORM: '+SimpleBOT.SimpleAI.ResponseText[0], 'DEBUG');
             end;
           end;
           if CustomReplyType = 'none' then
           begin
-            if not TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID) then
+            if not TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID, currentThreadIdAsString) then
             begin
               LogUtil.Add('none: '+SimpleBOT.SimpleAI.ResponseText[0], 'DEBUG');
             end;
@@ -1149,7 +1156,7 @@ begin
             MessageID := '';
           //s := AnsiToUtf8(SimpleBOT.SimpleAI.ResponseText[0]);
           s := SimpleBOT.SimpleAI.ResponseText[0];
-          TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID);
+          TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID, currentThreadIdAsString);
           LogUtil.Add(TELEGRAM.ChatID + '/' + TELEGRAM.UserID + '('+TELEGRAM.GroupName+')::' + OriginalText + ' |-> ' + s, 'SENTLOG1');
           LogUtil.Add(Request.Content.Replace(#13,'').Replace(#10,''), 'SENTLOG2');
         end;// /IsCustomAction
@@ -1173,7 +1180,7 @@ begin
         s := SimpleBOT.SimpleAI.ResponseText[j];
         if s <> '' then
         begin
-          if not TELEGRAM.SendMessage(TELEGRAM.ChatID, s, '') then
+          if not TELEGRAM.SendMessage(TELEGRAM.ChatID, s, '', currentThreadIdAsString) then
           begin
             LogUtil.Add('regular: '+SimpleBOT.SimpleAI.ResponseText[0], 'DEBUG');
           end;
@@ -1204,7 +1211,7 @@ begin
     LogUtil.Add(TELEGRAM.ResultText, 'IMG');
     if TELEGRAM.ResultCode <> 200 then
     begin
-      TELEGRAM.SendMessage( TELEGRAM.ChatID, 'Maaf, gambar tidak berhasil dikirimkan', MessageID);
+      TELEGRAM.SendMessage( TELEGRAM.ChatID, 'Maaf, gambar tidak berhasil dikirimkan', MessageID, currentThreadIdAsString);
     end;
   end;
 
