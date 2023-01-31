@@ -4362,7 +4362,6 @@ begin
     begin
       requestJson.ValueArray['data/files'] := FileList;
     end;
-    die(url);
     ContentType := 'application/json';
     RequestBody := TStringStream.Create(requestJson.AsJSON);
     httpResponse := Post;
@@ -5388,8 +5387,8 @@ begin
     postData['data/submit'] := OK;
     if (_GET['_FORMDEBUG'] = '1') then
     begin
-      //url := SimpleBOT.UserData[MESSAGE_ACTION_URL];
-      //die(postData.AsJSONFormated+#13+url); //ulil formpost
+      url := SimpleBOT.UserData[MESSAGE_ACTION_URL];
+      die(postData.AsJSONFormated+#13+url); //ulil formpost
     end;
     //die(postData.AsJSONFormated); //ulil formpost
 
