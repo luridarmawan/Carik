@@ -97,17 +97,17 @@ begin
   BOLD_CODE := '**';
   ITALIC_CODE := '*';
   responseFormat := '';
+  Text := '';
 
   // telegram style
   //   {"message":{"message_id":0,"text":"Hi","chat":{"id":0}}}
   try
     jsonData := GetJSON(Request.Content);
     try
-      //Text := jsonData.GetPath('message.text').AsString;
+      Text := jsonData.GetPath('message.text').AsString;
     except
-      Text := '';
     end;
-    Text := jsonData.Value['message/text'];
+    //Text := jsonData.Value['message/text'];
     if Text = 'False' then
       Text := '';
 
