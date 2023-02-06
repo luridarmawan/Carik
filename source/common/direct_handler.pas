@@ -281,6 +281,7 @@ begin
     Text := GenerateTextFromCustomActionOption(Text);
   if IsMuted then
   begin
+    LogChatPayload.Text:= Response.Content;
     LogChat(ChannelId, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, OriginalText, '', Carik.IsGroup, True);
     OutputJson(11, 'muted: ' + MutedUntil.AsString);
   end;
@@ -458,7 +459,10 @@ begin
       channelID := TELEGRAM_USERBOT_CHANNEL_ID;
     Analytics(ChannelId, SimpleBOT.SimpleAI.IntentName, Text, channelID + '-' + Carik.UserID);
     if (_GET['_NOLOG'] = '') then
+    begin
+      LogChatPayload.Text:= Response.Content;
       LogChat(ChannelId, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, OriginalText, text_response, Carik.IsGroup, True);
+    end;
   end;
 
   SimpleBOT.Free;

@@ -244,6 +244,7 @@ type
     SessionPrefix: string;
     Prefix: string;
     Suffix: string;
+    LogChatPayload: TStringList;
     AutoDeleteMessage: integer;
     Carik: TCarikController;
     SimpleBOT: TSimpleBotModule;
@@ -4298,10 +4299,11 @@ procedure TCarikWebModule.LogChat(AChannelID: string; AGroupID: string;
   AText: string; AReply: string; AIsGroup: boolean; AIsMentioned: boolean;
   AMessageID: integer; AResultMessageID: integer; AReplyFromMessageId: integer);
 var
+  urlExplode: TStrings;
   log_url: string;
   is_group, is_mentioned: string;
   httpResponse: IHTTPResponse;
-  requestJson: TJSONUtil;
+  requestJson, responseJson: TJSONUtil;
 begin
   if AText = '' then
     Exit;
@@ -4313,17 +4315,21 @@ begin
   if log_url = '' then
     Exit;
 
+  urlExplode := log_url.Explode('?');
+  log_url := urlExplode[0] + '?clientId=' + FClientId;
+
   if AGroupID = AUserID then
     AGroupID := '';
 
-  is_group := '1';
+  is_group := '0';
   is_mentioned := '1';
   if AIsGroup then
-    is_group := '0';
+    is_group := '1';
   if AIsMentioned then
     is_mentioned := '0';
 
   requestJson := TJSONUtil.Create;
+  responseJson := TJSONUtil.Create;
   with THTTPLib.Create(log_url) do
   begin
     AllowRedirect := True;
@@ -4358,18 +4364,50 @@ begin
     requestJson['data/dashboard_device_id'] := DashboardDeviceID;
     if MessageType.IsNotEmpty then
       requestJson['data/message_type'] := MessageType;
+
+    requestJson.Clear;
+    requestJson['message/message_id'] := AMessageID.ToString;
+    requestJson['message/text'] := (AText);
+    requestJson['message/reply'] := (AReply);
+    requestJson['message/from/id'] := AUserID;
+    requestJson['message/from/name'] := AFullName;
+    requestJson['message/from/username'] := AUserName;
+    requestJson['message/chat/channel'] := AChannelID;
+    requestJson['message/chat/id'] := AMessageID.ToString;
+    requestJson['message/chat/is_mentioned'] := is_mentioned;
+    requestJson['message/chat/is_group'] := is_group;
+    if AReplyFromMessageId > 0 then requestJson['message/chat/is_reply'] := 0;
+    if AIsGroup then
+    begin
+      requestJson['message/chat/group_name'] := AGroupName;
+    end;
+
     if MessageType.IsEqualTo('image') then
     begin
       requestJson.ValueArray['data/files'] := FileList;
     end;
+
+    responseJson.LoadFromJsonString(LogChatPayload.Text);
+    requestJson.Data.Add('response', responseJson.Data);
+    requestJson.Data.Add('nlp_response', responseJson.Data);
+
     ContentType := 'application/json';
     RequestBody := TStringStream.Create(requestJson.AsJSON);
     httpResponse := Post;
-    //die(httpResponse.ResultText);
+    if _GET['_debug'] <> '1' then
+    begin
+      //LogUtil.Add(httpResponse.ResultText, 'logchat');
+    end;
     Free;
   end;
-  requestJson.Free;
-
+  try
+    responseJson.Free;
+    //requestJson.Free;
+  except
+    on e : Exception do
+    begin
+    end;
+  end;
 end;
 
 procedure TCarikWebModule.LogJoin(AChannelID: string; AGroupID: string;
@@ -4498,7 +4536,7 @@ begin
   FBotID := _GET['botid'];
   FBotName := _GET['name'];
   FToken := _GET['token'];
-  FClientId := _GET['clientid'];
+  FClientId := _GET['clientId'];
 
   FDeviceId:= _GET['DeviceID'];
   if FDeviceId.IsEmpty then
@@ -4511,7 +4549,7 @@ begin
   end;
   if FClientId.IsEmpty then
     FClientId := Config[CONFIG_CLIENT_ID];
-  if FClientId.IsEmpty then FClientId := _POST['clientid'];
+  if FClientId.IsEmpty then FClientId := _POST['clientId'];
   if FClientId.IsNotEmpty then
     LogUtil.Prefix := FClientId + '-';
 
@@ -4589,10 +4627,12 @@ begin
   FCustomReplyActionTypeFromExternalNLP := '';
   FExternalNLPStarted := False;
   FGPTTimeout := 0;
+  LogChatPayload := TStringList.Create;
 end;
 
 destructor TCarikWebModule.Destroy;
 begin
+  LogChatPayload.Free;
   if Assigned(FInputOptions) then FInputOptions.Free;
   if Assigned(ElementArray) then
     ElementArray.Free;
