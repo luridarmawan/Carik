@@ -539,6 +539,7 @@ begin
   localReplyDisable := s2b(Config[TELEGRAM_BOT_REPLY_DISABLE]);
   if (localReplyDisable or replyDisable) then
   begin
+    LogChatPayload.Text:= Response.Content;
     LogChat(TELEGRAM_CHANNEL_ID, TELEGRAM.ChatID, TELEGRAM.GroupName, TELEGRAM.UserID, Carik.UserName, Carik.FullName, OriginalText, '', Carik.IsGroup, False, TELEGRAM.MessageID.ToInteger, 0, s2i(TELEGRAM.ReplyFromMessageID));
     die('{"state":"silent"}');
     exit;
@@ -790,6 +791,7 @@ begin
                       if isHandled then
                       begin
                         TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID, currentThreadIdAsString);
+                        LogChatPayload.Text:= Response.Content;
                         LogChat(TELEGRAM_CHANNEL_ID, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, '', s, True, False, s2i(TELEGRAM.MessageID), s2i(TELEGRAM.ResultMessageID), s2i(TELEGRAM.ReplyFromMessageID));
                         LogUtil.Add(TELEGRAM.ResultText, 'SPAM-SENT'); //todo: remove
                       end;
@@ -825,6 +827,7 @@ begin
               // Default LogChat
               if not forceSendMessage then
               begin
+                LogChatPayload.Text:= Response.Content;
                 s := s + OriginalText;
                 LogChat(TELEGRAM_CHANNEL_ID, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, s, '', True, False, MessageID.ToInteger, 0, s2i(TELEGRAM.ReplyFromMessageID));
                 Response.Content := '{"status":"nomention"}';
@@ -911,6 +914,7 @@ begin
     Text := GenerateTextFromCustomActionOption(Text);
   if IsMuted then
   begin
+    LogChatPayload.Text:= Response.Content;
     LogChat(TELEGRAM_CHANNEL_ID, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, OriginalText, '',
       Carik.IsGroup, False, MessageID.ToInteger, 0, s2i(TELEGRAM.ReplyFromMessageID));
     OutputJson(11, 'muted: ' + SimpleBOT.UserData['mute']);
@@ -1251,6 +1255,7 @@ begin
   begin
     s := 'callback|'+SimpleBOT.SimpleAI.IntentName;
   end;
+  LogChatPayload.Text:= Response.Content;
   LogChat(TELEGRAM_CHANNEL_ID, Carik.GroupChatID, Carik.GroupName,
     Carik.UserID, Carik.UserName, Carik.FullName, s, SimpleBOT.SimpleAI.ResponseText.Text,
     Carik.IsGroup, True, TELEGRAM.MessageID.ToInteger, s2i(TELEGRAM.ResultMessageID),
@@ -1258,6 +1263,7 @@ begin
 
   if Carik.IsGroup then
   begin
+    //LogChatPayload.Text:= Response.Content;
     //LogChat(TELEGRAM_CHANNEL_ID, Carik.GroupChatID, Carik.GroupName,
     //  '-1', TELEGRAM.ResultMessageID, SimpleBOT.SimpleAI.ResponseText.Text, '',
     //  Carik.IsGroup, False);
