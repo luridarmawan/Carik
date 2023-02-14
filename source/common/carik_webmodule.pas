@@ -597,7 +597,7 @@ begin
   Result := False;
   json := TJSONUtil.Create;
   try
-    json.LoadFromJsonString(Request.Content);
+    json.LoadFromJsonString(Request.Content, False);
     chatType := json['message/chat/type'];
     if chatType = 'group' then
       Result := True;
@@ -2370,7 +2370,7 @@ begin
     if Result <> '' then
     begin
       json := TJSONUtil.Create;
-      json.LoadFromJsonString(Result);
+      json.LoadFromJsonString(Result, False);
       if (not json['success']) then
       begin
         json.Free;
@@ -2379,7 +2379,7 @@ begin
       end;
 
       _img := json.Item['current'].Item['weather_icons'].AsJSON;
-      json.LoadFromJsonString(_img);
+      json.LoadFromJsonString(_img, False);
       _img := json.Data.Items[0].AsString;
       json.Free;
       //_img := 'http:' + Data['current.condition.weather_icons'];
@@ -3009,7 +3009,7 @@ begin
       if http_response.ResultCode = 200 then
       begin
         json := TJSONUtil.Create;
-        json.LoadFromJsonString(http_response.ResultText);
+        json.LoadFromJsonString(http_response.ResultText, False);
         i := json['code'];
         if i = 0 then
         begin
@@ -3127,7 +3127,7 @@ begin
     + '&gid=' + AGroupID;
   s := file_get_contents(checkUrl);
   json := TJSONUtil.Create;
-  json.LoadFromJsonString(s);
+  json.LoadFromJsonString(s, False);
   if (json['code'] <> 0) or (json['count']=0) then
   begin
     json.Free;
@@ -3226,7 +3226,7 @@ begin
     Exit;
 
   json := TJSONUtil.Create;
-  json.LoadFromJsonString(s);
+  json.LoadFromJsonString(s, False);
   try
     isDataExist := False;
     isDataExist := json['ok'];
@@ -3269,7 +3269,7 @@ begin
       LogUtil.Add( AUserID.Replace('+','') + '/' + AUserName + ': ' + http_response.ResultText, 'SPAMREPORT');
 
       json:= TJSONUtil.Create;
-      json.LoadFromJsonString(http_response.ResultText);
+      json.LoadFromJsonString(http_response.ResultText, False);
       Result:= json['text'];
       json.Free;
 
@@ -4387,7 +4387,7 @@ begin
       requestJson.ValueArray['data/files'] := FileList;
     end;
 
-    responseJson.LoadFromJsonString(LogChatPayload.Text);
+    responseJson.LoadFromJsonString(LogChatPayload.Text, False);
     requestJson.Data.Add('response', responseJson.Data);
     requestJson.Data.Add('nlp_response', responseJson.Data);
 
@@ -4822,7 +4822,7 @@ begin
 
     //TODO: lali
     json := TJSONUtil.Create;
-    json.LoadFromJsonString(SimpleBOT.SimpleAI.ResponseJson);
+    json.LoadFromJsonString(SimpleBOT.SimpleAI.ResponseJson, False);
     Result := json.AsJSONFormated;
     json.Free;
   end;
@@ -4968,7 +4968,7 @@ begin
   end;
 
   json := TJSONUtil.Create;
-  json.LoadFromJsonString(s);
+  json.LoadFromJsonString(s, False);
   Result := json['result/text'];
 
   json.Free;

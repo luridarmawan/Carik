@@ -159,7 +159,7 @@ const
   NLP_DEFAULT_WEIGHT = 100;
   LABEL_NLP_ERROR_COUNT = 'nec';
 
-  EXTERNAL_ACCESS_TIMEOUT = 3000;
+  EXTERNAL_ACCESS_TIMEOUT = 5000;
   EXTERNAL_NLP_TIMEOUT = 30000;
   GPT_TIMEOUT_DEFAULT = 60000;
   ERR_TIMEOUT_MESSAGE = 'Maaf, saat ini layanan belum bisa diakses. Coba lagi nanti yaa.';
