@@ -132,7 +132,7 @@ begin
   Result := False;
   json := TJSONUtil.Create;
   try
-    json.LoadFromJsonString(Request.Content);
+    json.LoadFromJsonString(Request.Content, False);
     s := json['message/reply_to_message/from/username'];
     //replyFrom := json['message/reply_to_message/from/id'];
     //try
@@ -176,7 +176,7 @@ var
 begin
   Result := False;
   json := TJSONUtil.Create;
-  json.LoadFromJsonString(Request.Content);
+  json.LoadFromJsonString(Request.Content, False);
   try
     //replyFrom := json['message/reply_to_message/from/id'];
     //replyFromUsername := json['message/reply_to_message/from/username'];
@@ -239,7 +239,7 @@ begin
   if s.IsEmpty then Exit;
 
   o := TJSONUtil.Create;
-  o.LoadFromJsonString(s);
+  o.LoadFromJsonString(s, False);
 
   try
     Result := o['data/options/welcome_member_collective'];
@@ -839,12 +839,22 @@ begin
           LogUtil.Add('noz', 'CHECK');
 
         end;
+      end
+      else
+      begin
+        SimpleBOT.AdditionalParameters.Values['reply_from_message_id'] := TELEGRAM.ReplyFromMessageID;
+        SimpleBOT.AdditionalParameters.Values['reply_from_user_id'] := TELEGRAM.ReplyFromUserID;
+        SimpleBOT.AdditionalParameters.Values['reply_from_fullname'] := TELEGRAM.ReplyFromFullName;
+        SimpleBOT.AdditionalParameters.Values['reply_from_text'] := TELEGRAM.ReplyFromText;
       end;
-
     end;
 
     if TELEGRAM.IsReply then
     begin
+      SimpleBOT.AdditionalParameters.Values['reply_from_message_id'] := TELEGRAM.ReplyFromMessageID;
+      SimpleBOT.AdditionalParameters.Values['reply_from_user_id'] := TELEGRAM.ReplyFromUserID;
+      SimpleBOT.AdditionalParameters.Values['reply_from_fullname'] := TELEGRAM.ReplyFromFullName;
+      SimpleBOT.AdditionalParameters.Values['reply_from_text'] := TELEGRAM.ReplyFromText;
     end;//if TELEGRAM.IsReply
 
   end;//-- if TELEGRAM.IsGroup

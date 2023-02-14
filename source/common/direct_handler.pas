@@ -399,7 +399,7 @@ begin
     cmdAction := Explode(parameterAction[0], '.');
 
     json := TJSONUtil.Create;
-    json.LoadFromJsonString( Response.Content);
+    json.LoadFromJsonString( Response.Content, False);
     json['response/action/callback_string'] := ActionCallback;
     json['response/action/callback_name'] := cmdAction[0];
     if cmdAction.Count > 1 then
@@ -421,7 +421,7 @@ begin
   if Assigned(ElementArray) then
   begin
     json := TJSONUtil.Create;
-    json.LoadFromJsonString( Response.Content);
+    json.LoadFromJsonString( Response.Content, False);
 
     //json.ValueArray['response/action/data'] := ElementArray;
     Response.Content := json.AsJSONFormated;
@@ -432,7 +432,7 @@ begin
 
   text_response := SimpleBOT.SimpleAI.ResponseText.Text;
   json := TJSONUtil.Create;
-  json.LoadFromJsonString( SimpleBOT.SimpleAI.ResponseJson);
+  json.LoadFromJsonString( SimpleBOT.SimpleAI.ResponseJson, False);
   s := json['response/action/callback_string'];
   if s <> '' then
   begin
