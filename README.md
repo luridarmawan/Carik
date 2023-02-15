@@ -157,3 +157,10 @@ bisa langsung dimention, atau dengan me-reply comment bot sebelumnya.
 - [GPT-3](https://en.wikipedia.org/wiki/GPT-3)
 - [ChatGPT-API](https://github.com/transitive-bullshit/chatgpt-api)
 - [OpenAI](https://en.wikipedia.org/wiki/OpenAI)
+
+## Credits
+
+Carik Bot is developed by [Luri Darmawan](https://github.com/luridarmawan/) and 20+ amazing contributors. Special thanks to Hastura, Mbah Don and Delli for originally creating Carik character.
+
+If you found this project interesting, please consider [sponsoring me](https://github.com/sponsors/luridarmawan/).
+
