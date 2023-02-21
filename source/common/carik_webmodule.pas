@@ -5442,6 +5442,7 @@ begin
         AddHeader('_source', 'carik');
         AddHeader('Cache-Control', 'no-cache');
         ContentType := 'application/json';
+        ConnectTimeout := FORM_SUBMIT_TIMEOUT;
         RequestBody := TStringStream.Create(postData.AsJSON);
         httpResponse := Post();
         if (_GET['_FORMDEBUG'] = '1') then
@@ -5467,7 +5468,10 @@ begin
             FCustomReplyActionTypeFromExternalNLP := FCustomReplyDataFromExternalNLP['action/type'];
             FCustomReplyURLFromExternalNLP := FCustomReplyDataFromExternalNLP['action/url'];
             FCustomReplyName := FCustomReplyDataFromExternalNLP['action/name'];
-            SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data')));
+            try
+              SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data')));
+            except
+            end;
             try
               FCustomReplyDataFromExternalNLP.LoadFromJsonString(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data').AsJSON, False);
             except
@@ -5488,6 +5492,7 @@ begin
         on e: Exception do
         begin
           Suffix := FORM_ERR_SUBMIT_EXCEPTION;
+          LogUtil.Add(e.Message + '//' + httpResponse.ResultText, 'FORM-ERROR');
           if (_GET['_DEBUG'] = '1') then
             Suffix += '\n' + e.Message;
         end;

@@ -162,7 +162,7 @@ const
   EXTERNAL_ACCESS_TIMEOUT = 5000;
   EXTERNAL_NLP_TIMEOUT = 30000;
   GPT_TIMEOUT_DEFAULT = 60000;
-  ERR_TIMEOUT_MESSAGE = 'Maaf, saat ini layanan belum bisa diakses. Coba lagi nanti yaa.';
+  ERR_TIMEOUT_MESSAGE = 'Maaf, saat ini layanan belum bisa diakses. Coba lagi beberapa saat lagi.';
   ERR_INVALID_PARAMETER = 'Invalid parameter.';
   ERR_INVALID_METHOD = 'Invalid method.';
 
@@ -176,6 +176,7 @@ const
   WAITING_INPUT_DATE = 'waiting_input_date';
   FORM_INPUT_TIMEOUT = 5; // 5 minutes
   FORM_SESSION = 'form_session';
+  FORM_SUBMIT_TIMEOUT = 20000; // 20 detik
   FORM_INPUT_TIMEOUT_MAX = 60; // 60 minutes
   FORM_INPUT_RESET_CODE = '#';
   FORM_INPUT_RELOAD_CODE = '!';
