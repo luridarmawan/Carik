@@ -637,6 +637,7 @@ begin
       end;
     end;
 
+    // if is not reply from chatbot's message
     if not isReply then
     begin
       if not isMentioned(Text) then
@@ -1164,6 +1165,8 @@ begin
         end
         else
         begin
+          if currentThreadIdAsString = TELEGRAM.ReplyFromMessageID then
+            currentThreadIdAsString := '';
 
           // Global/Default Sender
           If TELEGRAM.IsInvitation then
