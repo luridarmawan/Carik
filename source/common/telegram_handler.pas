@@ -1173,7 +1173,10 @@ begin
             MessageID := '';
           //s := AnsiToUtf8(SimpleBOT.SimpleAI.ResponseText[0]);
           s := SimpleBOT.SimpleAI.ResponseText[0];
-          TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID, currentThreadIdAsString);
+          if not TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID, currentThreadIdAsString) then
+          begin
+            LogUtil.Add(TELEGRAM.ChatID + '/' + TELEGRAM.UserID + ':('+TELEGRAM.GroupName+')::' + TELEGRAM.ResultText + ' |-> ' + s, 'SENTFAILED');
+          end;
           LogUtil.Add(TELEGRAM.ChatID + '/' + TELEGRAM.UserID + '('+TELEGRAM.GroupName+')::' + OriginalText + ' |-> ' + s, 'SENTLOG1');
           LogUtil.Add(Request.Content.Replace(#13,'').Replace(#10,''), 'SENTLOG2');
         end;// /IsCustomAction
