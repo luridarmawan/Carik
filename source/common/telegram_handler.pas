@@ -860,6 +860,17 @@ begin
 
   end;//-- if TELEGRAM.IsGroup
 
+  if not TELEGRAM.IsGroup then
+  begin
+    if TELEGRAM.IsReply then
+    begin
+      SimpleBOT.AdditionalParameters.Values['reply_from_message_id'] := TELEGRAM.ReplyFromMessageID;
+      SimpleBOT.AdditionalParameters.Values['reply_from_user_id'] := TELEGRAM.ReplyFromUserID;
+      SimpleBOT.AdditionalParameters.Values['reply_from_fullname'] := TELEGRAM.ReplyFromFullName;
+      SimpleBOT.AdditionalParameters.Values['reply_from_text'] := TELEGRAM.ReplyFromText;
+    end;
+  end;
+
   //ulil check collective
 
   // remove mention from text
@@ -1165,8 +1176,8 @@ begin
         end
         else
         begin
-          if currentThreadIdAsString = TELEGRAM.ReplyFromMessageID then
-            currentThreadIdAsString := '';
+          //if currentThreadIdAsString = TELEGRAM.ReplyFromMessageID then
+          //  currentThreadIdAsString := '';
 
           // Global/Default Sender
           If TELEGRAM.IsInvitation then

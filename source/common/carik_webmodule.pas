@@ -240,6 +240,8 @@ type
     ChannelId: string;
     Text: string;
     MessageType: string;
+    isReplyMessage: boolean;
+    replyFromMessageID, replyFromUserID, replyFromFullName, replyFromText: string;
     FileList: TJSONArray;
     SessionPrefix: string;
     Prefix: string;
@@ -3460,6 +3462,7 @@ begin
       requestData['data/client_id'] := ClientId;
       requestData['data/FullName'] := Carik.FullName;
       requestData['data/full_name'] := Carik.FullName;
+      if requestData['data/original_text'] = '' then requestData['data/original_text'] := AText;
       for i:=0 to SimpleBOT.SimpleAI.Parameters.Count-1 do
       begin
         requestData['data/'+SimpleBOT.SimpleAI.Parameters.Names[i]] :=
@@ -4628,6 +4631,7 @@ begin
   FExternalNLPStarted := False;
   FGPTTimeout := 0;
   LogChatPayload := TStringList.Create;
+  isReplyMessage := False;
 end;
 
 destructor TCarikWebModule.Destroy;
