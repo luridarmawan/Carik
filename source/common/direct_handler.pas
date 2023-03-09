@@ -134,6 +134,19 @@ begin
 
   try
     MessageType := jsonData.Value['message/chat/type'];
+    replyFromMessageID := jsonData.Value['message/reply/message_id'];
+    if replyFromMessageID.IsNotEmpty then
+    begin
+      isReplyMessage := True;
+      replyFromUserID := jsonData.Value['message/reply/user_id'];
+      replyFromFullName := jsonData.Value['message/reply/full_name'];
+      replyFromText := jsonData.Value['message/reply/text'];
+
+      SimpleBOT.AdditionalParameters.Values['reply_from_message_id'] := replyFromMessageID;
+      SimpleBOT.AdditionalParameters.Values['reply_from_user_id'] := replyFromUserID;
+      SimpleBOT.AdditionalParameters.Values['reply_from_fullname'] := replyFromFullName;
+      SimpleBOT.AdditionalParameters.Values['reply_from_text'] := replyFromText;
+    end;
   except
   end;
 
