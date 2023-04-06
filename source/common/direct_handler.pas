@@ -428,6 +428,11 @@ begin
       fieldAction.Free;
     end;
 
+    //json['processing_time'] := ProcessingTime;
+    //if SimpleBOT.SimpleAI.ElapsedTime > 0 then
+    //begin
+    //  json['processing_time'] := SimpleBOT.SimpleAI.ElapsedTime.ToString;
+    //end;
     Response.Content := json.AsJSONFormated;
   end;
 
