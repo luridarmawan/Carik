@@ -234,6 +234,7 @@ type
     procedure saveContext( const AParams: TStrings);
     procedure SaveUnknownChat(AText: string);
   public
+    ProcessingTime: integer;
     ToggleSpammer: boolean;
     MessageID: string;
     OriginalText: string;
@@ -3418,7 +3419,7 @@ end;
 
 function TCarikWebModule.ExternalNLP(AText: string): string;
 var
-  i: integer;
+  i, processing_time: integer;
   nlp_enable, use_gpt: boolean;
   nlp_url, nlpAction: string;
   nlp_json: TJSONData;
@@ -3427,6 +3428,7 @@ var
 begin
   Result := '';
   FExternalNLPWeight := 0;
+  processing_time := 0;
   use_gpt := False;
   try
     nlp_url := '';
@@ -3477,6 +3479,8 @@ begin
         FExternalNLPStarted := True;
         nlp_json := GetJSON(http_response.ResultText, False);
         FExternalNLPWeight := s2i(jsonGetData(nlp_json, 'weight'));
+        ProcessingTime := s2i(jsonGetData(nlp_json, 'processing_time'));
+        SimpleBOT.SimpleAI.AdditionalParameters.Values['external_processing_time'] := i2s(ProcessingTime);
         Result := jsonGetData(nlp_json, 'text');
         Result := Result.Replace(#10, '\n');
         FExternalNLPIntentName := jsonGetData(nlp_json, 'response/intents/name');
@@ -3906,6 +3910,12 @@ begin
       inputData.Add(FInputOptions);
       jsonOutput.ValueArray['action/input/data'] := inputData;
     end;
+  end;
+
+  jsonOutput['processing_time'] := ProcessingTime;
+  if SimpleBOT.SimpleAI.ElapsedTime > 0 then
+  begin
+    jsonOutput['processing_time'] := SimpleBOT.SimpleAI.ElapsedTime.ToString.ToInteger;
   end;
 
   if FIsDebug then
@@ -4632,6 +4642,7 @@ begin
   FGPTTimeout := 0;
   LogChatPayload := TStringList.Create;
   isReplyMessage := False;
+  ProcessingTime := 0;
 end;
 
 destructor TCarikWebModule.Destroy;
@@ -5275,7 +5286,9 @@ begin
 
   // check reset form
   if ((Text = FORM_INPUT_RESET_CODE)or
-    (Text = '"'+FORM_INPUT_RESET_CODE+'"')) then
+     (Text = 'batal')or
+     (Text = 'cancel')or
+     (Text = '"'+FORM_INPUT_RESET_CODE+'"')) then
   begin
     s := SimpleBOT.UserData[MESSAGE_ACTION_NAME];
     resetForm();
