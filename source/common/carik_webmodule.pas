@@ -3159,6 +3159,7 @@ var
   jData: TJSONData;
 begin
   Result := 0;
+  AText := AText.ToLower;
   if isLookLikeURL(AText) or ForceCheck then
   begin
     Result := Result + 10;
