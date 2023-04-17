@@ -237,6 +237,8 @@ type
     ProcessingTime: integer;
     ToggleSpammer: boolean;
     MessageID: string;
+    TopicID: Integer;
+    TopicName: string;
     OriginalText: string;
     ChannelId: string;
     Text: string;
@@ -280,7 +282,7 @@ type
     procedure Analytics(AChannel, AIntent, AText, AUserID: string);
     function KnowledgeBase(AKeyword: string): string;
     function CarikSearch(AKeyword: string): string;
-    function ExternalNLP(AText: string): string;
+    function ExternalNLP(AText: string; AUseGPT: boolean = False): string;
 
     function IsCommand( AText:string): boolean;
     function isValidCommand(ACommandString: string): boolean;
@@ -2558,7 +2560,7 @@ begin
   Result := '(' + Result + ')';
   if not preg_match(REGEX_EQUATION, Result) then
   begin
-    Result := ExternalNLP(Params.Values['Formula_value']);
+    Result := ExternalNLP('berapa '+Params.Values['Formula_value']);
     if Result.IsEmpty then Result := '..... :( ';
     Exit;
   end;
@@ -3417,7 +3419,7 @@ begin
   end;
 end;
 
-function TCarikWebModule.ExternalNLP(AText: string): string;
+function TCarikWebModule.ExternalNLP(AText: string; AUseGPT: boolean): string;
 var
   i, processing_time: integer;
   nlp_enable, use_gpt: boolean;
@@ -3439,12 +3441,15 @@ begin
   end;
   if nlp_url = '' then
     Exit;
+  if AUseGPT then use_gpt := True;
 
   if not nlp_enable then
     Exit;
 
-  nlp_url := nlp_url + '?client_id='+ClientId+'&text=' + UrlEncode(AText);
+  nlp_url := nlp_url + '?client_id='+ClientId;
   if use_gpt then nlp_url += '&gpt=1';
+  nlp_url += '&text=' + UrlEncode(AText);
+
   requestData := TJSONUtil.Create;
   try
     with THTTPLib.Create do
@@ -3473,6 +3478,7 @@ begin
       RequestBody := TStringStream.Create(requestData.AsJSON);
 
       http_response := Post;
+
       if http_response.ResultCode = 200 then
       begin
         SimpleBOT.SimpleAI.AdditionalParameters.Values['external'] := 'true';
@@ -4378,7 +4384,11 @@ begin
     if MessageType.IsNotEmpty then
       requestJson['data/message_type'] := MessageType;
 
-    requestJson.Clear;
+    requestJson.Clear; //TODO: delete the requestJson definition above
+    if not FClientId.IsEmpty then
+    begin
+      requestJson['client_id'] := FClientId;
+    end;
     requestJson['message/message_id'] := AMessageID.ToString;
     requestJson['message/text'] := (AText);
     requestJson['message/reply'] := (AReply);
@@ -4393,6 +4403,13 @@ begin
     if AIsGroup then
     begin
       requestJson['message/chat/group_name'] := AGroupName;
+      requestJson['message/chat/group_id'] := AGroupID;
+    end;
+
+    if TopicID > 0 then
+    begin
+      requestJson['message/chat/topic_name'] := TopicName;
+      requestJson['message/chat/topic_id'] := TopicID;
     end;
 
     if MessageType.IsEqualTo('image') then
@@ -4407,7 +4424,7 @@ begin
     ContentType := 'application/json';
     RequestBody := TStringStream.Create(requestJson.AsJSON);
     httpResponse := Post;
-    if _GET['_debug'] <> '1' then
+    if _GET['_DEBUG'] <> '1' then
     begin
       //LogUtil.Add(httpResponse.ResultText, 'logchat');
     end;
@@ -4643,6 +4660,8 @@ begin
   LogChatPayload := TStringList.Create;
   isReplyMessage := False;
   ProcessingTime := 0;
+  TopicID := 0;
+  TopicName := '';
 end;
 
 destructor TCarikWebModule.Destroy;
@@ -5832,6 +5851,10 @@ begin
   if SimpleBOT.isFormula then
   begin
     Result := SimpleBOT.Formula(Message);
+    if not SimpleBOT.IsMathSuccess then
+    begin
+      Result := ExternalNLP(Message);
+    end;
     SaveUnknownChat(Message);
     Analytics('global', 'unknown', Message, Carik.UserID);
     Exit;

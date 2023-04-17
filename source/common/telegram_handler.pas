@@ -444,7 +444,10 @@ begin
 
   TELEGRAM.RequestContent := Request.Content;
   OriginalText := TELEGRAM.Text;
-  currentThreadId := TELEGRAM.ThreadId;
+  currentThreadId := TELEGRAM.TopicId;
+  TopicID := TELEGRAM.TopicId;
+  if TopicID > 0 then
+    TopicName := TELEGRAM.TopicName;
   currentThreadIdAsString := currentThreadId.ToString;
   //if TELEGRAM.ChatID = '-1001240569966' then
   //  LogUtil.Add(Request.Content.Replace(#13,'').Replace(#10,''), 'JAVASCRIPT');
