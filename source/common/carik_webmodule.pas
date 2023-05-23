@@ -2319,16 +2319,18 @@ begin
     Result := Result + #10 + translateToID(Data['weather[0].main']) +
       ', ' + translateToID(Data['weather[0].description']);
 
-    Result := Result + #10'Suhu min: ' + FormatFloat('#0.00',
-      GetDataFloat('main.temp_min'));
-    Result := Result + #10'Suhu max: ' + FormatFloat('#0.00',
-      GetDataFloat('main.temp_max'));
+    Result := Result + #10'Kelembaban: ' + FormatFloat('#0',
+      GetDataFloat('main.humidity'));
+    Result := Result + #10'Suhu: ' + FormatFloat('#0.00',
+      GetDataFloat('main.temp')) + '⁰C';
+    Result := Result + #10'Terasa seperti: ' + FormatFloat('#0.00',
+      GetDataFloat('main.feels_like')) + '⁰C';
     Result := Result + #10'Tekanan: ' + FormatFloat('#0.00',
       GetDataFloat('main.pressure'));
 
     Result := Result + #10'Kec. Angin: ' + FormatFloat('#0.00',
       GetDataFloat('wind.speed'));
-    Result := Result + #10'' + FormatFloat('#0.000', GetDataFloat('wind.deg')) +
+    Result := Result + '; ' + FormatFloat('#0.0', GetDataFloat('wind.deg')) +
       ' derajat';
 
     Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
@@ -5808,6 +5810,7 @@ begin
   Result := s;
   actionText.Free;
 
+  SimpleBOT.SimpleAI.AdditionalParameters.Values['converted_text'] := s;
 end;
 
 function TCarikWebModule.RemoveDummyImageLink(AText: string): string;
