@@ -18,8 +18,9 @@ const
   DUALSPACE_CHANNEL_ID = '15';
   SIGNAL_CHANNEL_ID = '16';
   BIP_CHANNEL_ID = '17';
-  ZOOM_CHANNEL_ID = '17';
-  DISCORD_CHANNEL_ID = '18';
+  ZOOM_CHANNEL_ID = '18';
+  DISCORD_CHANNEL_ID = '19';
+  LIVECHAT_CHANNEL_ID = '20';
 
   YES_COMMAND : array [0..4] of string = ('YES', 'YA', 'OK', 'Y', 'SUDAH');
   NO_COMMAND : array [0..5] of string = ('NO', 'N', 'TIDAK', 'TDK', 'T', 'BELUM');

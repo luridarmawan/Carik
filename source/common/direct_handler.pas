@@ -259,9 +259,13 @@ begin
   begin
     chatID := groupID;
     Carik.GroupChatID := groupID;
+    SimpleBOT.AdditionalParameters.Values['group_id'] := groupID;
     SimpleBOT.AdditionalParameters.Values['GroupID'] := groupID;
     if groupName.IsNotEmpty then
+    begin
+      SimpleBOT.AdditionalParameters.Values['group_name'] := groupName;
       SimpleBOT.AdditionalParameters.Values['GroupName'] := groupName;
+    end;
   end;
   SimpleBOT.AdditionalParameters.Values['FullName'] := fullName;
   SimpleBOT.AdditionalParameters.Values['full_name'] := fullName;

@@ -51,6 +51,7 @@ type
     FCustomActionAsText: string;
     FCustomActionSuffix: string;
     FCustomReplyDataFromExternalNLP: TJSONUtil;
+    FRequestAsJson: TJSONUtil;
     FCustomReplyName: string;
     FCustomReplyActionTypeFromExternalNLP: string;
     FCustomReplyTypeFromExternalNLP: string;
@@ -125,6 +126,7 @@ type
     function getIsTranslate: boolean;
     function getPrefixID: string;
     function getReplyType: string;
+    function getRequestAsJson: TJSONUtil;
     function getUniqueID: string;
     function getWaitingInput: boolean;
     function isGroup: boolean;
@@ -269,7 +271,7 @@ type
     function isNewMember( AUserID: string; AGroupID: string; AInterval: integer = 10): boolean;
     function SpamScore( AUserID: string; AText: string; ForceCheck: boolean = False): integer;
     function IsSpammer( AUserID: string): boolean;
-    function ReportSpam( AUserID: string; AUserName: string = ''; AReportBy: string = ''): string;
+    function ReportSpam( AUserID: string; AUserName: string = ''; AReportBy: string = ''; AReportByName: string = ''): string;
     procedure LogChat(AChannelID: string; AGroupID: string; AGroupName: string;
       AUserID: string; AUserName: string; AFullName: string; AText: string; AReply: string;
       AIsGroup: boolean = True; AIsMentioned: boolean = True;
@@ -297,8 +299,9 @@ type
     property GroupData[const KeyName: string]: string read getGroupData write setGroupData;
   published
     property IsDebug: boolean read FIsDebug write FIsDebug;
+    property RequestAsJson: TJSONUtil read getRequestAsJson;
     property FormatNumber: string read FFormatNumber write FFormatNumber;
-    property Operation: string read FOperation;
+    property Operation: string read FOperation write FOperation;
     property BotID: string read FBotID;
     property BotName: string read FBotName write FBotName;
     property Token: string read FToken write FToken;
@@ -816,6 +819,18 @@ end;
 function TCarikWebModule.getReplyType: string;
 begin
   Result := SimpleBOT.ReplayType;
+end;
+
+function TCarikWebModule.getRequestAsJson: TJSONUtil;
+begin
+  if Assigned(FRequestAsJson) then
+    Result := FRequestAsJson
+  else
+  begin
+    FRequestAsJson := TJSONUtil.Create;
+    FRequestAsJson.LoadFromJsonString(Request.Content, False);
+    Result := FRequestAsJson;
+  end;
 end;
 
 function TCarikWebModule.getUniqueID: string;
@@ -3254,7 +3269,7 @@ begin
 end;
 
 function TCarikWebModule.ReportSpam(AUserID: string; AUserName: string;
-  AReportBy: string): string;
+  AReportBy: string; AReportByName: string): string;
 var
   log_url: string;
   spamList: TIniFile;
@@ -3268,11 +3283,14 @@ begin
     with THTTPLib.Create do
     begin
       URL := log_url;
+      LogUtil.Add( 'url: ' + URL, 'SPAMREPORT');
+      LogUtil.Add( 'par: ' + AUserID + '/' + AUserName + '/' + AReportBy + '/', 'SPAMREPORT');
       AddHeader('Cache-Control', 'no-cache');
       AddHeader('X-Client-Type', 'beta'); //TODO: client type
       FormData['UserID'] := AUserID.Replace('+','');
       FormData['UserName'] := AUserName;
       FormData['ReportBy'] := AReportBy;
+      FormData['ReportByName'] := AReportByName;
       http_response := Post;
       LogUtil.Add( AUserID.Replace('+','') + '/' + AUserName + ': ' + http_response.ResultText, 'SPAMREPORT');
 
@@ -3468,6 +3486,8 @@ begin
 
       ContentType := 'application/json';
       requestData['data/user_id'] := PrefixId + '-' + Carik.UserID;
+      requestData['data/group_id'] := Carik.GroupChatID;
+      requestData['data/group_name'] := Carik.GroupName;
       requestData['data/channel_id'] := ChannelId;
       requestData['data/client_id'] := ClientId;
       requestData['data/FullName'] := Carik.FullName;
@@ -3542,6 +3562,8 @@ begin
         end;
 
       end;
+
+      //TODO: ulil chek if 'files' exist
 
       Free;
     end;
@@ -4223,6 +4245,7 @@ var
   httpResponse: IHTTPResponse;
 begin
   Result := '';
+  if FOperation.IsEmpty then FOperation := RequestAsJson['op'];
 
   with THTTPLib.Create(AURL) do
   begin
@@ -4368,6 +4391,7 @@ begin
     requestJson['data/groupID'] := AGroupID;
     requestJson['data/group_id'] := AGroupID;
     requestJson['data/groupName'] := AGroupName;
+    requestJson['data/group_name'] := AGroupName;
     requestJson['data/userID'] := AUserID;
     requestJson['data/userName'] := (AUserName);
     requestJson['data/fullName'] := AFullName;
@@ -4449,6 +4473,7 @@ procedure TCarikWebModule.LogJoin(AChannelID: string; AGroupID: string;
 var
   log_url: string;
   http_response: IHTTPResponse;
+  requestJson: TJSONUtil;
 begin
   if AChannelID <> TELEGRAM_CHANNEL_ID then // Telegram only
     Exit;
@@ -4466,6 +4491,7 @@ begin
     URL := log_url;
     AddHeader('Cache-Control', 'no-cache');
     AddHeader('X-Client-Type', 'beta'); //TODO: client type
+    {
     FormData['ChannelID'] := AChannelID;
     FormData['GroupID'] := AGroupID;
     FormData['GroupName'] := AGroupName;
@@ -4478,10 +4504,29 @@ begin
       FormData['Restrict'] := 'yes';
     if AUserLeft then
       FormData['LeftFromGroup'] := 'yes';
+    }
+    requestJson := TJSONUtil.Create;
+    requestJson['data/ChannelID'] := AChannelID;
+    requestJson['data/GroupID'] := AGroupID;
+    requestJson['data/GroupName'] := AGroupName;
+    requestJson['data/UserID'] := AUserID;
+    requestJson['data/UserName'] := AUserName;
+    requestJson['data/FullName'] := AFullName;
+    requestJson['data/MessageID'] := MessageID;
+    requestJson['data/InvitedBy'] := AInvitedBy;
+    if ARestrict then
+      requestJson['data/Restrict'] := 'yes';
+    if AUserLeft then
+      requestJson['data/LeftFromGroup'] := 'yes';
+
+    ContentType := 'application/json';
+    RequestBody := TStringStream.Create(requestJson.AsJSON);
     try
       http_response := Post;
+      LogUtil.Add( 'response: ' + http_response.ResultText, 'JOIN');
     except
     end;
+    requestJson.Free;
     //die //ulil
     Free;
   end;

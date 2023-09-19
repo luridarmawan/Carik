@@ -290,7 +290,7 @@ begin
     end
     else
       Result := 'Saya tidak bisa menghapus user ini, saya colek admin yaa.\n' + TELEGRAM.AdminListAsString;
-    ReportSpam(userId, replyFromName, TELEGRAM.UserID);
+    ReportSpam(userId, replyFromName, TELEGRAM.UserID, TELEGRAM.FullName);
   end
   else
   begin
@@ -914,6 +914,8 @@ begin
   end;
   if TELEGRAM.IsGroup then
   begin
+    SimpleBOT.AdditionalParameters.Values['group_id'] := 'tl-' + TELEGRAM.ChatID;
+    SimpleBOT.AdditionalParameters.Values['group_name'] := TELEGRAM.GroupName;
     SimpleBOT.AdditionalParameters.Values['GroupID'] := 'tl-' + TELEGRAM.ChatID;
     SimpleBOT.AdditionalParameters.Values['GroupName'] := TELEGRAM.GroupName;
   end;
