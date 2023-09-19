@@ -51,6 +51,7 @@ type
     FCustomActionAsText: string;
     FCustomActionSuffix: string;
     FCustomReplyDataFromExternalNLP: TJSONUtil;
+    FRequestAsJson: TJSONUtil;
     FCustomReplyName: string;
     FCustomReplyActionTypeFromExternalNLP: string;
     FCustomReplyTypeFromExternalNLP: string;
@@ -125,6 +126,7 @@ type
     function getIsTranslate: boolean;
     function getPrefixID: string;
     function getReplyType: string;
+    function getRequestAsJson: TJSONUtil;
     function getUniqueID: string;
     function getWaitingInput: boolean;
     function isGroup: boolean;
@@ -237,6 +239,8 @@ type
     ProcessingTime: integer;
     ToggleSpammer: boolean;
     MessageID: string;
+    TopicID: Integer;
+    TopicName: string;
     OriginalText: string;
     ChannelId: string;
     Text: string;
@@ -267,7 +271,7 @@ type
     function isNewMember( AUserID: string; AGroupID: string; AInterval: integer = 10): boolean;
     function SpamScore( AUserID: string; AText: string; ForceCheck: boolean = False): integer;
     function IsSpammer( AUserID: string): boolean;
-    function ReportSpam( AUserID: string; AUserName: string = ''; AReportBy: string = ''): string;
+    function ReportSpam( AUserID: string; AUserName: string = ''; AReportBy: string = ''; AReportByName: string = ''): string;
     procedure LogChat(AChannelID: string; AGroupID: string; AGroupName: string;
       AUserID: string; AUserName: string; AFullName: string; AText: string; AReply: string;
       AIsGroup: boolean = True; AIsMentioned: boolean = True;
@@ -280,7 +284,7 @@ type
     procedure Analytics(AChannel, AIntent, AText, AUserID: string);
     function KnowledgeBase(AKeyword: string): string;
     function CarikSearch(AKeyword: string): string;
-    function ExternalNLP(AText: string): string;
+    function ExternalNLP(AText: string; AUseGPT: boolean = False): string;
 
     function IsCommand( AText:string): boolean;
     function isValidCommand(ACommandString: string): boolean;
@@ -295,8 +299,9 @@ type
     property GroupData[const KeyName: string]: string read getGroupData write setGroupData;
   published
     property IsDebug: boolean read FIsDebug write FIsDebug;
+    property RequestAsJson: TJSONUtil read getRequestAsJson;
     property FormatNumber: string read FFormatNumber write FFormatNumber;
-    property Operation: string read FOperation;
+    property Operation: string read FOperation write FOperation;
     property BotID: string read FBotID;
     property BotName: string read FBotName write FBotName;
     property Token: string read FToken write FToken;
@@ -814,6 +819,18 @@ end;
 function TCarikWebModule.getReplyType: string;
 begin
   Result := SimpleBOT.ReplayType;
+end;
+
+function TCarikWebModule.getRequestAsJson: TJSONUtil;
+begin
+  if Assigned(FRequestAsJson) then
+    Result := FRequestAsJson
+  else
+  begin
+    FRequestAsJson := TJSONUtil.Create;
+    FRequestAsJson.LoadFromJsonString(Request.Content, False);
+    Result := FRequestAsJson;
+  end;
 end;
 
 function TCarikWebModule.getUniqueID: string;
@@ -2317,16 +2334,18 @@ begin
     Result := Result + #10 + translateToID(Data['weather[0].main']) +
       ', ' + translateToID(Data['weather[0].description']);
 
-    Result := Result + #10'Suhu min: ' + FormatFloat('#0.00',
-      GetDataFloat('main.temp_min'));
-    Result := Result + #10'Suhu max: ' + FormatFloat('#0.00',
-      GetDataFloat('main.temp_max'));
+    Result := Result + #10'Kelembaban: ' + FormatFloat('#0',
+      GetDataFloat('main.humidity'));
+    Result := Result + #10'Suhu: ' + FormatFloat('#0.00',
+      GetDataFloat('main.temp')) + '⁰C';
+    Result := Result + #10'Terasa seperti: ' + FormatFloat('#0.00',
+      GetDataFloat('main.feels_like')) + '⁰C';
     Result := Result + #10'Tekanan: ' + FormatFloat('#0.00',
       GetDataFloat('main.pressure'));
 
     Result := Result + #10'Kec. Angin: ' + FormatFloat('#0.00',
       GetDataFloat('wind.speed'));
-    Result := Result + #10'' + FormatFloat('#0.000', GetDataFloat('wind.deg')) +
+    Result := Result + '; ' + FormatFloat('#0.0', GetDataFloat('wind.deg')) +
       ' derajat';
 
     Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
@@ -2558,7 +2577,7 @@ begin
   Result := '(' + Result + ')';
   if not preg_match(REGEX_EQUATION, Result) then
   begin
-    Result := ExternalNLP(Params.Values['Formula_value']);
+    Result := ExternalNLP('berapa '+Params.Values['Formula_value']);
     if Result.IsEmpty then Result := '..... :( ';
     Exit;
   end;
@@ -3157,6 +3176,7 @@ var
   jData: TJSONData;
 begin
   Result := 0;
+  AText := AText.ToLower;
   if isLookLikeURL(AText) or ForceCheck then
   begin
     Result := Result + 10;
@@ -3249,7 +3269,7 @@ begin
 end;
 
 function TCarikWebModule.ReportSpam(AUserID: string; AUserName: string;
-  AReportBy: string): string;
+  AReportBy: string; AReportByName: string): string;
 var
   log_url: string;
   spamList: TIniFile;
@@ -3263,11 +3283,14 @@ begin
     with THTTPLib.Create do
     begin
       URL := log_url;
+      LogUtil.Add( 'url: ' + URL, 'SPAMREPORT');
+      LogUtil.Add( 'par: ' + AUserID + '/' + AUserName + '/' + AReportBy + '/', 'SPAMREPORT');
       AddHeader('Cache-Control', 'no-cache');
       AddHeader('X-Client-Type', 'beta'); //TODO: client type
       FormData['UserID'] := AUserID.Replace('+','');
       FormData['UserName'] := AUserName;
       FormData['ReportBy'] := AReportBy;
+      FormData['ReportByName'] := AReportByName;
       http_response := Post;
       LogUtil.Add( AUserID.Replace('+','') + '/' + AUserName + ': ' + http_response.ResultText, 'SPAMREPORT');
 
@@ -3417,7 +3440,7 @@ begin
   end;
 end;
 
-function TCarikWebModule.ExternalNLP(AText: string): string;
+function TCarikWebModule.ExternalNLP(AText: string; AUseGPT: boolean): string;
 var
   i, processing_time: integer;
   nlp_enable, use_gpt: boolean;
@@ -3439,12 +3462,15 @@ begin
   end;
   if nlp_url = '' then
     Exit;
+  if AUseGPT then use_gpt := True;
 
   if not nlp_enable then
     Exit;
 
-  nlp_url := nlp_url + '?client_id='+ClientId+'&text=' + UrlEncode(AText);
+  nlp_url := nlp_url + '?client_id='+ClientId;
   if use_gpt then nlp_url += '&gpt=1';
+  nlp_url += '&text=' + UrlEncode(AText);
+
   requestData := TJSONUtil.Create;
   try
     with THTTPLib.Create do
@@ -3460,6 +3486,8 @@ begin
 
       ContentType := 'application/json';
       requestData['data/user_id'] := PrefixId + '-' + Carik.UserID;
+      requestData['data/group_id'] := Carik.GroupChatID;
+      requestData['data/group_name'] := Carik.GroupName;
       requestData['data/channel_id'] := ChannelId;
       requestData['data/client_id'] := ClientId;
       requestData['data/FullName'] := Carik.FullName;
@@ -3473,6 +3501,7 @@ begin
       RequestBody := TStringStream.Create(requestData.AsJSON);
 
       http_response := Post;
+
       if http_response.ResultCode = 200 then
       begin
         SimpleBOT.SimpleAI.AdditionalParameters.Values['external'] := 'true';
@@ -3533,6 +3562,8 @@ begin
         end;
 
       end;
+
+      //TODO: ulil chek if 'files' exist
 
       Free;
     end;
@@ -4214,6 +4245,7 @@ var
   httpResponse: IHTTPResponse;
 begin
   Result := '';
+  if FOperation.IsEmpty then FOperation := RequestAsJson['op'];
 
   with THTTPLib.Create(AURL) do
   begin
@@ -4359,6 +4391,7 @@ begin
     requestJson['data/groupID'] := AGroupID;
     requestJson['data/group_id'] := AGroupID;
     requestJson['data/groupName'] := AGroupName;
+    requestJson['data/group_name'] := AGroupName;
     requestJson['data/userID'] := AUserID;
     requestJson['data/userName'] := (AUserName);
     requestJson['data/fullName'] := AFullName;
@@ -4378,7 +4411,11 @@ begin
     if MessageType.IsNotEmpty then
       requestJson['data/message_type'] := MessageType;
 
-    requestJson.Clear;
+    requestJson.Clear; //TODO: delete the requestJson definition above
+    if not FClientId.IsEmpty then
+    begin
+      requestJson['client_id'] := FClientId;
+    end;
     requestJson['message/message_id'] := AMessageID.ToString;
     requestJson['message/text'] := (AText);
     requestJson['message/reply'] := (AReply);
@@ -4393,6 +4430,13 @@ begin
     if AIsGroup then
     begin
       requestJson['message/chat/group_name'] := AGroupName;
+      requestJson['message/chat/group_id'] := AGroupID;
+    end;
+
+    if TopicID > 0 then
+    begin
+      requestJson['message/chat/topic_name'] := TopicName;
+      requestJson['message/chat/topic_id'] := TopicID;
     end;
 
     if MessageType.IsEqualTo('image') then
@@ -4407,7 +4451,7 @@ begin
     ContentType := 'application/json';
     RequestBody := TStringStream.Create(requestJson.AsJSON);
     httpResponse := Post;
-    if _GET['_debug'] <> '1' then
+    if _GET['_DEBUG'] <> '1' then
     begin
       //LogUtil.Add(httpResponse.ResultText, 'logchat');
     end;
@@ -4429,6 +4473,7 @@ procedure TCarikWebModule.LogJoin(AChannelID: string; AGroupID: string;
 var
   log_url: string;
   http_response: IHTTPResponse;
+  requestJson: TJSONUtil;
 begin
   if AChannelID <> TELEGRAM_CHANNEL_ID then // Telegram only
     Exit;
@@ -4446,6 +4491,7 @@ begin
     URL := log_url;
     AddHeader('Cache-Control', 'no-cache');
     AddHeader('X-Client-Type', 'beta'); //TODO: client type
+    {
     FormData['ChannelID'] := AChannelID;
     FormData['GroupID'] := AGroupID;
     FormData['GroupName'] := AGroupName;
@@ -4458,10 +4504,29 @@ begin
       FormData['Restrict'] := 'yes';
     if AUserLeft then
       FormData['LeftFromGroup'] := 'yes';
+    }
+    requestJson := TJSONUtil.Create;
+    requestJson['data/ChannelID'] := AChannelID;
+    requestJson['data/GroupID'] := AGroupID;
+    requestJson['data/GroupName'] := AGroupName;
+    requestJson['data/UserID'] := AUserID;
+    requestJson['data/UserName'] := AUserName;
+    requestJson['data/FullName'] := AFullName;
+    requestJson['data/MessageID'] := MessageID;
+    requestJson['data/InvitedBy'] := AInvitedBy;
+    if ARestrict then
+      requestJson['data/Restrict'] := 'yes';
+    if AUserLeft then
+      requestJson['data/LeftFromGroup'] := 'yes';
+
+    ContentType := 'application/json';
+    RequestBody := TStringStream.Create(requestJson.AsJSON);
     try
       http_response := Post;
+      LogUtil.Add( 'response: ' + http_response.ResultText, 'JOIN');
     except
     end;
+    requestJson.Free;
     //die //ulil
     Free;
   end;
@@ -4643,6 +4708,8 @@ begin
   LogChatPayload := TStringList.Create;
   isReplyMessage := False;
   ProcessingTime := 0;
+  TopicID := 0;
+  TopicName := '';
 end;
 
 destructor TCarikWebModule.Destroy;
@@ -5788,6 +5855,7 @@ begin
   Result := s;
   actionText.Free;
 
+  SimpleBOT.SimpleAI.AdditionalParameters.Values['converted_text'] := s;
 end;
 
 function TCarikWebModule.RemoveDummyImageLink(AText: string): string;
@@ -5832,6 +5900,10 @@ begin
   if SimpleBOT.isFormula then
   begin
     Result := SimpleBOT.Formula(Message);
+    if not SimpleBOT.IsMathSuccess then
+    begin
+      Result := ExternalNLP(Message);
+    end;
     SaveUnknownChat(Message);
     Analytics('global', 'unknown', Message, Carik.UserID);
     Exit;

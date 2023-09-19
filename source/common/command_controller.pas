@@ -79,14 +79,14 @@ procedure TCommandController.commandUserset();
   const
     VAR_MUTE = 'duration';
   var
-    s: string;
+    muteDuration: string;
   begin
-    if _POST[VAR_MUTE] = '0' then _POST[VAR_MUTE] := '';
-    if not _POST[VAR_MUTE].IsEmpty then
+    muteDuration := RequestAsJson[VAR_MUTE];
+    if muteDuration.IsNotEmpty then
     begin
-      s := Now.IncMinute(_POST[VAR_MUTE].ToInteger).AsString;
+      muteDuration := Now.IncMinute(muteDuration.AsInteger).AsString;
     end;
-    SimpleBOT.UserData[SessionPrefix + 'mute'] := s;
+    SimpleBOT.UserData[SessionPrefix + 'mute'] := muteDuration;
   end;
 begin
   setUpMute();
@@ -147,10 +147,13 @@ begin
 
   FUserId := _POST['userId'];
   if ClientId = '0' then ClientId := _POST['clientid'];
+  if ClientId.IsEmpty then ClientId := RequestAsJson['clientid'];
+  if FUserId.IsEmpty then FUserId := RequestAsJson['userId'];
   if ClientId.IsEmpty then ClientId := '0';
   if FUserId.IsEmpty then OutputJson(400, ERR_INVALID_PARAMETER);
   prepareData;
 
+  if Operation.IsEmpty then Operation := RequestAsJson['op'];
   if Operation = OPERATION_USERSET then
   begin
     commandUserset();
