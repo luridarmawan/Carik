@@ -49,8 +49,11 @@ type
     FClientId: string;
     FCurrentInputType: string;
     FCustomActionAsText: string;
+    FCustomActionFiles: TJSONArray;
     FCustomActionSuffix: string;
     FCustomReplyDataFromExternalNLP: TJSONUtil;
+    FHideTextReply: boolean;
+    FPackageName: string;
     FRequestAsJson: TJSONUtil;
     FCustomReplyName: string;
     FCustomReplyActionTypeFromExternalNLP: string;
@@ -334,6 +337,7 @@ type
     property ExternalNLPWeight: integer read FExternalNLPWeight;
     property ExternalNLPStarted: boolean read FExternalNLPStarted;
     property GPTTimeout: integer read FGPTTimeout write FGPTTimeout;
+    property PackageName: string read FPackageName write FPackageName;
 
     property ActionCallback: string read FActionCallback;
     property IsMuted: boolean read getIsMuted;
@@ -398,6 +402,7 @@ type
     property ReplayType: string read getReplyType;
     property CustomActionAsText: string read FCustomActionAsText;
     property CustomActionSuffix: string read getCustomActionSuffix write FCustomActionSuffix;
+    property CustomActionFiles: TJSONArray read FCustomActionFiles write FCustomActionFiles;
     property CustomReplyName: string read FCustomReplyName;
     property CustomReplyType: string read getCustomReplyType;
     property CustomReplyMenuLevel: string read getCustomReplyMenuLevel;
@@ -420,6 +425,7 @@ type
     property CurrentInputType: string read FCurrentInputType;
     property FormInputExpired: boolean read FFormInputExpired;
     property InputOptions: TJSONArray read FInputOptions;
+    property HideTextReply: boolean read FHideTextReply write FHideTextReply;
     function FormInputHandler(): boolean;
     function GetFormQuestion(AIndex: integer): string;
     function GetFormAnswerValue(AQuestionIndex: integer; AOptionIndex: integer = 0): string;
@@ -3444,7 +3450,7 @@ function TCarikWebModule.ExternalNLP(AText: string; AUseGPT: boolean): string;
 var
   i, processing_time: integer;
   nlp_enable, use_gpt: boolean;
-  nlp_url, nlpAction: string;
+  s, nlp_url, nlpAction: string;
   nlp_json: TJSONData;
   requestData: TJSONUtil;
   http_response: IHTTPResponse;
@@ -3467,9 +3473,9 @@ begin
   if not nlp_enable then
     Exit;
 
-  nlp_url := nlp_url + '?client_id='+ClientId;
-  if use_gpt then nlp_url += '&gpt=1';
-  nlp_url += '&text=' + UrlEncode(AText);
+  //nlp_url := nlp_url + '?client_id='+ClientId;
+  //if use_gpt then nlp_url += '&gpt=1';
+  //nlp_url += '&text=' + UrlEncode(AText);
 
   requestData := TJSONUtil.Create;
   try
@@ -3492,14 +3498,16 @@ begin
       requestData['data/client_id'] := ClientId;
       requestData['data/FullName'] := Carik.FullName;
       requestData['data/full_name'] := Carik.FullName;
-      if requestData['data/original_text'] = '' then requestData['data/original_text'] := AText;
+      if requestData['data/original_text'] = '' then requestData['data/original_text'] := OriginalText;
       for i:=0 to SimpleBOT.SimpleAI.Parameters.Count-1 do
       begin
         requestData['data/'+SimpleBOT.SimpleAI.Parameters.Names[i]] :=
             SimpleBOT.SimpleAI.Parameters.ValueFromIndex[i];
       end;
-      RequestBody := TStringStream.Create(requestData.AsJSON);
+      requestData['data/message'] := Text;
+      requestData['data/text'] := Text;
 
+      RequestBody := TStringStream.Create(requestData.AsJSON);
       http_response := Post;
 
       if http_response.ResultCode = 200 then
@@ -3507,6 +3515,9 @@ begin
         SimpleBOT.SimpleAI.AdditionalParameters.Values['external'] := 'true';
         FExternalNLPStarted := True;
         nlp_json := GetJSON(http_response.ResultText, False);
+        s := jsonGetData(nlp_json, 'package');
+        if s.IsNotEmpty then
+          SimpleBOT.SimpleAI.AdditionalParameters.Values['package'] := s;
         FExternalNLPWeight := s2i(jsonGetData(nlp_json, 'weight'));
         ProcessingTime := s2i(jsonGetData(nlp_json, 'processing_time'));
         SimpleBOT.SimpleAI.AdditionalParameters.Values['external_processing_time'] := i2s(ProcessingTime);
@@ -3557,6 +3568,13 @@ begin
             s := ACTION_SUFFIX.Replace('%s', s);
             Suffix += '\n' + s;
             }
+          end;
+
+          // files
+          FCustomActionFiles := Nil;
+          try
+            FCustomActionFiles := TJSONArray(FCustomReplyDataFromExternalNLP.Data.GetPath('files'));
+          except
           end;
 
         end;
@@ -4407,6 +4425,7 @@ begin
     requestJson['data/context'] := ActiveContext;
 
     requestJson['data/intentName'] := SimpleBOT.SimpleAI.IntentName;
+    requestJson['data/intents/name'] := SimpleBOT.SimpleAI.IntentName;
     requestJson['data/dashboard_device_id'] := DashboardDeviceID;
     if MessageType.IsNotEmpty then
       requestJson['data/message_type'] := MessageType;
@@ -4426,6 +4445,7 @@ begin
     requestJson['message/chat/id'] := AMessageID.ToString;
     requestJson['message/chat/is_mentioned'] := is_mentioned;
     requestJson['message/chat/is_group'] := is_group;
+    requestJson['message/intents/name'] := SimpleBOT.SimpleAI.IntentName;
     if AReplyFromMessageId > 0 then requestJson['message/chat/is_reply'] := 0;
     if AIsGroup then
     begin
@@ -4705,16 +4725,19 @@ begin
   FCustomReplyActionTypeFromExternalNLP := '';
   FExternalNLPStarted := False;
   FGPTTimeout := 0;
+  FPackageName := '';
   LogChatPayload := TStringList.Create;
   isReplyMessage := False;
   ProcessingTime := 0;
   TopicID := 0;
   TopicName := '';
+  FHideTextReply := False;
 end;
 
 destructor TCarikWebModule.Destroy;
 begin
   LogChatPayload.Free;
+  if Assigned(FCustomActionFiles) then FCustomActionFiles.Free;
   if Assigned(FInputOptions) then FInputOptions.Free;
   if Assigned(ElementArray) then
     ElementArray.Free;
@@ -4833,6 +4856,8 @@ begin
   end;
   SimpleBOT.SimpleAI.AdditionalParameters.Values['OriginalText'] := OriginalText.Trim;
   SimpleBOT.SimpleAI.AdditionalParameters.Values['original_text'] := OriginalText.Trim;
+  SimpleBOT.SimpleAI.AdditionalParameters.Values['message'] := AMessage;
+  SimpleBOT.SimpleAI.AdditionalParameters.Values['text'] := AMessage;
   if not ChannelId.IsEmpty then
   begin
     SimpleBOT.SimpleAI.AdditionalParameters.Values['ChannelId'] := ChannelId;
@@ -5569,6 +5594,15 @@ begin
               Suffix += '\n' + s;
               }
             end;
+
+            // files
+            FCustomActionFiles := Nil;
+            try
+              LogUtil.Add('ada file', 'FORM');
+              FCustomActionFiles := TJSONArray(FCustomReplyDataFromExternalNLP.Data.GetPath('files'));
+            except
+            end;
+
           end;
 
         end;
@@ -5824,7 +5858,8 @@ begin
     begin
       if dt.MinutesDiff(Now) < CALLBACK_QUERY_TIMEOUT_PREFIX then
       begin
-        Prefix := 'Maaf, kalau jawaban ini untuk memilih menu, sepertinya waktunya sudah habis. Silakan coba ulangi lagi.\nTerima kasih\n';
+        Prefix := FORM_ERR_TIMEOUT;
+        FHideTextReply := True;
       end;
       Exit;
     end;

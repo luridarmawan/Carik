@@ -753,6 +753,7 @@ begin
               or (Text.ToLower.IsExists('/admin'))
               or (Text.ToLower.IsExists('/report'))
               or (Text.ToLower.IsExists('/spam'))
+              or (Text.ToLower.IsExists('we got spam'))
             )
             and (not isReplyFromBot('CarikBot')) then //TODO: make it configurable
             begin
@@ -1169,6 +1170,12 @@ begin
               LogUtil.Add('none: '+SimpleBOT.SimpleAI.ResponseText[0], 'DEBUG');
             end;
           end;
+          if CustomReplyType = '' then // usualy when send files
+          begin
+            if not TELEGRAM.SendMessage(TELEGRAM.ChatID, SimpleBOT.SimpleAI.ResponseText[0], MessageID, currentThreadIdAsString) then
+            begin
+            end;
+          end;
 
 
           // check autoprune
@@ -1193,6 +1200,7 @@ begin
             MessageID := '';
           //s := AnsiToUtf8(SimpleBOT.SimpleAI.ResponseText[0]);
           s := SimpleBOT.SimpleAI.ResponseText[0];
+          s := s.Replace('_', '\_'); //ulil
           if not TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID, currentThreadIdAsString) then
           begin
             LogUtil.Add(TELEGRAM.ChatID + '/' + TELEGRAM.UserID + ':('+TELEGRAM.GroupName+')::' + TELEGRAM.ResultText + ' |-> ' + s, 'SENTFAILED');
@@ -1269,9 +1277,34 @@ begin
           fileCaption := SimpleBOT.SimpleAI.CustomReply['action/files['+i.ToString+']/caption'];
           TELEGRAM.SendAudio(TELEGRAM.ChatID, url, fileCaption, MessageID);
         end;
+        if fileType = 'image' then
+        begin
+          url := SimpleBOT.SimpleAI.CustomReply['action/files['+i.ToString+']/url'];
+          fileCaption := SimpleBOT.SimpleAI.CustomReply['action/files['+i.ToString+']/caption'];
+          TELEGRAM.SendPhotoFromURL( TELEGRAM.ChatID, url, fileCaption, MessageID);
+          if TELEGRAM.ResultCode <> 200 then
+          begin
+            //TELEGRAM.SendMessage( TELEGRAM.ChatID, 'Maaf, gambar tidak berhasil dikirimkan', MessageID, currentThreadIdAsString);
+          end;
+
+        end;
       end;
     end;
   except
+  end;
+  // /send files
+
+  // send files #2
+  if CustomActionFiles <> Nil then
+  begin
+    for i:=0 to CustomActionFiles.Count-1 do
+    begin
+      url := CustomActionFiles.Items[i].GetPath('url').AsString;
+      fileType := CustomActionFiles.Items[i].GetPath('type').AsString;
+      fileCaption := CustomActionFiles.Items[i].GetPath('caption').AsString;
+      if fileType = 'audio' then
+        TELEGRAM.SendAudio(TELEGRAM.ChatID, url, fileCaption, MessageID);
+    end;
   end;
 
   {
