@@ -31,16 +31,19 @@
     <RunParams>
       <FormatVersion Value="2"/>
     </RunParams>
-    <RequiredPackages Count="3">
+    <RequiredPackages Count="4">
       <Item1>
-        <PackageName Value="simplebot_package"/>
+        <PackageName Value="fastplaz_integration"/>
       </Item1>
       <Item2>
-        <PackageName Value="simpleai_package"/>
+        <PackageName Value="simplebot_package"/>
       </Item2>
       <Item3>
-        <PackageName Value="fastplaz_runtime"/>
+        <PackageName Value="simpleai_package"/>
       </Item3>
+      <Item4>
+        <PackageName Value="fastplaz_runtime"/>
+      </Item4>
     </RequiredPackages>
     <Units Count="7">
       <Unit0>

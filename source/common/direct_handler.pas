@@ -220,7 +220,6 @@ begin
   //Text := StringReplace(Text, '@' + BOTNAME_DEFAULT + 'Bot', '',
   //  [rfReplaceAll, rfIgnoreCase]);
 
-  Text := Text.Replace('@6287887100878','');  //ulil
   Text := Text.Replace('@' + BOTNAME_DEFAULT + 'Bot','');
   Text := Text.Replace('@' + BOTNAME_DEFAULT + ' Bot','');
   Text := Text.Replace('@' + BOTNAME_DEFAULT,'');
@@ -298,15 +297,19 @@ begin
     Text := GenerateTextFromCustomActionOption(Text);
   if IsMuted then
   begin
+    //LogUtil.Add(SimpleBOT.SimpleAI.ResponseJson, 'mute');
     LogChatPayload.Text:= Response.Content;
     LogChat(ChannelId, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, OriginalText, '', Carik.IsGroup, True);
-    OutputJson(11, 'muted: ' + MutedUntil.AsString);
+    //OutputJson(11, 'muted: ' + MutedUntil.AsString);
+    Response.Content:= SimpleBOT.SimpleAI.ResponseJson;
+    Exit;
   end;
 
   //Text := Text.Replace(',',''); //koma
   if not isHandled then
   begin
     BotInit;
+    GPTTimeout := GPT_TIMEOUT_DEFAULT;
     Response.Content := ProcessText(Text);
     SimpleBOT.SimpleAI.ResponseText.Text := Prefix + RemoveDummyImageLink(SimpleBOT.SimpleAI.ResponseText.Text).Trim;
     if responseFormat = 'text' then
@@ -378,6 +381,14 @@ begin
     Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end;
   }
+  if Prefix.IsNotEmpty then
+  begin
+    if HideTextReply then
+    begin
+      SimpleBOT.SimpleAI.ResponseText.Text := Prefix;
+      Prefix := '';
+    end;
+  end;
 
   if Suffix.IsNotEmpty then
   begin

@@ -209,3 +209,5 @@ const
   FORM_ERR_FORMAT_OPTION_INVALID = 'Jawaban tidak sesuai, pastikan angka sesuai dengan pilihan di atas.';
   FORM_ERR_SUBMIT_FAILED = 'Mohon maaf, data Anda gagal dikirim. Silakan coba lagi nanti.';
   FORM_ERR_SUBMIT_EXCEPTION = 'Maaf, terjadi kegagalan dalam pengiriman data. Silakan coba lagi nanti.';
+  FORM_ERR_TIMEOUT = 'Maaf, kalau jawaban ini untuk memilih menu, sepertinya waktunya sudah habis. Silakan coba ulangi lagi.\nTerima kasih\n';
+
