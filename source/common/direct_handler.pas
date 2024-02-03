@@ -220,6 +220,8 @@ begin
   //Text := StringReplace(Text, '@' + BOTNAME_DEFAULT + 'Bot', '',
   //  [rfReplaceAll, rfIgnoreCase]);
 
+  Text := Text.Replace('@+62811857001','');  //ulil
+  Text := Text.Replace('@62811857001','');  //ulil
   Text := Text.Replace('@' + BOTNAME_DEFAULT + 'Bot','');
   Text := Text.Replace('@' + BOTNAME_DEFAULT + ' Bot','');
   Text := Text.Replace('@' + BOTNAME_DEFAULT,'');

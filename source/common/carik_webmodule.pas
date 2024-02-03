@@ -4635,8 +4635,11 @@ begin
   FBotName := _GET['name'];
   FToken := _GET['token'];
   FClientId := _GET['clientId'];
-
   FDeviceId:= _GET['DeviceID'];
+  if FBotID.IsEmpty then   FBotID := _GET['bot_id'];
+  if FClientId.IsEmpty then FClientId := _GET['client_id'];;
+  if FDeviceId.IsEmpty then FDeviceId:= _GET['device_id'];;
+
   if FDeviceId.IsEmpty then
     FDeviceId := Header['DeviceID'];
   if not FBotID.IsEmpty then
