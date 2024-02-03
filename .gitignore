@@ -212,6 +212,10 @@ backup/
 public_html/carik/ztemp/cache/*
 public_html/carik/ztemp/error_log/*
 public_html/carik/ztemp/sessions/*
+source/telegram/lib/
+source/facebook/lib/
+source/carik/lib/
+source/line/lib/
 
 *.dll
 *.exe
