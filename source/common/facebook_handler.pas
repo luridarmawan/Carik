@@ -383,6 +383,9 @@ begin
       lst.Free;
     end;
 
+    // bypass
+    payloadText := Facebook.PayloadTitle;
+
     if Text = '' then
     begin
       Text := SimpleBOT.GetResponse(payloadText);

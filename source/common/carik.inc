@@ -39,6 +39,9 @@ const
   GROUPINFO_URL = 'services/groupinfo_url';
   BLACKLISTCHECK_URL = 'services/blacklistcheck_url';
   BLACKLISTADD_URL = 'services/blacklistadd_url';
+  BLACKLIST_GLOBAL_FILENAME = 'files/blacklist-global.txt';
+  BLACKLIST_FILENAME = 'files/blacklist.txt';
+
 
   USERSTATUS_URL = 'ai/default/user_status/url';
   USERSTATUS_CLIENTID = 'ai/default/user_status/client_id';
@@ -182,10 +185,11 @@ const
   FORM_INPUT_RESET_CODE = '#';
   FORM_INPUT_RELOAD_CODE = '!';
   FORM_INPUT_EXPIRED = '\nSebelumnya kamu sempat melakukan pengisian form, tapi sayang batas waktu pengisian sudah berakhir.\n\n';
-  FORM_INPUT_HASHTAG_CANCEL = '\n*Kirim # untuk membatalkan.*'
+  FORM_INPUT_HASHTAG_CANCEL = '\n*Ketik # untuk membatalkan.*'
       + '\n*Ulangi* jawaban jika %botname% lama memberikan respon, atau ketik "*'+FORM_INPUT_RELOAD_CODE+'*" (tanda seru).';
   FORM_INPUT_HASHTAG_CANCEL2 = '\nAtau ketik # untuk membatalkan.'
       + '\n*Ulangi* jawaban jika %botname% lama memberikan respon, atau ketik "*'+FORM_INPUT_RELOAD_CODE+'*" (tanda seru).';
+  FORM_INPUT_HASHTAG_CANCEL3 = '\nSilakan ketikkan informasi yang benar, atau ketik *#* untuk membatalkan.';
   FORM_INPUT_CANCEL = 'Baik, pengisian form %s telah dibatalkan.\nTerima kasih.';
   FORM_INPUT_DATE_FORMAT = '\nTulis dalam format tgl/bln/tahun\nMisal: 17/08/1945';
   FORM_INPUT_OPTION_FORMAT = '\n\nTulis dalam angka sesuai pilihan di atas';
@@ -193,6 +197,12 @@ const
   FORM_INPUT_TITLE = 'input_title';
   FORM_INPUT_NAME = 'input_name';
   FORM_INPUT_TYPE = 'input_type';
+  FORM_INPUT_VALUE_MAX = 'input_value_max';
+  FORM_INPUT_VALUE_MIN = 'input_value_min';
+  FORM_INPUT_LENGTH_MAX = 'input_length_max';
+  FORM_INPUT_LENGTH_MIN = 'input_length_min';
+  FORM_INPUT_VALIDATION_URL = 'input_validation_url';
+  FORM_INPUT_CANCELATION_KEYWORD = 'input_cancelation_keyword';
   FORM_INPUT_OPTION_COUNT = 'input_option_count';
   //FORM_INDEX = 'form_index';
   FORM_TOPIC = 'form_topic';
@@ -207,6 +217,11 @@ const
   FORM_ERR_FORMAT_BOOLEAN = 'Jawaban tidak sesuai, pastikan anda menjawab "Y" atau "T".';
   FORM_ERR_FORMAT_OPTION = 'Jawaban tidak sesuai, pastikan yang anda masukkan berformat angka sesuai pilihan di atas.';
   FORM_ERR_FORMAT_OPTION_INVALID = 'Jawaban tidak sesuai, pastikan angka sesuai dengan pilihan di atas.';
+  FORM_ERR_LENGTH_MAX = 'Jawaban tidak sesuai, maksimum %d karakter.';
+  FORM_ERR_LENGTH_MIN = 'Jawaban tidak sesuai, minimum %d karakter.';
+  FORM_ERR_VALUE_MAX = 'Jawaban tidak sesuai, nilai maksimum adalah %d.';
+  FORM_ERR_VALUE_MIN = 'Jawaban tidak sesuai, nilai minimum adalah %d.';
+  FORM_ERR_CANCELATION_KEYWORD = '\nKetik "*%s*" untuk mengulang.';
   FORM_ERR_SUBMIT_FAILED = 'Mohon maaf, data Anda gagal dikirim. Silakan coba lagi nanti.';
   FORM_ERR_SUBMIT_EXCEPTION = 'Maaf, terjadi kegagalan dalam pengiriman data. Silakan coba lagi nanti.';
   FORM_ERR_TIMEOUT = 'Maaf, kalau jawaban ini untuk memilih menu, sepertinya waktunya sudah habis. Silakan coba ulangi lagi.\nTerima kasih\n';

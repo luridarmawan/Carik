@@ -1200,7 +1200,8 @@ begin
             MessageID := '';
           //s := AnsiToUtf8(SimpleBOT.SimpleAI.ResponseText[0]);
           s := SimpleBOT.SimpleAI.ResponseText[0];
-          s := s.Replace('_', '\_'); //ulil
+          //s := s.Replace('_', '\_'); //ulil
+          s := preg_replace('/_(.*?)_/', '__$1__', s);
           if not TELEGRAM.SendMessage(TELEGRAM.ChatID, s, MessageID, currentThreadIdAsString) then
           begin
             LogUtil.Add(TELEGRAM.ChatID + '/' + TELEGRAM.UserID + ':('+TELEGRAM.GroupName+')::' + TELEGRAM.ResultText + ' |-> ' + s, 'SENTFAILED');
