@@ -129,8 +129,19 @@ begin
       fullName := userName;
     responseFormat := jsonData.Value['message/format'];
     DashboardDeviceID := s2i(jsonData.Value['message/chat/dashboard_device_id']);
+    IsDelayReplay := s2b(jsonData.Value['delay_reply']);
   except
   end;
+
+  try
+    DashboardDeviceID := s2i(jsonData.Value['message/chat/dashboard_device_id']);
+  except
+  end;
+  s := trim(_GET['device_id']);
+  if s.IsNotEmpty then DashboardDeviceID := s2i(s);;
+
+
+  //if ClientId = '263' then LogUtil.Add(Request.Content, 'lll');
 
   try
     MessageType := jsonData.Value['message/chat/type'];
@@ -203,6 +214,13 @@ begin
   except
   end;
   Carik.UserPrefix := channelID;
+
+  if IsGlobalUserBlackListed(PrefixId + '-' + Carik.UserID) then
+  begin
+    LogUtil.Add('user blacklist: ' + PrefixId + '-' + Carik.UserID + '|' + Carik.FullName,'TELE');
+    Response.Content := '{"status":"'+Carik.UserID+' blaclisted"}';
+    Exit;
+  end;
 
   // remove mention from text
   OriginalText := Text.Trim;
@@ -314,6 +332,7 @@ begin
     GPTTimeout := GPT_TIMEOUT_DEFAULT;
     Response.Content := ProcessText(Text);
     SimpleBOT.SimpleAI.ResponseText.Text := Prefix + RemoveDummyImageLink(SimpleBOT.SimpleAI.ResponseText.Text).Trim;
+    SimpleBOT.SimpleAI.ResponseText.Text := preg_replace('\*\*(.*?)\*\*', '*$1*', SimpleBOT.SimpleAI.ResponseText.Text);
     if responseFormat = 'text' then
     begin
       SimpleBOT.SimpleAI.ResponseText.Text := RemoveMarkDown(SimpleBOT.SimpleAI.ResponseText.Text);

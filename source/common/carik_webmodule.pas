@@ -52,6 +52,7 @@ type
     FCustomActionFiles: TJSONArray;
     FCustomActionSuffix: string;
     FCustomReplyDataFromExternalNLP: TJSONUtil;
+    FDelayReplay: boolean;
     FHideTextReply: boolean;
     FPackageName: string;
     FRequestAsJson: TJSONUtil;
@@ -104,6 +105,9 @@ type
     FCanSendTemplateCard: boolean;
     FSendVenue: boolean;
     FToken: string;
+    FToken_I: Integer;
+    FToken_O: Integer;
+    FToken_T: Integer;
     FTriggeredText: string;
     FVenueAddress: string;
     FVenueLatitude: double;
@@ -310,6 +314,7 @@ type
     property Token: string read FToken write FToken;
     property ClientId: string read FClientId write FClientId;
     property DeviceId: string read FDeviceId write FDeviceId;
+    property IsDelayReplay: boolean read FDelayReplay write FDelayReplay;
     property ReplyDisable: boolean read FReplyDisable write FReplyDisable;
     property IterationParams: string read FIterationParams write FIterationParams;
     property PrefixId: string read getPrefixID;
@@ -430,6 +435,11 @@ type
     function GetFormQuestion(AIndex: integer): string;
     function GetFormAnswerValue(AQuestionIndex: integer; AOptionIndex: integer = 0): string;
     function GetFormAnswerText(AQuestionIndex: integer; AOptionIndex: integer = 0): string;
+
+    // SimpleNLP
+    property Token_I: Integer read FToken_I write FToken_I;
+    property Token_O: Integer read FToken_O write FToken_O;
+    property Token_T: Integer read FToken_T write FToken_T;
   end;
 
   { TSmartHomeTestIntegration }
@@ -490,7 +500,6 @@ const
 
   AI_CONFIG_TRIGGERWORD = 'ai/default/trigger_word';
 
-  BLACKLIST_FILENAME = 'files/blacklist.txt';
   REGEX_EQUATION =
     '^[cos|sin|tan|tangen|sqr|sqrt|log|ln|sec|cosec|arctan|abs|exp|frac|int|round|trunc|shl|shr|ifs|iff|ifd|ifi|0-9*+ ().,-/:]+$';
 
@@ -3089,18 +3098,18 @@ end;
 function TCarikWebModule.IsGlobalUserBlackListed(AUserId: string): boolean;
 var
   i: integer;
-  id: string;
+  s, id: string;
+  lst: TStringList;
 begin
   Result := False;
   try
-    //s := Config.GetObject('blacklist/').Find('users').Items[1].Items[0].AsString;
-    if Config.GetObject('blacklist/users').Count = 0 then
+    if Config.GetObject('blacklist').Find('users').Count = 0 then
       Exit;
 
     id := '';
-    for i:=0 to Config.GetObject('blacklist/users').Count-1 do
+    for i:=0 to Config.GetObject('blacklist').Find('users').Count-1 do
     begin
-      id := Config.GetObject('blacklist/').Find('users').Items[i].Items[0].AsString;
+      id := Config.GetObject('blacklist').Find('users').Items[i].Items[0].AsString;
       if id = AUserId then
       begin
         Result := True;
@@ -3110,6 +3119,26 @@ begin
   except
   end;
 
+  if not FileExists(BLACKLIST_GLOBAL_FILENAME) then
+    Exit;
+
+  lst := TStringList.Create;
+  lst.LoadFromFile(BLACKLIST_GLOBAL_FILENAME);
+  for i := 0 to lst.Count -1 do
+  begin
+    id := lst[i];
+    id := RemoveCharactersBefore(id, ',');
+    if FMessengerMode = mmWhatsapp then
+    begin
+      if (AUserId = WHATSAPP_CHANNEL_ID + '-' + id) then
+      begin
+        Result := True;
+        break;
+      end;
+    end;
+  end;
+
+  lst.Free;
 end;
 
 function TCarikWebModule.IsGlobalGroupBlackListed(AGroupId: string): boolean;
@@ -3498,6 +3527,7 @@ begin
       requestData['data/client_id'] := ClientId;
       requestData['data/FullName'] := Carik.FullName;
       requestData['data/full_name'] := Carik.FullName;
+      if FDelayReplay then requestData['data/delay_reply'] := 1;
       if requestData['data/original_text'] = '' then requestData['data/original_text'] := OriginalText;
       for i:=0 to SimpleBOT.SimpleAI.Parameters.Count-1 do
       begin
@@ -3509,7 +3539,10 @@ begin
 
       RequestBody := TStringStream.Create(requestData.AsJSON);
       http_response := Post;
+      if AppData.debug then
+        LogUtil.Add(http_response.ResultText, 'LLM');
 
+      // gunakan block di bawah
       if http_response.ResultCode = 200 then
       begin
         SimpleBOT.SimpleAI.AdditionalParameters.Values['external'] := 'true';
@@ -3518,6 +3551,12 @@ begin
         s := jsonGetData(nlp_json, 'package');
         if s.IsNotEmpty then
           SimpleBOT.SimpleAI.AdditionalParameters.Values['package'] := s;
+
+        // get token usage
+        FToken_I := s2i(jsonGetData(nlp_json, 'token_usage/i'));
+        FToken_O := s2i(jsonGetData(nlp_json, 'token_usage/o'));
+        FToken_T := s2i(jsonGetData(nlp_json, 'token_usage/t'));
+
         FExternalNLPWeight := s2i(jsonGetData(nlp_json, 'weight'));
         ProcessingTime := s2i(jsonGetData(nlp_json, 'processing_time'));
         SimpleBOT.SimpleAI.AdditionalParameters.Values['external_processing_time'] := i2s(ProcessingTime);
@@ -3534,6 +3573,8 @@ begin
           FCustomReplyURLFromExternalNLP := jsonGetData(nlp_json, 'action/url');
           FCustomReplyName := jsonGetData(nlp_json, 'action/name');
           FCustomActionSuffix:= jsonGetData(nlp_json, 'action/suffix');
+          // compatibility
+          if FCustomActionSuffix.IsEmpty then FCustomActionSuffix := jsonGetData(nlp_json, 'suffix');;
           //ulil -----
           SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(nlp_json.GetPath('action.data')));
           if FCustomActionAsText.IsNotEmpty then
@@ -3558,6 +3599,8 @@ begin
           FCustomReplyURLFromExternalNLP := FCustomReplyDataFromExternalNLP['action/url'];
           FCustomReplyName := FCustomReplyDataFromExternalNLP['action/name'];
           FCustomActionSuffix := FCustomReplyDataFromExternalNLP['action/suffix'];
+          // compatibility
+          if FCustomActionSuffix.IsEmpty then FCustomActionSuffix := jsonGetData(nlp_json, 'suffix');;
           SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data')));
           FCustomReplyDataFromExternalNLP.LoadFromJsonString(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data').AsJSON, False);
           if FCustomActionAsText.IsNotEmpty then
@@ -3960,6 +4003,11 @@ begin
       jsonOutput.ValueArray['action/input/data'] := inputData;
     end;
   end;
+
+  // show token usage
+  jsonOutput['response/token_usage/i'] := Token_I;
+  jsonOutput['response/token_usage/o'] := Token_O;
+  jsonOutput['response/token_usage/t'] := Token_T;
 
   jsonOutput['processing_time'] := ProcessingTime;
   if SimpleBOT.SimpleAI.ElapsedTime > 0 then
@@ -4429,6 +4477,7 @@ begin
     requestJson['data/dashboard_device_id'] := DashboardDeviceID;
     if MessageType.IsNotEmpty then
       requestJson['data/message_type'] := MessageType;
+    if IsDelayReplay then requestJson['data/delay_reply'] := 1;
 
     requestJson.Clear; //TODO: delete the requestJson definition above
     if not FClientId.IsEmpty then
@@ -4543,7 +4592,7 @@ begin
     RequestBody := TStringStream.Create(requestJson.AsJSON);
     try
       http_response := Post;
-      LogUtil.Add( 'response: ' + http_response.ResultText, 'JOIN');
+      LogUtil.Add( 'response-join: ' + http_response.ResultText, 'JOIN');
     except
     end;
     requestJson.Free;
@@ -4673,11 +4722,11 @@ begin
 
   SimpleBOT := TSimpleBotModule.Create;
   SimpleBOT.FirstSessionResponse := False;
-  SimpleBOT.BotName := FBotName;
   if not FBotID.IsEmpty then SimpleBOT.AdditionalParameters.Values['bot_id'] := FBotID;
 
   //TODO: if FOperation.IsEmpty then
     SimpleBOT.LoadConfig;
+  SimpleBOT.BotName := FBotName;
   SimpleBOT.StorageType := stFile;
   SimpleBOT.StorageFileName := 'files/carik/carik-userdata.dat';
   s := Config[_NLP_CONFIG_USERDATA_STORAGE];
@@ -4735,6 +4784,10 @@ begin
   TopicID := 0;
   TopicName := '';
   FHideTextReply := False;
+  FDelayReplay := False;
+  FToken_I := 0;
+  FToken_O := 0;
+  FToken_T := 0;
 end;
 
 destructor TCarikWebModule.Destroy;
@@ -4869,7 +4922,9 @@ begin
   if ClientId.IsNotEmpty then
   begin
     SimpleBOT.SimpleAI.AdditionalParameters.Values['ClientId'] := ClientId;;
-    SimpleBOT.SimpleAI.AdditionalParameters.Values['client_id'] := ClientId;;
+    SimpleBOT.SimpleAI.AdditionalParameters.Values['client_id'] := ClientId;
+    if DeviceId.IsNotEmpty then SimpleBOT.SimpleAI.AdditionalParameters.Values['dashboard_device_id'] := DeviceId;
+    if IsDelayReplay then SimpleBOT.SimpleAI.AdditionalParameters.Values['delay_reply'] := '1';
   end;
   if Carik.IsGroup then
     SimpleBOT.SimpleAI.AdditionalParameters.Values['GroupID_'] := Carik.GroupChatID;
@@ -5183,6 +5238,8 @@ begin
     tmpSuffix += 'total ' + questionCount.ToString + ' pertanyaan.';
   end;
   tmpSuffix += FORM_INPUT_HASHTAG_CANCEL.Replace('%botname%', SimpleBOT.BotName);
+  if FCustomActionSuffix.IsNotEmpty then tmpSuffix := FCustomActionSuffix;
+  if SimpleBOT.SimpleAI.ReplySuffix.IsNotEmpty then tmpSuffix := SimpleBOT.SimpleAI.ReplySuffix;
 
   tmpSuffix += '\n\n' + GetFormQuestion(1);
 
@@ -5371,7 +5428,8 @@ function TCarikWebModule.FormInputHandler: boolean;
 
 var
   i, j, questionIndex, questionTotal: integer;
-  s, inputType, inputName, url, answerText: string;
+  valueMax, valueMin, lengthMax, lengthMin: integer;
+  s, inputType, inputName, url, answerText, validationURL, cancelationKeyword: string;
   lst: TStrings;
   postData: TJSONUtil;
   httpResponse: IHTTPResponse;
@@ -5413,6 +5471,41 @@ begin
 
   inputType := SimpleBOT.UserData[FORM_INPUT_TYPE];
   inputName := SimpleBOT.UserData[FORM_INPUT_NAME];
+  valueMax := s2i(SimpleBOT.UserData[FORM_INPUT_VALUE_MAX]);
+  valueMin := s2i(SimpleBOT.UserData[FORM_INPUT_VALUE_MIN]);
+  lengthMax := s2i(SimpleBOT.UserData[FORM_INPUT_LENGTH_MAX]);
+  lengthMin := s2i(SimpleBOT.UserData[FORM_INPUT_LENGTH_MIN]);
+  validationURL := SimpleBOT.UserData[FORM_INPUT_VALIDATION_URL];
+  cancelationKeyword := SimpleBOT.UserData[FORM_INPUT_CANCELATION_KEYWORD];
+
+  // reset form with specific keyword
+  if Text = cancelationKeyword then
+  begin
+    resetForm();
+    Text := cancelationKeyword;
+    Result := False;
+    Exit;
+  end;
+
+  if inputType = 'string' then
+  begin
+    //validation
+    if ((lengthMin > 0) and (Text.Length<lengthMin)) then
+    begin
+      Suffix := Format(FORM_ERR_LENGTH_MIN, [lengthMin]) + FORM_INPUT_HASHTAG_CANCEL3;
+      if cancelationKeyword.IsNotEmpty then Suffix += Format(FORM_ERR_CANCELATION_KEYWORD, [cancelationKeyword]);
+      Result := True;
+      Exit;
+    end;
+    if ((lengthMax > 0) and (Text.Length>lengthMax)) then
+    begin
+      Suffix := Format(FORM_ERR_LENGTH_MAX, [lengthMax]) + FORM_INPUT_HASHTAG_CANCEL3;
+      if cancelationKeyword.IsNotEmpty then Suffix += Format(FORM_ERR_CANCELATION_KEYWORD, [cancelationKeyword]);
+      Result := True;
+      Exit;
+    end;
+  end;
+
   // check date
   if inputType = 'date' then
   begin
@@ -5448,6 +5541,23 @@ begin
       Result := True;
       Exit;
     end;
+
+    // validation
+    if ((valueMin > 0) and (Text.AsInteger<valueMin)) then
+    begin
+      Suffix:= Format(FORM_ERR_VALUE_MIN, [valueMin]) + FORM_INPUT_HASHTAG_CANCEL3;
+      if cancelationKeyword.IsNotEmpty then Suffix += Format(FORM_ERR_CANCELATION_KEYWORD, [cancelationKeyword]);
+      Result := True;
+      Exit;
+    end;
+    if ((valueMax > 0) and (Text.AsInteger>valueMax)) then
+    begin
+      Suffix:= Format(FORM_ERR_VALUE_MAX, [valueMax]) + FORM_INPUT_HASHTAG_CANCEL3;
+      if cancelationKeyword.IsNotEmpty then Suffix += Format(FORM_ERR_CANCELATION_KEYWORD, [cancelationKeyword]);
+      Result := True;
+      Exit;
+    end;
+
   end;
   // check boolean
   if inputType = 'boolean' then
@@ -5493,6 +5603,13 @@ begin
       Text := s;
     end;
   end;
+
+  // validation
+  if validationURL.IsNotEmpty then
+  begin
+    ;
+  end;
+
   // save data
   if inputName.IsEmpty then inputName := 'a'+questionIndex.ToString;
   if answerText.IsNotEmpty then
@@ -5639,7 +5756,9 @@ end;
 function TCarikWebModule.GetFormQuestion(AIndex: integer): string;
 var
   i, topic, subCount, currentCount, index: integer;
-  s, fileName, inputTitle, inputName, inputType, optionList: string;
+  s, fileName, inputTitle, inputName, inputType, optionList, validationUrl,
+    cancelationKeyword: string;
+  valueMax, valueMin, lengthMax, lengthMin: integer;
   lst: TStringList;
   formAsArray: TJSONArray;
   formAsJson: TJSONData;
@@ -5680,6 +5799,14 @@ begin
   end;
   inputName := formAsArray.Items[topic].Items[index].GetPath('name').AsString;
   inputType := formAsArray.Items[topic].Items[index].GetPath('type').AsString;
+
+  lengthMax := jsonGetData(formAsArray.Items[topic].Items[index], 'length_max').AsInteger;
+  lengthMin := jsonGetData(formAsArray.Items[topic].Items[index], 'length_min').AsInteger;
+  valueMax := jsonGetData(formAsArray.Items[topic].Items[index], 'value_max').AsInteger;
+  valueMin := jsonGetData(formAsArray.Items[topic].Items[index], 'value_min').AsInteger;
+  validationUrl := jsonGetData(formAsArray.Items[topic].Items[index], 'validation_url');
+  cancelationKeyword := jsonGetData(formAsArray.Items[topic].Items[index], 'cancelation_keyword');
+
   FCurrentInputType := inputType;
 
   if inputTitle.StrPos('#') = 1 then begin
@@ -5690,6 +5817,12 @@ begin
   SimpleBOT.UserData[FORM_INPUT_TITLE] := inputTitle.Replace(#13,'\n').Replace(#10,'\n');
   SimpleBOT.UserData[FORM_INPUT_NAME] := inputName;
   SimpleBOT.UserData[FORM_INPUT_TYPE] := inputType;
+  SimpleBOT.UserData[FORM_INPUT_LENGTH_MAX] := lengthMax.ToString;
+  SimpleBOT.UserData[FORM_INPUT_LENGTH_MIN] := lengthMin.ToString;
+  SimpleBOT.UserData[FORM_INPUT_VALUE_MAX] := valueMax.ToString;
+  SimpleBOT.UserData[FORM_INPUT_VALUE_MIN] := valueMin.ToString;
+  SimpleBOT.UserData[FORM_INPUT_VALIDATION_URL] := validationUrl;
+  SimpleBOT.UserData[FORM_INPUT_CANCELATION_KEYWORD] := cancelationKeyword;
 
   if inputType = 'date' then
   begin
