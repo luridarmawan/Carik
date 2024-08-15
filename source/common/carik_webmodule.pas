@@ -5254,7 +5254,7 @@ procedure TCarikWebModule.SaveActionToUserData(AActionType: string;
   AData: TJSONObject);
 var
   i, j, indexAction: integer;
-  s, actionData, firstMenuTitle, previousAction, currentAction: string;
+  s, actionData, firstMenuTitle, previousAction, currentAction, title: string;
   buttonAsArray: TJSONArray;
 begin
   FCustomActionAsText := '';
@@ -5271,6 +5271,11 @@ begin
   begin
     SaveActionToUserDataFromForm(AData);
     Exit;
+  end;
+
+  if AActionType='list' then
+  begin
+    SimpleBOT.UserData[MESSAGE_ACTION_COUNT] := '0';
   end;
 
   if not ((AActionType='button')
@@ -5330,8 +5335,9 @@ begin
       SimpleBOT.UserData[MESSAGE_ACTION_DATA_+indexAction.ToString] := actionData;
 
       indexAction := indexAction + 1;
+      title := buttonAsArray.Items[i].Items[j].GetPath('text').AsString;
       FCustomActionAsText := FCustomActionAsText + #10 + '*' + indexAction.ToString + '*'
-       + '. ' + buttonAsArray.Items[i].Items[j].GetPath('text').AsString;
+       + '. ' + title;
       if firstMenuTitle.IsEmpty then
         firstMenuTitle := buttonAsArray.Items[i].Items[j].GetPath('text').AsString;
     end;
