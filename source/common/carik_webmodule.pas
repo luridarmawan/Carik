@@ -5336,6 +5336,7 @@ begin
 
       indexAction := indexAction + 1;
       title := buttonAsArray.Items[i].Items[j].GetPath('text').AsString;
+      title := title.SafeText;
       FCustomActionAsText := FCustomActionAsText + #10 + '*' + indexAction.ToString + '*'
        + '. ' + title;
       if firstMenuTitle.IsEmpty then
@@ -5518,6 +5519,16 @@ begin
     if not Text.isDate('/') then
     begin
       Suffix := FORM_ERR_FORMAT_DATE + FORM_INPUT_HASHTAG_CANCEL2.Replace('%botname%', SimpleBOT.BotName);
+      Result := True;
+      Exit;
+    end;
+  end;
+  // check url
+  if inputType = 'url' then
+  begin
+    if not Text.IsURL then
+    begin
+      Suffix := FORM_ERR_FORMAT_URL + FORM_INPUT_HASHTAG_CANCEL2.Replace('%botname%', SimpleBOT.BotName);
       Result := True;
       Exit;
     end;

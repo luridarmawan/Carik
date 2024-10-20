@@ -212,7 +212,8 @@ const
   FORM_PATH = DirectorySeparator + 'form' + DirectorySeparator;
   FORM_DATA = 'fdata_';
   FORM_ERR_FORMAT_DATE = 'Format jawaban tidak sesuai, pastikan Anda memasukkan tanggal yang benar, format DD/MM/YYYY.\nContoh: 17/08/1945';
-  FORM_ERR_FORMAT_EMAIL = 'Jawaban tidak sesuai, pastikan email yang anda masukkan sudah benar.';
+  FORM_ERR_FORMAT_URL = 'Jawaban tidak sesuai, pastikan *URL* yang anda masukkan sudah *benar*.';
+  FORM_ERR_FORMAT_EMAIL = 'Jawaban tidak sesuai, pastikan *email* yang anda masukkan sudah *benar*.';
   FORM_ERR_FORMAT_NUMERIC = 'Jawaban tidak sesuai, pastikan yang anda masukkan berformat angka/bilangan';
   FORM_ERR_FORMAT_BOOLEAN = 'Jawaban tidak sesuai, pastikan anda menjawab "Y" atau "T".';
   FORM_ERR_FORMAT_OPTION = 'Jawaban tidak sesuai, pastikan yang anda masukkan berformat angka sesuai pilihan di atas.';
