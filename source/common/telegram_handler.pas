@@ -439,7 +439,7 @@ begin
   if AppData.debug then
   begin
     s := Request.Content.Replace(#13,'').Replace(#10,'');
-    LogUtil.Add(s, 'TELE');
+    LogUtil.Add(RequestAsJson.AsJSON, '## TELE');
   end;
 
   TELEGRAM.RequestContent := Request.Content;
@@ -625,6 +625,7 @@ begin
   end;
   SimpleBOT.UserData[BotID+'_UPDATE_ID'] := updateID.ToString;
 
+
   // only for telegram group
   if TELEGRAM.IsGroup then
   begin
@@ -659,7 +660,7 @@ begin
         if TELEGRAM.IsInvitation then
         begin
           s := Request.Content.Replace(#13,'').Replace(#10,'');
-          LogUtil.Add(s, 'JOIN');
+          LogUtil.Add(RequestAsJson.AsJSON, '> JOIN');
 
           Carik.IsInvitation := True;
           if IsSuspected(TELEGRAM.InvitedUserId, TELEGRAM.InvitedFullName) then
@@ -786,7 +787,11 @@ begin
               //if (TELEGRAM.IsPicture or isURL(Text)) and Assigned(FOnSpam) then //simple force checking
               if Assigned(FOnSpam) then //simple force checking
               begin
-                if Carik.isSpamChecking then
+                if TELEGRAM.IsForwardFromDeletedAccount then
+                begin
+                  spamScoreTotal := SPAM_SCORE_THRESHOLD;
+                end;
+                if Carik.isSpamChecking or (spamScoreTotal>0) then
                 begin
                   //if s.IsNotEmpty then //TODO: fix function isSpamChecking
                   begin
