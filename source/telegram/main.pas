@@ -74,7 +74,14 @@ begin
   //suffixMessage := '\n@' + suffixMessage.Replace(',', ', @');
 
   Result := 'Pesan ini terdeteksi sebagai spamming, abaikan jika bukan.';
-  Result := Result + '\nSaya colek admin: ' + suffixMessage;
+  if TELEGRAM.AdminListAsJson.Count > 0 then
+  begin
+    Result := Result + '\nSaya colek admin: ' + suffixMessage;
+  end
+  else
+  begin
+    Result := Result + '\nSaya tidak menemukan ada admin di sini.';
+  end;
   Result := Result + '\n_('+Score.ToString+')_';
   Handled:= True;
 end;
