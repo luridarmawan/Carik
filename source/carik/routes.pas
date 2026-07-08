@@ -9,7 +9,7 @@ uses
 
 implementation
 
-uses info_controller, main, command_controller;
+uses main, command_controller;
 
 initialization
   Route[ '/command'] := TCommandController;

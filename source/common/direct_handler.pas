@@ -460,9 +460,9 @@ begin
     for i := 1 to parameterAction.count - 1 do
     begin
       fieldAction := Explode(parameterAction[i], '=');
-      json['response/action/parameter_' + i2s(i)] := parameterAction[i];
+      json[UnicodeString('response/action/parameter_' + i2s(i))] := parameterAction[i];
       try
-        json['response/action/' + fieldAction[0]] := fieldAction[1];
+        json[UnicodeString('response/action/' + fieldAction[0])] := fieldAction[1];
       except
       end;
       fieldAction.Free;

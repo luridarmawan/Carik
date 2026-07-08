@@ -7,7 +7,7 @@ interface
 uses
   carik_webmodule, regexpr_lib,
   Classes, SysUtils, fpcgi, fpjson, json_lib, HTTPDefs, fastplaz_handler, 
-    database_lib, string_helpers, dateutils, datetime_helpers, json_helpers;
+    database_lib, string_helpers, dateutils, datetime_helpers, variants;
 
 {$include ../common/carik.inc}
 
@@ -140,20 +140,18 @@ end;
 
 // POST Method Handler
 procedure TCommandController.Post;
-var
-  s: string;
 begin
   Response.ContentType := 'application/json';
 
   FUserId := _POST['userId'];
   if ClientId = '0' then ClientId := _POST['clientid'];
-  if ClientId.IsEmpty then ClientId := RequestAsJson['clientid'];
-  if FUserId.IsEmpty then FUserId := RequestAsJson['userId'];
+  if ClientId.IsEmpty then ClientId := VarToStr(RequestAsJson['clientid']);
+  if FUserId.IsEmpty then FUserId := VarToStr(RequestAsJson['userId']);
   if ClientId.IsEmpty then ClientId := '0';
   if FUserId.IsEmpty then OutputJson(400, ERR_INVALID_PARAMETER);
   prepareData;
 
-  if Operation.IsEmpty then Operation := RequestAsJson['op'];
+  if Operation.IsEmpty then Operation := VarToStr(RequestAsJson['op']);
   if Operation = OPERATION_USERSET then
   begin
     commandUserset();
