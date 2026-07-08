@@ -119,6 +119,7 @@ begin
   if Operation = OPERATION_USERSET then
   begin
     json := TJSONUtil.Create;
+    {$WARN 6058 OFF}
     json['code'] := Int64(0);
     if ClientId = '0' then
       json['data/client_id'] := ''
@@ -137,6 +138,7 @@ begin
 
   OutputJson(1, FAILED);
 end;
+{$WARN 6058 ON}
 
 // POST Method Handler
 procedure TCommandController.Post;

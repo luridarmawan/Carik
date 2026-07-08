@@ -12,7 +12,7 @@ uses
   process,
   redis_controller, simplebot_controller,
   Classes, SysUtils, fpcgi, fpjson, json_lib, HTTPDefs, fastplaz_handler,
-  database_lib, string_helpers, dateutils, datetime_helpers, json_helpers;
+  database_lib, string_helpers, dateutils, datetime_helpers;
 
 {$include carik.inc}
 
