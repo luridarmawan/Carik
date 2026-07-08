@@ -3851,6 +3851,7 @@ function TCarikWebModule.botEnableHandler(const IntentName: string;
   Params: TStrings): string;
 begin
   Result := '';
+  //todo: check di whatsapp ulil
   if Carik.EnableBot then
     Result := SimpleBOT.GetResponse(IntentName + 'Response');
 end;

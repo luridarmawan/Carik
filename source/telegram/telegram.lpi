@@ -17,7 +17,7 @@
       <AutoIncrementBuild Value="True"/>
       <MinorVersionNr Value="12"/>
       <RevisionNr Value="15"/>
-      <BuildNr Value="3"/>
+      <BuildNr Value="4"/>
       <StringTable CompanyName="Carik" OriginalFilename="telegram.bin"/>
     </VersionInfo>
     <BuildModes Count="1">
