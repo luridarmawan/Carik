@@ -1,0 +1,16 @@
+services:
+  carik:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: carik:latest
+    container_name: carik-bot
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:80"
+    volumes:
+      # Mount konfigurasi dan data agar persisten saat development
+      - ./public_html/carik/config:/projects/carik/public_html/carik/config
+      - ./public_html/carik/data:/projects/carik/public_html/carik/data
+      - ./public_html/carik/files:/projects/carik/public_html/carik/files
+      - ./public_html/carik/ztemp:/projects/carik/public_html/carik/ztemp

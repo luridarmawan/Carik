@@ -83,6 +83,21 @@ source$ _
 
 untuk konfigurasi custom, misal untuk perubahan path tempat library berada, bisa dilakukan dengan melakukan modifikasi di file **extra.cfg**.
 
+**Menjalankan dengan Docker & Docker Compose**
+
+Untuk kemudahan kompilasi dan deployment tanpa perlu menginstal Lazarus/FPC di mesin host, Anda dapat menggunakan Docker atau Docker Compose:
+
+```bash
+# Menggunakan Docker Compose (Direkomendasikan)
+docker compose up -d --build
+
+# Atau menggunakan Docker CLI langsung
+docker build -t carik .
+docker run -it --rm -p 8080:80 carik
+```
+
+Detail panduan, konfigurasi port, volume persistence, dan debugging container dapat dilihat di [DOCKER.md](DOCKER.md).
+
 **Telegram Bot Installation**
 
 Cara instalasi bot telegram bisa anda ikuti dari situs offisial dari telegram.

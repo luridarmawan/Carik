@@ -1,17 +1,11 @@
 #!/bin/bash
-echo Carik - Run Container
+echo "Carik - Run Container (Interactive Shell)"
 echo
-echo Sample Project: Carik Bot Framework
-echo   dir: /projects/carik
-echo 
-echo How to compile:
-echo   $ cd /projects/carik/source/echo/
-echo   $ ./clean.sh
-echo   $ ./compile.sh
-echo
-echo Output File:
-echo   /projects/echo/public_htm/carik.bin
+echo "Direktori project di container: /projects/carik"
+echo "Untuk kompilasi manual di dalam container:"
+echo "  $ cd /projects/carik"
+echo "  $ ./clean.sh"
+echo "  $ ./build.sh"
 echo
 
-docker run -it -p 8080:80 carik bash 
-#docker run -it -v ~/shared-folder:/shared-folder -p 8080:80 carik bash
+docker run -it --rm -p 8080:80 --name carik-dev carik bash

@@ -1,25 +1,34 @@
 FROM fastplaz/ubuntu AS base
 
-# Configuration
-ARG GIT_REPO="https://github.com/luridarmawan/Carik.git"
-ARG WEB_DIR="/projects/Carik/public_html"
+# Arguments & Metadata
+ARG DEBIAN_FRONTEND=noninteractive
+LABEL maintainer="Carik Community"
+LABEL description="Container image for Carik Bot Framework built on FastPlaz"
 
-# Make port 80 available to the world outside this container
+# Environment
+ENV PROJECT_DIR="/projects/carik"
+ENV WEB_DIR="/projects/carik/public_html/carik"
+
+# Expose HTTP port
 EXPOSE 80
-EXPOSE 443
 
-# DEPENDENCIES
-RUN cd /projects/vendors/ && git clone -b development https://github.com/luridarmawan/SimpleAI.git
+# Pastikan repositori dependensi SimpleAI tersedia di /projects/vendors/
+RUN mkdir -p /projects/vendors && \
+    if [ ! -d "/projects/vendors/SimpleAI" ]; then \
+        git clone -b development https://github.com/luridarmawan/SimpleAI.git /projects/vendors/SimpleAI; \
+    fi
 
-# remove old template and pull source from echo repository
-RUN git clone -b development $GIT_REPO
-#RUN chmod -R 777 $WEB_DIR/ztemp/
+# Salin source code proyek Carik ke container
+WORKDIR /projects/carik
+COPY . /projects/carik
 
-# setup apache web dir
-RUN mv /var/www/html /var/www/html-old
-RUN ln -s $WEB_DIR /var/www/html
+# Setup direktori ztemp dan konfigurasi Apache web root
+RUN chmod -R 777 /projects/carik/public_html/carik/ztemp && \
+    rm -rf /var/www/html && \
+    ln -s /projects/carik/public_html/carik /var/www/html
 
-# Add file autu run
-ADD files/echo-run.sh /app/run.sh
+# Salin startup script
+COPY docker/files/carik-run.sh /app/run.sh
 RUN chmod 755 /app/run.sh
 
+CMD ["/app/run.sh"]
