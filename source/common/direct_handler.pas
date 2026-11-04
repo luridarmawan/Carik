@@ -17,7 +17,7 @@ uses
   carik_webmodule,
   fpjson, RegExpr, googlegeocoding_integration,
   carik_controller, simplebot_controller, logutil_lib,
-  clarifai_integration, telegram_integration, googleplacesearch_integration,
+  telegram_integration, googleplacesearch_integration,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, database_lib,
   json_helpers, string_helpers, datetime_helpers, array_helpers;
 
@@ -50,19 +50,19 @@ type
 
 implementation
 
-uses json_lib, common;
+uses json_lib, common, security_lib;
 
 constructor TCarikHandler.CreateNew(AOwner: TComponent; CreateMode: integer);
 begin
   inherited CreateNew(AOwner, CreateMode);
   BeforeRequest := @BeforeRequestHandler;
-
-  Carik := TCarikController.Create;
+  jsonData := nil;
+  // Carik & SimpleBOT dibuat dan dibebaskan oleh TCarikWebModule
 end;
 
 destructor TCarikHandler.Destroy;
 begin
-  Carik.Free;
+  FreeAndNil(jsonData);
   inherited Destroy;
 end;
 
@@ -90,9 +90,11 @@ var
   json: TJSONUtil;
   cmdAction, parameterAction, fieldAction : TStrings;
   isHandled: Boolean;
-  replyText: TStringList;
+  replyText: string;
 begin
   Response.Content := '{}';
+  isHandled := False;
+  replyText := '';
   forceRespond := False;
   BOLD_CODE := '**';
   ITALIC_CODE := '*';
@@ -101,8 +103,19 @@ begin
 
   // telegram style
   //   {"message":{"message_id":0,"text":"Hi","chat":{"id":0}}}
+  FreeAndNil(jsonData);
   try
     jsonData := GetJSON(Request.Content);
+  except
+    jsonData := nil;
+  end;
+  if not Assigned(jsonData) then
+  begin
+    Response.Content := '{"status":"invalid json"}';
+    Exit;
+  end;
+
+  try
     try
       Text := jsonData.GetPath('message.text').AsString;
     except
@@ -222,7 +235,7 @@ begin
   if IsGlobalUserBlackListed(PrefixId + '-' + Carik.UserID) then
   begin
     LogUtil.Add('user blacklist: ' + PrefixId + '-' + Carik.UserID + '|' + Carik.FullName,'TELE');
-    Response.Content := '{"status":"'+Carik.UserID+' blaclisted"}';
+    Response.Content := '{"status":"' + StringToJSONString(Carik.UserID + ' blacklisted') + '"}';
     Exit;
   end;
 
@@ -302,8 +315,7 @@ begin
   if Assigned(FOnMessage) then
   begin
     isHandled := False;
-    replyText := TStringList.Create;
-    replyText.Text := FOnMessage(OriginalText, isHandled);
+    replyText := FOnMessage(OriginalText, isHandled);
     for j:=0 to SimpleBOT.AdditionalParameters.Count-1 do
     begin
       s := SimpleBOT.AdditionalParameters.Names[j];
@@ -359,8 +371,7 @@ begin
       SimpleBOT.SimpleAI.ResponseText.Text := s;
     end;
   end else begin
-    SimpleBOT.SimpleAI.ResponseText.Text := replyText.Text;
-    replyText.Free
+    SimpleBOT.SimpleAI.ResponseText.Text := replyText;
   end;
   Response.Content := SimpleBOT.SimpleAI.ResponseJson;
 
@@ -499,7 +510,7 @@ begin
   json.Free;
 
 
-  if not (_GET['_DEBUG'] = '1') then
+  if not IsDebug then
   begin
     if channelID = 'direct' then
       channelID := DEFAULT_CHANNEL_ID;
@@ -515,15 +526,15 @@ begin
       channelID := INSTAGRAM_CHANNEL_ID;
     if channelID = 'telegram_userbot' then
       channelID := TELEGRAM_USERBOT_CHANNEL_ID;
-    Analytics(ChannelId, SimpleBOT.SimpleAI.IntentName, Text, channelID + '-' + Carik.UserID);
-    if (_GET['_NOLOG'] = '') then
+    // _NOLOG hanya berlaku bila systems/debug = true
+    if (_GET['_NOLOG'] = '') or not IsDebugAllowed then
     begin
       LogChatPayload.Text:= Response.Content;
       LogChat(ChannelId, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, OriginalText, text_response, Carik.IsGroup, True);
     end;
   end;
 
-  SimpleBOT.Free;
+  // SimpleBOT dibebaskan di TCarikWebModule.Destroy
   Response.ContentType := 'application/json';
 end;
 

@@ -18,6 +18,11 @@
     "ffmpeg_path": "./ffmpeg",
     "error_redirect": false
   },
+  "security": {
+    "api_token": "",
+    "allowed_hosts": "",
+    "allow_external_commands": false
+  },
   "stemming" : {
     "dictionary_file" : "files/dictionary.csv",
     "nonstandardword_file" : "files/word-nonstandard.txt"
@@ -164,55 +169,14 @@
       "key": ""
     }
   },
-  "googleanalytics": {
-    "default": {
-      "tracking_id": ""
-    }
-  },
-  "zomato": {
-    "default": {
-      "url": "",
-      "key": ""
-    }
-  },
-  "yandex": {
-    "default": {
-      "key": ""
-    }
-  },
   "witai": {
     "default": {
       "token": ""
     }
   },
-  "cognitive": {
-    "ocr": {
-      "key": "",
-      "key2": ""
-    }
-  },
-  "customvision": {
-    "default": {
-      "key": "",
-      "url": ""
-    }
-  },
   "openweathermap": {
     "default": {
       "key": ""
-    }
-  },
-  "weatherstack": {
-    "default": {
-      "key": ""
-    }
-  },
-  "klaudless": {
-    "default": {
-      "appid": "",
-      "apikey": "",
-      "calendar_accountid": "",
-      "calendar_id": ""
     }
   },
   "msbotframework": {

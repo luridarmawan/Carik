@@ -1404,12 +1404,6 @@ begin
     end;
   end;
 
-  s := Text;
-  if TELEGRAM.IsCallbackQuery then
-  begin
-    s := 'callback|'+SimpleBOT.SimpleAI.IntentName;
-  end;
-  Analytics('telegram', SimpleBOT.SimpleAI.IntentName, s, 'tl-' + Carik.UserID);
   Response.ContentType := 'application/json';
 
   if AutoDeleteMessage > 0 then

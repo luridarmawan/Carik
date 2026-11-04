@@ -59,12 +59,7 @@ const
   CARIKSEARCH_URL = 'carik_search/url';
   CARIKSEARCH_TOKEN = 'carik_search/token';
 
-  CLARIFAI_TOKEN = 'clarifai/default/token';
-  CLARIFAI_CLIENTID = 'clarifai/default/client_id';
-  CLARIFAI_CLIENTSECRET = 'clarifai/default/client_secret';
 
-  CUSTOMVISION_KEY = 'customvision/default/key';
-  CUSTOMVISION_URL = 'customvision/default/url';
 
   TELEGRAM_TOKEN = 'telegram/default/token';
   TELEGRAM_WHITELIST = 'telegram/default/whitelist';
@@ -80,26 +75,12 @@ const
 
   WITAI_TOKEN = 'witai/default/token';
   GOOGLE_KEY = 'google/default/key';
-  GOOGLEANALYTICS_TRACKING_ID = 'googleanalytics/default/tracking_id';
-  ZOMATO_URL = 'zomato/default/url';
-  ZOMATO_KEY = 'zomato/default/key';
-  YANDEX_KEY = 'yandex/default/key';
-  COGNITIVE_OCR_TOKEN = 'cognitive/ocr/key';
   OPENWEATHERMAP_KEY = 'openweathermap/default/key';
-  WEATHERSTACK_KEY = 'weatherstack/default/key';
   IBACOR_TOKEN = 'ibacor/default/token';
   RAJAONGKIR_TOKEN = 'rajaongkir/default/key';
 
-  PORTALPULSA_USERID = 'PortalPulsa/default/userid';
-  PORTALPULSA_KEY = 'PortalPulsa/default/key';
-  PORTALPULSA_SECRET = 'PortalPulsa/default/secret';
 
 
-
-  KLAUDLESS_APPID = 'klaudless/default/appid';
-  KLAUDLESS_APIKEY = 'klaudless/default/apikey';
-  KLAUDLESS_CALENDAR_ACCOUNTID = 'klaudless/default/calendar_accountid';
-  KLAUDLESS_CALENDAR_ID = 'klaudless/default/calendar_id';
 
   MASKOFA_SHALAT_SESSIONID = 'maskofa/jadwalshalat/sessionid';
   MASKOFA_SHALAT_CITYLISTS = 'maskofa/jadwalshalat/citylists';
@@ -120,7 +101,6 @@ const
   RUMAH123_API_CLIENT_TYPE = 'rumah123/default/api_client_type';
   RUMAH123_LISTING_MAX = 3;
 
-  PAJAKMOTOR_API = 'pajakmotor/api_url';
 
   STEMMING_ENABLED = 'ai/default/stemming';
   STANDARDWORD_CHECKING = 'ai/default/standard_word_check';

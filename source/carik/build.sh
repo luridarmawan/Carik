@@ -1,4 +1,4 @@
 #!/bin/bash
-mkdir -p lib
+mkdir -p lib/$(fpc -iTP)-$(fpc -iTO)
 fpc carik.lpr @extra.cfg
 chmod 755 ../../public_html/carik/carik.bin

@@ -12,7 +12,7 @@ uses
   process,
   redis_controller, simplebot_controller,
   Classes, SysUtils, fpcgi, fpjson, json_lib, HTTPDefs, fastplaz_handler,
-  database_lib, string_helpers, dateutils, datetime_helpers, json_helpers;
+  database_lib, string_helpers, dateutils, datetime_helpers;
 
 {$include carik.inc}
 
@@ -38,7 +38,7 @@ type
 
 implementation
 
-uses common;
+uses common, security_lib;
 
 function TLoaderController.loadToRedis(AKeyName: string; AFileName: string
   ): string;
@@ -89,17 +89,26 @@ var
 begin
   Response.Content := '';
 
-  //TODO: check authentication
-
-  tempFileName := GetTempDir + DirectorySeparator + 'file.nlp';
-  tempFileName := tempFileName.Replace('//', '/');
-  if FileExists( tempFileName) then
-    DeleteFile(tempFileName);
+  // endpoint admin: wajib security/api_token
+  FToken := _GET['token'];
+  if not IsValidApiToken(Header['Authorization'], Header['X-Carik-Token'], FToken) then
+  begin
+    common.OutputJson(401, 'Unauthorized', 401);
+    Exit;
+  end;
 
   FBotName := _GET['name'];
-  FToken := _GET['token'];
   if FBotName.IsEmpty then
     FBotName := Config[CONFIG_BOTNAME];
+  // dipakai untuk nama file NLP & key redis
+  if not IsSafeIdentifier(FBotName) then
+  begin
+    common.OutputJson(400, 'Invalid bot name', 400);
+    Exit;
+  end;
+
+  // nama file unik per request (bukan 'file.nlp' bersama di temp dir)
+  tempFileName := GetTempFileName(GetTempDir, 'nlp');
 
   SimpleBOT := TSimpleBotModule.Create;
   SimpleBOT.BotName := FBotName;
@@ -108,6 +117,7 @@ begin
   lst := TStringList.Create;
   json := TJSONUtil.Create;
   outputJson := TJSONUtil.Create;
+  try
 
   // entities
   SimpleBOT.SimpleAI.SimpleAILib.Intent.Entities.Data.GetStrings(lst);
@@ -137,9 +147,14 @@ begin
   outputJson['responses/responses'] := s;
 
   Response.Content := outputJson.AsJSONFormated;
-  outputJson.Free;
-  json.Free;
-  lst.Free;
+  finally
+    outputJson.Free;
+    json.Free;
+    lst.Free;
+    FreeAndNil(SimpleBOT);
+    if FileExists(tempFileName) then
+      DeleteFile(tempFileName);
+  end;
 end;
 
 // POST Method Handler

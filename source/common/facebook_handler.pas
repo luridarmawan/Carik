@@ -49,7 +49,7 @@ type
 
 implementation
 
-uses common;
+uses common, StrUtils;
 
 constructor TFacebookHandler.CreateNew(AOwner: TComponent; CreateMode: integer);
 begin
@@ -526,7 +526,9 @@ begin
   end;
 
   //Exec Command - carik base
-  if Carik.IsCommand(SimpleBOT.SimpleAI.ResponseText.Text) then
+  // jangan jalankan command dari respons ExternalNLP/LLM atau dari pesan user
+  if Carik.IsCommand(SimpleBOT.SimpleAI.ResponseText.Text) and not UntrustedResponse
+    and not ContainsText(OriginalText, Trim(SimpleBOT.SimpleAI.ResponseText.Text)) then
   begin
     SimpleBOT.SimpleAI.ResponseText.Text :=
       Carik.ExecCommand(SimpleBOT.SimpleAI.ResponseText.Text);
@@ -681,14 +683,6 @@ begin
   s := jsonGetData(SimpleBOT.SimpleAI.CustomReply.Data, 'suffix');
   if s.IsNotEmpty then
     Facebook.Send(Facebook.UserID, s);
-
-
-  s := Text;
-  if Facebook.isPostback then
-  begin
-    s := 'callback|'+SimpleBOT.SimpleAI.IntentName;
-  end;
-  Analytics('facebook', SimpleBOT.SimpleAI.IntentName, s, 'fb-' + Carik.UserID);
 end;
 
 

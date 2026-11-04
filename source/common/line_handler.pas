@@ -738,7 +738,6 @@ begin
 
   LogChat(LINE_CHANNEL_ID, Carik.GroupChatID, Carik.GroupName,
     Carik.UserID, Carik.UserName, Carik.FullName, Text, SimpleBOT.SimpleAI.ResponseText.Text, Carik.IsGroup, True);
-  Analytics('line', SimpleBOT.SimpleAI.IntentName, Text, 'ln-' + Carik.UserID);
   //Response.Content := 'OK';
 end;
 
