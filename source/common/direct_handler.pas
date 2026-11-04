@@ -50,7 +50,7 @@ type
 
 implementation
 
-uses json_lib, common;
+uses json_lib, common, security_lib;
 
 constructor TCarikHandler.CreateNew(AOwner: TComponent; CreateMode: integer);
 begin
@@ -235,7 +235,7 @@ begin
   if IsGlobalUserBlackListed(PrefixId + '-' + Carik.UserID) then
   begin
     LogUtil.Add('user blacklist: ' + PrefixId + '-' + Carik.UserID + '|' + Carik.FullName,'TELE');
-    Response.Content := '{"status":"'+Carik.UserID+' blaclisted"}';
+    Response.Content := '{"status":"' + StringToJSONString(Carik.UserID + ' blacklisted') + '"}';
     Exit;
   end;
 
@@ -510,7 +510,7 @@ begin
   json.Free;
 
 
-  if not (_GET['_DEBUG'] = '1') then
+  if not IsDebug then
   begin
     if channelID = 'direct' then
       channelID := DEFAULT_CHANNEL_ID;
@@ -526,7 +526,8 @@ begin
       channelID := INSTAGRAM_CHANNEL_ID;
     if channelID = 'telegram_userbot' then
       channelID := TELEGRAM_USERBOT_CHANNEL_ID;
-    if (_GET['_NOLOG'] = '') then
+    // _NOLOG hanya berlaku bila systems/debug = true
+    if (_GET['_NOLOG'] = '') or not IsDebugAllowed then
     begin
       LogChatPayload.Text:= Response.Content;
       LogChat(ChannelId, Carik.GroupChatID, Carik.GroupName, Carik.UserID, Carik.UserName, Carik.FullName, OriginalText, text_response, Carik.IsGroup, True);

@@ -104,7 +104,6 @@ const
   RUMAH123_API_CLIENT_TYPE = 'rumah123/default/api_client_type';
   RUMAH123_LISTING_MAX = 3;
 
-  PAJAKMOTOR_API = 'pajakmotor/api_url';
 
   STEMMING_ENABLED = 'ai/default/stemming';
   STANDARDWORD_CHECKING = 'ai/default/standard_word_check';

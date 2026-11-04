@@ -20,6 +20,7 @@ type
     userIdAsArray: TStrings;
     FUserId: string;
     function validateMuteDate(ADateAsString: string): string;
+    function isAuthorized: boolean;
     function prepareData: boolean;
     procedure commandUserset();
 
@@ -34,7 +35,16 @@ type
 
 implementation
 
-uses common;
+uses common, security_lib;
+
+// endpoint admin: wajib security/api_token (lihat security_lib)
+function TCommandController.isAuthorized: boolean;
+begin
+  Result := IsValidApiToken(Header['Authorization'], Header['X-Carik-Token'],
+    _GET['token']);
+  if not Result then
+    OutputJson(401, 'Unauthorized', 401);
+end;
 
 function TCommandController.validateMuteDate(ADateAsString: string): string;
 begin
@@ -120,6 +130,7 @@ var
   json: TJSONUtil;
 begin
   Response.ContentType := 'application/json';
+  if not isAuthorized then Exit;
 
   FUserId := _GET['userId'];
   if FUserId.IsEmpty then
@@ -157,6 +168,7 @@ end;
 procedure TCommandController.Post;
 begin
   Response.ContentType := 'application/json';
+  if not isAuthorized then Exit;
 
   FUserId := _POST['userId'];
   if ClientId = '0' then ClientId := _POST['clientid'];

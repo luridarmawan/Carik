@@ -66,6 +66,8 @@ type
     FExternalNLPIntentPattern: string;
     FExternalNLPWeight: integer;
     FExternalNLPStarted: boolean;
+    // respons berasal dari ExternalNLP/LLM: jangan jalankan command di dalamnya
+    FUntrustedResponse: boolean;
     FFormatNumber: string;
     FFormInputExpired: boolean;
     FGenericContent: boolean;
@@ -322,6 +324,7 @@ type
     property ExternalNLPIntentPattern: string read FExternalNLPIntentPattern;
     property ExternalNLPWeight: integer read FExternalNLPWeight;
     property ExternalNLPStarted: boolean read FExternalNLPStarted;
+    property UntrustedResponse: boolean read FUntrustedResponse;
     property GPTTimeout: integer read FGPTTimeout write FGPTTimeout;
     property PackageName: string read FPackageName write FPackageName;
 
@@ -344,7 +347,6 @@ type
     function translateSundaToIndonesiaHandler(const IntentName: string;
       Params: TStrings): string;
 
-    function pajakKendaraanHandler(const IntentName: string; Params: TStrings): string;
     function ProcessText(AMessage: string): string;
     procedure BotInit;
     function OnNLPErrorHandler(const Message: string): string;
@@ -451,6 +453,8 @@ type
 
 
 implementation
+
+uses security_lib;
 
 const
   _RESPONSE = 'Response';
@@ -1297,7 +1301,6 @@ begin
     Token := Config[COGNITIVE_OCR_TOKEN];
     Details := 'celebrities';
     Result := Scan(_url);
-    LogUtil.Add(Token, 'Token');
     LogUtil.Add(ResultText, 'ImageToFigure');
     Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
     Free;
@@ -1873,7 +1876,8 @@ begin
   if not preg_match(REGEX_EQUATION, Result) then
   begin
     Result := ExternalNLP('berapa '+Params.Values['Formula_value']);
-    if Result.IsEmpty then Result := '..... :( ';
+    if Result.IsEmpty then Result := '..... :( '
+    else FUntrustedResponse := True;
     Exit;
   end;
 
@@ -1890,7 +1894,8 @@ begin
     Result := Result.Replace(',000','');
   except
     Result := ExternalNLP('berapa '+Params.Values['Formula_value']);
-    if Result.IsEmpty then Result := 'duuhh... saya bingung dehh.. ';
+    if Result.IsEmpty then Result := 'duuhh... saya bingung dehh.. '
+    else FUntrustedResponse := True;
   end;
   mathParser.Free;
 end;
@@ -2963,50 +2968,6 @@ begin
   end;
 end;
 
-function TCarikWebModule.pajakKendaraanHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  http_response: IHTTPResponse;
-begin
-  Result := SimpleBOT.GetResponse('NotFound');
-
-  with THTTPLib.Create do
-  begin
-    URL := Config[PAJAKMOTOR_API] + Params.Values['nopol_value'];
-    if URL = '' then
-    begin
-      Free;
-      Exit;
-    end;
-    http_response := Get;
-
-    if http_response.ResultCode = 200 then
-    begin
-      if Trim(http_response.ResultText) <> '' then
-        Result := Trim(http_response.ResultText);
-    end;
-
-    Free;
-  end;
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-
-
-  {
-  with TPajakKendaraanIbacorIntegration.Create do
-  begin
-    Result := Find(Params.Values['nopol_value']);
-    if Result <> '' then
-      Result := StringReplace(SimpleBOT.GetResponse(IntentName + 'Info'),
-        '%s', Result, [rfReplaceAll])
-    else
-      Result := SimpleBOT.GetResponse('NotFound');
-
-    Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-    Free;
-  end;
-  }
-end;
-
 function TCarikWebModule.botEnableHandler(const IntentName: string;
   Params: TStrings): string;
 begin
@@ -3108,6 +3069,17 @@ var
   lst: TStrings;
 begin
   Result := '';
+  // command hanya boleh berasal dari respons intent lokal (config NLP).
+  // Tolak bila respons datang dari ExternalNLP/LLM, atau bila pesan user sendiri
+  // memuat command (mis. dipantulkan oleh echo) -> cegah SSRF via prompt/echo.
+  if FUntrustedResponse
+    or ContainsText(OriginalText, CMD_POST_RICH + ':')
+    or ContainsText(OriginalText, CMD_JSON_RICH + ':') then
+  begin
+    LogUtil.Add('command ditolak (sumber tidak tepercaya): ' + Copy(AText, 1, 200), 'SECURITY');
+    Exit;
+  end;
+
   lst := Explode(AText, ':');
   case lst[0] of
     CMD_POST_RICH:
@@ -3447,9 +3419,17 @@ begin
   Result := '';
   if FOperation.IsEmpty then FOperation := RequestAsJson['op'];
 
+  // anti SSRF: tolak host lokal/privat & host di luar security/allowed_hosts
+  if not IsSafeOutboundURL(AURL) then
+  begin
+    LogUtil.Add('URL ditolak: ' + Copy(AURL, 1, 200), 'SECURITY');
+    Exit;
+  end;
+
   with THTTPLib.Create(AURL) do
   begin
     try
+      AllowRedirect := False; // redirect bisa mengarah ke host internal
       // set header from nlp config
       AddHeader('_source', 'carik');
       s := SimpleBOT.GetResponse(SimpleBOT.SimpleAI.IntentName, '', 'header');
@@ -3825,7 +3805,8 @@ var
 begin
   inherited CreateNew(AOwner, CreateMode);
   FIsDebug := False;
-  if (_GET['_DEBUG'] = '1') then FIsDebug:= True;
+  // _DEBUG hanya berlaku bila systems/debug = true
+  if (_GET['_DEBUG'] = '1') and IsDebugAllowed then FIsDebug:= True;
   FGenericContent := True;
   FDashboardDeviceID := 0;
   FOperation := _GET['op'];
@@ -3841,7 +3822,8 @@ begin
 
   if FDeviceId.IsEmpty then
     FDeviceId := Header['DeviceID'];
-  if not FBotID.IsEmpty then
+  // botid dipakai sebagai nama file config: hanya [A-Za-z0-9_-]
+  if FBotID.IsNotEmpty and IsSafeIdentifier(FBotID) then
   begin
     s := 'config/config-'+FBotID+'.json';
     if FileExists(s) then
@@ -3928,6 +3910,7 @@ begin
   FCustomReplyActionTypeFromExternalNLP := '';
   FIsCustomActionFileExist := False;
   FExternalNLPStarted := False;
+  FUntrustedResponse := False;
   FGPTTimeout := 0;
   FPackageName := '';
   LogChatPayload := TStringList.Create;
@@ -4106,6 +4089,7 @@ begin
         Result := externalResult;
         SimpleBOT.ResponseText.Text := externalResult;
         SimpleBOT.SimpleAI.Parameters.Values['external_nlp'] := '1';
+        FUntrustedResponse := True;
       end;
   end;
   if (SimpleBOT.ResponseText.Text = '') and not (FSendAudio or
@@ -4160,7 +4144,6 @@ begin
   SimpleBOT.Handler['translate_sunda_indonesia'] := @translateSundaToIndonesiaHandler;
   SimpleBOT.Handler['language_set'] := @LanguageSetHandler;
 
-  SimpleBOT.Handler['pajak_kendaraan'] := @pajakKendaraanHandler;
   SimpleBOT.Handler['alquran_terjemahan'] := @alquranTerjemahanHandler;
 
   SimpleBOT.Handler['mortgage_calculator'] := @mortgageCalculatorHandler;
@@ -4503,9 +4486,17 @@ function TCarikWebModule.FormInputHandler: boolean;
     postData['client_id'] := ClientId;
     postData['session'] := SimpleBOT.UserData[FORM_SESSION];
     postData['data/submit'] := CANCEL;
+    // URL form berasal dari respons NLP: cegah data user terkirim ke host internal/asing
+    if not IsSafeOutboundURL(SimpleBOT.UserData[MESSAGE_ACTION_URL]) then
+    begin
+      LogUtil.Add('URL form ditolak: ' + Copy(SimpleBOT.UserData[MESSAGE_ACTION_URL], 1, 200), 'SECURITY');
+      postData.Free;
+      Exit;
+    end;
     with THTTPLib.Create(SimpleBOT.UserData[MESSAGE_ACTION_URL]) do
     begin
       try
+        AllowRedirect := False;
         AddHeader('_source', 'carik');
         AddHeader('Cache-Control', 'no-cache');
         ContentType := 'application/json';
@@ -4800,7 +4791,7 @@ begin
       lst.Free;
     end;
     postData['data/submit'] := OK;
-    if (_GET['_FORMDEBUG'] = '1') then
+    if (_GET['_FORMDEBUG'] = '1') and IsDebugAllowed then
     begin
       url := SimpleBOT.UserData[MESSAGE_ACTION_URL];
       die(postData.AsJSONFormated+#13+url); //ulil formpost
@@ -4811,9 +4802,20 @@ begin
     url := SimpleBOT.UserData[MESSAGE_ACTION_URL];
     LogUtil.Add(postData.AsJSON, 'FORM-DATA');
     LogUtil.Add(url, 'FORM-URL');
+    // URL form berasal dari respons NLP: cegah data user terkirim ke host internal/asing
+    if not IsSafeOutboundURL(url) then
+    begin
+      LogUtil.Add('URL form ditolak: ' + Copy(url, 1, 200), 'SECURITY');
+      Suffix := FORM_ERR_SUBMIT_FAILED;
+      postData.Free;
+      resetForm();
+      Result := True;
+      Exit;
+    end;
     with THTTPLib.Create(url) do
     begin
       try
+        AllowRedirect := False;
         AddHeader('_source', 'carik');
         AddHeader('Cache-Control', 'no-cache');
         ContentType := 'application/json';
@@ -4890,7 +4892,7 @@ begin
             LogUtil.Add(e.Message + '//' + httpResponse.ResultText, 'FORM-ERROR')
           else
             LogUtil.Add(e.Message, 'FORM-ERROR');
-          if (_GET['_DEBUG'] = '1') then
+          if FIsDebug then
             Suffix += '\n' + e.Message;
         end;
       end;
@@ -5257,6 +5259,7 @@ begin
     if not SimpleBOT.IsMathSuccess then
     begin
       Result := ExternalNLP(Message);
+      if Result.IsNotEmpty then FUntrustedResponse := True;
     end;
     SaveUnknownChat(Message);
     Exit;
@@ -5302,6 +5305,7 @@ begin
     except
     end;
     Result := s;
+    FUntrustedResponse := True;
   end;
 
   LogUtil.Add(Carik.UserID + ':' + Carik.FullName + ':' + Message + '/' + Carik.GroupChatID
