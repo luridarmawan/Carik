@@ -17,7 +17,7 @@ uses
   carik_webmodule,
   fpjson, RegExpr, googlegeocoding_integration,
   carik_controller, simplebot_controller, logutil_lib,
-  clarifai_integration, telegram_integration, googleplacesearch_integration,
+  telegram_integration, googleplacesearch_integration,
   Classes, SysUtils, fpcgi, HTTPDefs, fastplaz_handler, database_lib,
   json_helpers, string_helpers, datetime_helpers, array_helpers;
 
