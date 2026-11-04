@@ -86,7 +86,6 @@ const
   YANDEX_KEY = 'yandex/default/key';
   COGNITIVE_OCR_TOKEN = 'cognitive/ocr/key';
   OPENWEATHERMAP_KEY = 'openweathermap/default/key';
-  WEATHERSTACK_KEY = 'weatherstack/default/key';
   IBACOR_TOKEN = 'ibacor/default/token';
   RAJAONGKIR_TOKEN = 'rajaongkir/default/key';
 

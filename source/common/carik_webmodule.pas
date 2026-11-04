@@ -17,7 +17,7 @@ uses
   clarifai_integration, alquranindonesia_integration,
   telegram_integration, googleplacesearch_integration,
   kamussunda_integration, bmkg_integration, openweathermap_integration,
-  apixu_integration, bca_integration, witai_integration,
+  bca_integration, witai_integration,
   line_integration,
   facebookmessenger_integration,
   googledistancematrix_integration, cognitivecustomvision_integration,
@@ -196,7 +196,6 @@ type
 
     function bmkgSimpleInfoHandler(const IntentName: string; Params: TStrings): string;
     function openweatherInfoHandler(const IntentName: string; Params: TStrings): string;
-    function apixuweatherInfoHandler(const IntentName: string; Params: TStrings): string;
     function beritaHariIniHandler(const IntentName: string; Params: TStrings): string;
 
     function conversionHashHandler(const IntentName: string; Params: TStrings): string;
@@ -2306,115 +2305,6 @@ begin
     Result += '\n `prakiraan cuaca di '+keywordTemp+'`';
     Result += '\n\nTetap prokes dan jaga diri yaa.';
     Free;
-  end;
-end;
-
-function TCarikWebModule.apixuweatherInfoHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  _keyword, _suffix: string;
-  _img: string;
-  json: TJSONUtil;
-  apixu: TApixuIntegration;
-  node: TJSONData;
-  isValid: boolean;
-
-  function translateToID(ASource: string): string;
-  begin
-    Result := SimpleBOT.SimpleAI.GetResponse('LanguageID', '', trim(ASource));
-    if (Result = '') or (Result = '._') then
-      Result := ASource;
-  end;
-
-begin
-  Result := '';
-  _suffix := '';
-  _keyword := Params.Values['keyword_value'];
-  if _keyword = 'jogja' then
-    _keyword := 'yogyakarta';
-  if _keyword = 'jogjakarta' then
-    _keyword := 'yogyakarta';
-  if _keyword = '' then
-  begin
-    _keyword := 'jakarta';
-    _suffix := '\n\nUntuk kota lain, bisa coba:\n *CUACA DI NAMAKOTA*';
-  end;
-  if Pos(',', _keyword) < 1 then
-    _keyword := _keyword + ',indonesia';
-  apixu := TApixuIntegration.Create;
-  try
-  with apixu do
-  begin
-    Key := Config[WEATHERSTACK_KEY];
-    Result := WeatherAsJson(_keyword);
-    if Result <> '' then
-    begin
-      // respons sukses weatherstack tidak punya key "success";
-      // anggap gagal bila node "current" tidak ada
-      _img := '';
-      isValid := False;
-      json := TJSONUtil.Create;
-      try
-        try
-          json.LoadFromJsonString(Result, False);
-          node := nil;
-          if Assigned(json.Data) then
-            node := json.Data.FindPath('current');
-          isValid := Assigned(node);
-          if isValid then
-          begin
-            node := json.Data.FindPath('current.weather_icons');
-            if Assigned(node) and (node.Count > 0) then
-              _img := node.Items[0].AsString;
-          end;
-        except
-          isValid := False;
-        end;
-      finally
-        json.Free;
-      end;
-      if not isValid then
-      begin
-        Result := openweatherInfoHandler(IntentName, Params);
-        Exit; // finally membebaskan apixu
-      end;
-      //_img := 'http:' + Data['current.condition.weather_icons'];
-
-      Result := 'Cuaca di ' + Data['location.name'] + ', ' + Data['location.region'];
-      if FMessengerMode = mmTelegram then
-        Result := Result + '[:]('+_img+')';
-      Result := Result + #10 + translateToID(Data['current.condition.text']);
-      Result := Result + #10'Suhu: ' + FormatFloat('#0.0',
-        GetDataFloat('current.temperature')) + ' °C';
-      Result := Result + #10'terasa seperti ' + FormatFloat('#0.0',
-        GetDataFloat('current.feelslike')) + ' °C';
-
-      Result := Result + #10'Kec. Angin: ' + FormatFloat('#0.00',
-        GetDataFloat('current.wind_speed')) + ' kph';
-      Result := Result + #10'Arah Angin: ' + FormatFloat('#0.00',
-        GetDataFloat('current.wind_degree')) + '° (' + Data['current.wind_dir'] + ')';
-      Result := Result + #10'Tekanan: ' + FormatFloat('#0.00',
-        GetDataFloat('current.pressure')) + ' mb';
-      Result := Result + #10'Kelembaban: ' + FormatFloat('#0.00',
-        GetDataFloat('current.humidity')) + '';
-
-      Result := Result + #10'Koordinat: '
-        + FormatFloat('#0.0', GetDataFloat('location.lat'))
-        + ','
-        + FormatFloat('#0.0', GetDataFloat('location.lon'));
-      Result := Result + _suffix;
-    end;
-    Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-
-    // force send photo
-    {
-    FSendPhoto := True;
-    FFileURL := _img;
-    FCaption := Result;
-    }
-  end;
-  finally
-    apixu.Free;
   end;
 end;
 
@@ -5075,7 +4965,6 @@ begin
   SimpleBOT.Handler['mortgage_calculator'] := @mortgageCalculatorHandler;
   SimpleBOT.Handler['bmkg_simpleinfo'] := @bmkgSimpleInfoHandler;
   SimpleBOT.Handler['openweather_info'] := @openweatherInfoHandler;
-  //SimpleBOT.Handler['openweather_info'] := @apixuweatherInfoHandler;
   SimpleBOT.Handler['berita_hariini'] := @beritaHariIniHandler;
 
   SimpleBOT.Handler['conversion_hash'] := @conversionHashHandler;
