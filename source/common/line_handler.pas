@@ -180,7 +180,7 @@ begin
       itemImage := buttonList.Items[i].Value['image'];
 
       with TJSONUtil.Create do
-      begin
+      try
         Value['type'] := 'action';
         if not itemImage.IsEmpty then
           Value['imageUrl'] := itemImage;
@@ -188,19 +188,22 @@ begin
         Value['action/label'] := itemLabel;
         Value['action/text'] := itemData;
 
-        itemAsArray.Add(Data);
+        itemAsArray.Add(Data.Clone); // array memiliki salinan; wrapper di-Free
+      finally
+        Free;
       end;
 
     end;
 
     with TJSONUtil.Create do
-    begin
+    try
       Value['type'] := 'text';
       Value['text'] := ACaption;
       ValueArray['quickReply/items'] := itemAsArray;
 
       LINE.Push( LINE.UserID, AsJSON, true);
 
+    finally
       Free;
     end;
 
@@ -210,7 +213,7 @@ begin
 
   // generate line button template
   with TLineTemplateMessage.Create('buttons') do
-  begin
+  try
     AltText := 'Pilihan';
     Title := ' ';
     Text := ACaption;
@@ -250,6 +253,7 @@ begin
     if captionLength > 60 then
       LINE.Send( LINE.UserID, ACaption);
     LINE.Push( LINE.UserID, templateAsString, true);
+  finally
     Free;
   end;
 
@@ -304,7 +308,7 @@ begin
       actionData := ElementArray.Items[i].Value['callback_data'];
     end;
     with TJSONUtil.Create do
-    begin
+    try
       Value['type'] := actionType;
       Value['label'] := 'Detail';
       if actionType = 'uri' then
@@ -314,7 +318,9 @@ begin
         Value['data'] := actionData;
         //bValue['text'] := cardTitle;
       end;
-      actionAsArray.Add(Data);
+      actionAsArray.Add(Data.Clone); // array memiliki salinan; wrapper di-Free
+    finally
+      Free;
     end;
     cardItem.Data.Add('actions', actionAsArray);
 
@@ -366,11 +372,13 @@ begin
     if ButtonCaption.IsEmpty then
       ButtonCaption := 'Info lanjut';
     with TJSONUtil.Create do
-    begin
+    try
       Value['type'] := 'uri';
       Value['label'] := 'Detail';
       Value['uri'] := ADataAsArray.Items[i].Value['url'];
-      actionAsArray.Add(Data);
+      actionAsArray.Add(Data.Clone); // array memiliki salinan; wrapper di-Free
+    finally
+      Free;
     end;
     cardItem.Data.Add('actions', actionAsArray);
 
