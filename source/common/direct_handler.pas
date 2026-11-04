@@ -255,12 +255,20 @@ begin
   //Text := StringReplace(Text, '@' + BOTNAME_DEFAULT + 'Bot', '',
   //  [rfReplaceAll, rfIgnoreCase]);
 
-  Text := Text.Replace('@+62811857001','');  //ulil
-  Text := Text.Replace('@62811857001','');  //ulil
-  Text := Text.Replace('@' + BOTNAME_DEFAULT + 'Bot','');
-  Text := Text.Replace('@' + BOTNAME_DEFAULT + ' Bot','');
-  Text := Text.Replace('@' + BOTNAME_DEFAULT,'');
-  Text := Text.Replace(BOTNAME_DEFAULT + 'Bot','');
+  // hapus mention nomor WhatsApp chatbot (config ai/default/whatsapp/number),
+  // dengan atau tanpa '+'
+  s := string(Config[CONFIG_WHATSAPP_NUMBER]);
+  s := s.Replace('+', '').Replace(' ', '').Replace('-', '').Trim;
+  if s.IsNotEmpty then
+  begin
+    Text := Text.Replace('@+' + s, '');
+    Text := Text.Replace('@' + s, '');
+  end;
+  // Text sudah lowercase: pencocokan nama bot harus case-insensitive
+  Text := StringReplace(Text, '@' + BOTNAME_DEFAULT + 'Bot', '', [rfReplaceAll, rfIgnoreCase]);
+  Text := StringReplace(Text, '@' + BOTNAME_DEFAULT + ' Bot', '', [rfReplaceAll, rfIgnoreCase]);
+  Text := StringReplace(Text, '@' + BOTNAME_DEFAULT, '', [rfReplaceAll, rfIgnoreCase]);
+  Text := StringReplace(Text, BOTNAME_DEFAULT + 'Bot', '', [rfReplaceAll, rfIgnoreCase]);
 
   Text := Trim(Text);
   if Text = '' then

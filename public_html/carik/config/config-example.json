@@ -87,6 +87,9 @@
   "ai": {
     "default": {
       "name": "Carik",
+      "whatsapp": {
+        "number": ""
+      },
       "client_id": 1,
       "datasource": "file",
       "userdata_storage": "file",
