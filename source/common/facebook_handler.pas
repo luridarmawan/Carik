@@ -681,14 +681,6 @@ begin
   s := jsonGetData(SimpleBOT.SimpleAI.CustomReply.Data, 'suffix');
   if s.IsNotEmpty then
     Facebook.Send(Facebook.UserID, s);
-
-
-  s := Text;
-  if Facebook.isPostback then
-  begin
-    s := 'callback|'+SimpleBOT.SimpleAI.IntentName;
-  end;
-  Analytics('facebook', SimpleBOT.SimpleAI.IntentName, s, 'fb-' + Carik.UserID);
 end;
 
 

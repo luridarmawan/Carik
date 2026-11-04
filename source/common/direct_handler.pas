@@ -526,7 +526,6 @@ begin
       channelID := INSTAGRAM_CHANNEL_ID;
     if channelID = 'telegram_userbot' then
       channelID := TELEGRAM_USERBOT_CHANNEL_ID;
-    Analytics(ChannelId, SimpleBOT.SimpleAI.IntentName, Text, channelID + '-' + Carik.UserID);
     if (_GET['_NOLOG'] = '') then
     begin
       LogChatPayload.Text:= Response.Content;

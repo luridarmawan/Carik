@@ -21,8 +21,8 @@ uses
   line_integration,
   facebookmessenger_integration,
   googledistancematrix_integration, cognitivecustomvision_integration,
-  kloudlesscalendar_integration, rss_lib, http_lib, IniFiles,
-  rajaongkir_integration, googleanalytics_integration,
+  rss_lib, http_lib, IniFiles,
+  rajaongkir_integration,
   kamuskemdikbud_integration, thesaurus_integration,
   fpexprpars, // formula
   {$if FPC_FULlVERSION >= 30200}
@@ -141,8 +141,6 @@ type
     function isTelegramGroup: boolean;
     function getTelegramImageID: string;
 
-    function generateCalendarID: string;
-    function generateEventName(AEventName: string): string;
 
     // HANDLER
     function onewordHandler(const IntentName: string; Params: TStrings): string;
@@ -182,10 +180,6 @@ type
     function alquranTerjemahanHandler(const IntentName: string;
       Params: TStrings): string;
 
-    function kloudlessCalendarEventListHandler(const IntentName: string;
-      Params: TStrings): string;
-    function kloudlessCalendarEventCreateHandler(const IntentName: string;
-      Params: TStrings): string;
 
     function openweatherInfoHandler(const IntentName: string; Params: TStrings): string;
     function beritaHariIniHandler(const IntentName: string; Params: TStrings): string;
@@ -276,7 +270,6 @@ type
       AUserLeft: boolean = false);
     procedure LogGroupAdd(AChannelID: string; AGroupID: string; AGroupName: string;
       AInvitedByID: string; AInvitedByUserName: string; AInvitedByName: string);
-    procedure Analytics(AChannel, AIntent, AText, AUserID: string);
     function KnowledgeBase(AKeyword: string): string;
     function CarikSearch(AKeyword: string): string;
     function ExternalNLP(AText: string; AUseGPT: boolean = False): string;
@@ -930,19 +923,6 @@ begin
     end;
   end;
   _json.Free;
-end;
-
-function TCarikWebModule.generateCalendarID: string;
-begin
-  Result := Carik.UserID + '-' + Carik.UserName;
-  if isTelegramGroup then
-    Result := Carik.GroupChatID + '-';
-  Result := Carik.UserPrefix + '|' + Result;
-end;
-
-function TCarikWebModule.generateEventName(AEventName: string): string;
-begin
-  Result := generateCalendarID + '|' + AEventName;
 end;
 
 function TCarikWebModule.onewordHandler(const IntentName: string;
@@ -1699,214 +1679,6 @@ begin
 end;
 
 // jadwal/agenda
-function TCarikWebModule.kloudlessCalendarEventListHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  i: integer;
-  s: string;
-  startTime, endTime: TDateTime;
-begin
-  Result := '';
-
-  // hari
-  startTime := Today;
-  endTime := IncDay(Today, 7);
-
-  s := Params.Values['CalendarRange_value'];
-  if (s = 'hari ini') or (s = 'sekarang') then
-  begin
-    startTime := Today;
-    endTime := Tomorrow;
-  end;
-  if s = 'besok' then
-  begin
-    startTime := Tomorrow;
-    endTime := IncDay(Tomorrow);
-  end;
-  if s = 'lusa' then
-  begin
-    startTime := IncDay(Tomorrow);
-    endTime := IncDay(Tomorrow, 2);
-  end;
-  if (s = 'minggu ini') or (s = 'seminggu') then
-  begin
-    startTime := Today;
-    endTime := IncDay(Today, 7);
-  end;
-  if (s = 'bulan ini') or (s = 'sebulan') then
-  begin
-    startTime := Today;
-    endTime := IncDay(Today, 30);
-  end;
-  if (s = 'tahun ini') or (s = 'setahun') then
-  begin
-    startTime := Today;
-    endTime := IncDay(Today, 360);
-  end;
-
-  if MessengerMode = mmNone then
-  begin
-    Result := '';
-    FActionCallback := 'calendar.list|start=' + FormatDateTime('yyyy/mm/dd HH:nn', startTime)
-    + '|end=' + FormatDateTime('yyyy/mm/dd HH:nn', endTime);
-    exit;
-  end;
-
-  with TKlaudlessCalendarIntegration.Create do
-  begin
-    AppID := Config[KLAUDLESS_APPID];
-    APIKey := Config[KLAUDLESS_APIKEY];
-    Result := GetEventListAsJson(Config[KLAUDLESS_CALENDAR_ACCOUNTID],
-      Config[KLAUDLESS_CALENDAR_ID], startTime, endTime);
-
-    Result := EventList(generateCalendarID);
-    for i := 0 to 10 do
-    begin
-      Result := StringReplace(Result, i2s(i) + '. ', _ICON_NUMBER_ARRAY[i] +
-        ' ', [rfReplaceAll]);
-    end;
-    if Result <> '' then
-      Result := SimpleBOT.GetResponse('CalendarData') + '\n\n' + Result;
-    if Result = '' then
-      Result := SimpleBOT.GetResponse('CalendarNoData');
-
-    Free;
-  end;
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-end;
-
-//--> senin jam 11 meeting sama anu
-//--> info mudik
-
-function TCarikWebModule.kloudlessCalendarEventCreateHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  jam, menit, jamSelesai, penambahanJam: integer;
-  s, eventName: string;
-  startTime, endTime: TDateTime;
-  jamTime: TTime;
-begin
-  Result := '';
-
-  // event name
-  eventName := Params.Values['EventName_value'];
-  if eventName = '' then
-    eventName := 'Meeting';
-  eventName := generateEventName(eventName);
-
-  // hari
-  startTime := Today;
-  if Params.Values['CalendarRange_value'] = 'besok' then
-    startTime := Tomorrow;
-  if Params.Values['CalendarRange_value'] = 'lusa' then
-    startTime := IncDay(Tomorrow);
-  if Params.Values['CalendarRange_value'] = 'besok lusa' then
-    startTime := IncDay(Tomorrow, 2);
-
-  // tanggal
-  s := Params.Values['Tanggal_value'];
-  if s <> '' then
-  begin
-    startTime := StringHumanToDate(s);
-  end;
-
-  // jam
-  menit := 0;
-  jamSelesai := 1;
-  penambahanJam := 0;
-  if Params.Values['Nominal_value'] <> '' then
-    Params.Values['Jam_value'] := Params.Values['Nominal_value'];
-  s := Params.Values['Jam_value'];
-  if s <> '' then
-  begin
-    jam := s2i(s);
-    if jam = 0 then
-    begin
-      // input user bisa bukan format jam (mis. "jam nol")
-      if TryStrToTime(s, jamTime) then
-      begin
-        jam := HourOf(jamTime);
-        menit := MinuteOf(jamTime);
-      end;
-    end;
-    if jam > 12 then
-      jam := jam - 12;
-    if Params.Values['Waktu_value'] = 'siang' then
-    begin
-      if (jam >= 1) and (jam < 4) then
-        jam := jam + 12;
-    end;
-    if Params.Values['Waktu_value'] = 'sore' then
-      jam := jam + 12;
-    if (Params.Values['Waktu_value'] = 'malam') or
-      (Params.Values['Waktu_value'] = 'malem') then
-      jam := jam + 12;
-    startTime := IncHour(startTime, jam);
-  end
-  else
-  begin
-    startTime := IncHour(startTime, 8);
-    if Params.Values['Waktu_value'] = 'siang' then
-      startTime := IncHour(startTime, 4);
-    if Params.Values['Waktu_value'] = 'sore' then
-      startTime := IncHour(startTime, 9);
-    if (Params.Values['Waktu_value'] = 'malam') or
-      (Params.Values['Waktu_value'] = 'malem') then
-      startTime := IncHour(startTime, 11);
-  end;// jam
-  startTime := IncMinute(startTime, menit);
-
-
-  endTime := IncHour(startTime, 1);
-  if Params.Values['JamSelesai_value'] <> '' then
-  begin
-    endTime := StartOfTheDay(startTime);
-    jamSelesai := s2i(Params.Values['JamSelesai_value']);
-    if jamSelesai = 0 then
-      jamSelesai := 1;
-    if jamSelesai < 12 then
-    begin
-      if Params.Values['Waktu_value'] = 'sore' then
-        jamSelesai := jamSelesai + 12;
-      if Params.Values['Waktu_value'] = 'malam' then
-        jamSelesai := jamSelesai + 12;
-    end;
-    endTime := IncHour(endTime, jamSelesai);
-  end;
-
-  if FMessengerMode = mmNone then
-  begin
-    eventName := Params.Values['EventName_value'];
-    if eventName = '' then
-      eventName := 'Meeting';
-    FActionCallback := 'calendar.add|name='+ucwords(eventName)
-      +'|start=' + FormatDateTime('yyyy/mm/dd HH:nn', startTime)
-      + '|end=' + FormatDateTime('yyyy/mm/dd HH:nn', endTime);
-    Result := SimpleBOT.GetResponse('LayananBelumTersedia');
-    Exit;
-  end;
-
-
-  // TEST
-  //Result := 'x: ' + FormatDateTime('dd/mmm/yyyy HH:nn', startTime) + ' - ' + FormatDateTime('dd/mmm/yyyy HH:nn', endTime);
-  //Exit;
-
-  with TKlaudlessCalendarIntegration.Create do
-  begin
-    AppID := Config[KLAUDLESS_APPID];
-    APIKey := Config[KLAUDLESS_APIKEY];
-    Result := EventCreate(Config[KLAUDLESS_CALENDAR_ACCOUNTID],
-      Config[KLAUDLESS_CALENDAR_ID], ucwords(eventName), startTime, endTime);
-
-    Free;
-  end;
-  Result := SimpleBOT.GetResponse('CalendarEventCreated');
-  Result := StringReplace(Result, '%eventname%', Params.Values['EventName_value'],
-    [rfReplaceAll]);
-  Result := StringReplace(Result, '%eventtime%',
-    FormatDateTime('dd/mmm/yyyy HH:nn', startTime), [rfReplaceAll]);
-end;
-
 function TCarikWebModule.openweatherInfoHandler(const IntentName: string;
   Params: TStrings): string;
 var
@@ -2890,49 +2662,6 @@ begin
 
 end;
 
-
-procedure TCarikWebModule.Analytics(AChannel, AIntent, AText, AUserID: string);
-var
-  _trackingID: string;
-begin
-  _trackingID := Config[GOOGLEANALYTICS_TRACKING_ID];
-  if _trackingID.IsEmpty then
-    Exit;
-  if AIntent.Equals('GroupInvitationNotMe') then Exit;
-  if AIntent.Equals('Greeting') then Exit;
-  if AIntent.Equals('Menyapa') then Exit;
-
-  with TGoogleAnalyticsIntegration.Create do
-  begin
-    TrackingID := Config[GOOGLEANALYTICS_TRACKING_ID];
-    ClientID := AUserID;
-    HitType := 'event';
-    Payloads['an'] := FBotName;
-    Payloads['ai'] := FBotName;
-    Payloads['av'] := AChannel + '-v0';
-    Payloads['ec'] := AChannel;
-    Payloads['ea'] := AIntent;
-    Payloads['dp'] := '/' + AIntent;
-    Payloads['el'] := UrlEncode(AText);
-    Payloads['lbl'] := 'lbl1';
-    Payloads['uid'] := AUserID;
-    if not Send then
-      LogUtil.Add(URL, 'Analytics-Failed');
-    Free;
-  end;
-
-  with TGoogleAnalyticsIntegration.Create do
-  begin
-    TrackingID := Config[GOOGLEANALYTICS_TRACKING_ID];
-    ClientID := AUserID;
-    HitType := 'pageview';
-    Payloads['dt'] := AIntent;
-    Payloads['dp'] := UrlEncode(AIntent + '/' + AText);
-    Send;
-    Free;
-  end;
-
-end;
 
 function TCarikWebModule.KnowledgeBase(AKeyword: string): string;
 var
@@ -4433,8 +4162,6 @@ begin
 
   SimpleBOT.Handler['pajak_kendaraan'] := @pajakKendaraanHandler;
   SimpleBOT.Handler['alquran_terjemahan'] := @alquranTerjemahanHandler;
-  SimpleBOT.Handler['calendar_eventlist'] := @kloudlessCalendarEventListHandler;
-  SimpleBOT.Handler['calendar_eventcreate'] := @kloudlessCalendarEventCreateHandler;
 
   SimpleBOT.Handler['mortgage_calculator'] := @mortgageCalculatorHandler;
   SimpleBOT.Handler['openweather_info'] := @openweatherInfoHandler;
@@ -5532,7 +5259,6 @@ begin
       Result := ExternalNLP(Message);
     end;
     SaveUnknownChat(Message);
-    Analytics('global', 'unknown', Message, Carik.UserID);
     Exit;
   end;
 
@@ -5569,7 +5295,6 @@ begin
     end;
     SimpleBOT.UserData[LABEL_NLP_ERROR_COUNT] := nec.ToString;
     SaveUnknownChat(Message);
-    Analytics('global', 'unknown', Message, Carik.UserID);
   end else
   begin
     try

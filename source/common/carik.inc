@@ -77,7 +77,6 @@ const
 
   WITAI_TOKEN = 'witai/default/token';
   GOOGLE_KEY = 'google/default/key';
-  GOOGLEANALYTICS_TRACKING_ID = 'googleanalytics/default/tracking_id';
   COGNITIVE_OCR_TOKEN = 'cognitive/ocr/key';
   OPENWEATHERMAP_KEY = 'openweathermap/default/key';
   IBACOR_TOKEN = 'ibacor/default/token';
@@ -85,10 +84,6 @@ const
 
 
 
-  KLAUDLESS_APPID = 'klaudless/default/appid';
-  KLAUDLESS_APIKEY = 'klaudless/default/apikey';
-  KLAUDLESS_CALENDAR_ACCOUNTID = 'klaudless/default/calendar_accountid';
-  KLAUDLESS_CALENDAR_ID = 'klaudless/default/calendar_id';
 
   MASKOFA_SHALAT_SESSIONID = 'maskofa/jadwalshalat/sessionid';
   MASKOFA_SHALAT_CITYLISTS = 'maskofa/jadwalshalat/citylists';
