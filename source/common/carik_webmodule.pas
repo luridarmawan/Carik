@@ -16,7 +16,7 @@ uses
   alquranindonesia_integration,
   telegram_integration, googleplacesearch_integration,
   kamussunda_integration, openweathermap_integration,
-  bca_integration, witai_integration,
+  witai_integration,
   line_integration,
   facebookmessenger_integration,
   googledistancematrix_integration,
@@ -88,12 +88,10 @@ type
     FImageURL: string;
     FInvitedFullName: string;
     FInvitedUserName: string;
-    FIsTranslate: boolean;
     FITALIC_CODE: string;
     FIterationParams: string;
     FIterationParamsPast : TStringList;
     FKickUser: boolean;
-    FLanguage: string;
     FMessengerMode: TMessengerMode;
     FOnError: TOnMessageEvent;
     forceRespond: boolean;
@@ -132,7 +130,6 @@ type
     function getIsObjectFocusExpired: boolean;
     function getisSpeakingMode: boolean;
     function getIsSuggest: boolean;
-    function getIsTranslate: boolean;
     function getPrefixID: string;
     function getReplyType: string;
     function getRequestAsJson: TJSONUtil;
@@ -182,9 +179,6 @@ type
     function customMathHandler(const IntentName: string; Params: TStrings): string;
 
     function propertySearchHandler(const IntentName: string; Params: TStrings): string;
-    function smartHomeGeneralHandler(const IntentName: string; Params: TStrings): string;
-    function smartHomeOnHandler(const IntentName: string; Params: TStrings): string;
-    function smartHomeOffHandler(const IntentName: string; Params: TStrings): string;
 
     function richContentHandler(const IntentName: string; Params: TStrings): string;
 
@@ -193,7 +187,6 @@ type
     function speakingModeOnHandler(const IntentName: string; Params: TStrings): string;
     function speakingModeOffHandler(const IntentName: string; Params: TStrings): string;
 
-    function bcaTestHandler(const IntentName: string; Params: TStrings): string;
 
     function botEnableHandler(const IntentName: string; Params: TStrings): string;
     function botDisableHandler(const IntentName: string; Params: TStrings): string;
@@ -295,7 +288,6 @@ type
     property PrefixId: string read getPrefixID;
     property UniqueID: string read getUniqueID;
     property MessengerMode: TMessengerMode read FMessengerMode write FMessengerMode;
-    property Language: string read FLanguage write FLanguage;
     property SendAudio: boolean read FSendAudio write FSendAudio;
     property SendPhoto: boolean read FSendPhoto write FSendPhoto;
     property SendRichContent: boolean read FSendRichContent;
@@ -331,7 +323,6 @@ type
     function ContextFocus: string;
 
 
-    function LanguageSetHandler(const IntentName: string; Params: TStrings): string;
 
     // Kamus
     function translateIndonesiaToSundaHandler(const IntentName: string;
@@ -363,7 +354,6 @@ type
     property VenueLongitude: double read FVenueLongitude;
 
     property SpeakingMode: boolean read getisSpeakingMode write setisSpeakingMode;
-    property IsTranslate: boolean read getIsTranslate;
     property ErrorCount: integer read FErrorCount;
     property OnError : TOnMessageEvent Read FOnError Write FOnError;
 
@@ -412,38 +402,6 @@ type
     property Token_T: Integer read FToken_T write FToken_T;
   end;
 
-  { TSmartHomeTestIntegration }
-
-  // FOR TESTING ONLY
-  TSmartHomeTestIntegration = class(TInterfacedObject)
-  private
-    FAccountName: string;
-    FUserData: TIniFile;
-    FAccountID: string;
-    FStorageFileName: string;
-    FStorageType: TStorageType;
-    function getActive: boolean;
-    procedure setActive(AValue: boolean);
-    procedure setStorageType(AValue: TStorageType);
-  public
-    constructor Create; virtual;
-    destructor Destroy; virtual;
-
-    procedure AddDevice(ADeviceName: string);
-    procedure SetDevice(ADeviceName: string; AStatus: boolean);
-    function IsHaveDevice: boolean;
-    function IsDeviceExist(ADeviceName: string): boolean;
-    function GetDeviceAsText: string;
-    function GetStatusAsText(ADeviceName: string): string;
-  published
-    property Active: boolean read getActive write setActive;
-    property AccountID: string read FAccountID write FAccountID;
-    property AccountName: string read FAccountName write FAccountName;
-    property StorageType: TStorageType read FStorageType write setStorageType;
-    property StorageFileName: string read FStorageFileName write FStorageFileName;
-  end;
-
-
 implementation
 
 uses security_lib;
@@ -473,118 +431,11 @@ const
   AI_CONFIG_TRIGGERWORD = 'ai/default/trigger_word';
 
   REGEX_EQUATION =
-    '^[cos|sin|tan|tangen|sqr|sqrt|log|ln|sec|cosec|arctan|abs|exp|frac|int|round|trunc|shl|shr|ifs|iff|ifd|ifi|0-9*+ ().,-/:]+$';
-
-{ TSmartHomeTestIntegration }
-
-procedure TSmartHomeTestIntegration.setStorageType(AValue: TStorageType);
-begin
-  if FStorageType = AValue then
-    Exit;
-  FStorageType := AValue;
-
-  if FStorageType = stFile then
-  begin
-
-  end;
-end;
-
-function TSmartHomeTestIntegration.getActive: boolean;
-begin
-  Result := FUserData.ReadBool('AccountList', FAccountID, False);
-end;
-
-procedure TSmartHomeTestIntegration.setActive(AValue: boolean);
-begin
-  FUserData.WriteBool('AccountList', FAccountID, AValue);
-end;
-
-constructor TSmartHomeTestIntegration.Create;
-begin
-  FAccountID := '';
-  FStorageType := stFile;
-  FStorageFileName := 'files/carik/carik-smarthome.dat';
-
-  FUserData := TIniFile.Create(FStorageFileName);
-end;
-
-destructor TSmartHomeTestIntegration.Destroy;
-begin
-  if Assigned(FUserData) then
-    FUserData.Free;
-end;
-
-function TSmartHomeTestIntegration.IsHaveDevice: boolean;
-begin
-  Result := False;
-  if FAccountID = '' then
-    Exit;
-
-  Result := FUserData.ReadBool('AccountList', FAccountID, False);
-end;
-
-function TSmartHomeTestIntegration.IsDeviceExist(ADeviceName: string): boolean;
-begin
-  Result := FUserData.ReadBool(FAccountID, ADeviceName, False);
-end;
-
-function TSmartHomeTestIntegration.GetDeviceAsText: string;
-var
-  i: integer;
-  s: string;
-  lst: TStringList;
-begin
-  Result := '';
-  lst := TStringList.Create;
-  FUserData.ReadSectionRaw(FAccountID, lst);
-
-  for i := 0 to lst.Count - 1 do
-  begin
-    if lst.ValueFromIndex[i] = '1' then
-    begin
-      s := lst.Names[i];
-      Result := Result + s + ':'#10' ' + GetStatusAsText(s) + #10;
-    end;
-  end;
-  lst.Free;
-end;
-
-function TSmartHomeTestIntegration.GetStatusAsText(ADeviceName: string): string;
-var
-  s: string;
-  d: TDateTime;
-begin
-  Result := 'Mati, ';
-  if FUserData.ReadString(FAccountID + '-' + ADeviceName, 'status', '0') = '1' then
-    Result := 'Nyala, ';
-
-  s := FUserData.ReadString(FAccountID + '-' + ADeviceName, 'time', '');
-  if s.IsEmpty then Exit;
-  try
-    d := ScanDateTime('yyyy-mm-dd HH:nn:ss', s);
-    Result := Result + ' ' + FormatDateTime('dd/mm HH:nn', d);
-  except
-  end;
-end;
-
-procedure TSmartHomeTestIntegration.AddDevice(ADeviceName: string);
-begin
-  FUserData.WriteBool(FAccountID, ADeviceName, True);
-  FUserData.WriteString(FAccountID + '-' + ADeviceName, 'by_id', '');
-  FUserData.WriteString(FAccountID + '-' + ADeviceName, 'by_name', '');
-  FUserData.WriteString(FAccountID + '-' + ADeviceName, 'status', '1');
-  FUserData.WriteString(FAccountID + '-' + ADeviceName, 'time',
-    FormatDateTime('yyyy-mm-dd HH:nn:ss', Now));
-end;
-
-procedure TSmartHomeTestIntegration.SetDevice(ADeviceName: string; AStatus: boolean);
-begin
-  FUserData.WriteString(FAccountID + '-' + ADeviceName, 'by_id', FAccountID);
-  FUserData.WriteString(FAccountID + '-' + ADeviceName, 'by_name', FAccountName);
-  FUserData.WriteBool(FAccountID + '-' + ADeviceName, 'status', AStatus);
-  FUserData.WriteString(FAccountID + '-' + ADeviceName, 'time',
-    FormatDateTime('yyyy-mm-dd HH:nn:ss', Now));
-end;
+    // alternation nama fungsi utuh (dulu character class [cos|sin|...] sehingga
+    // string apa pun dari huruf-huruf itu dianggap persamaan)
+    '^((cos|sin|tan|tangen|sqr|sqrt|log|ln|sec|cosec|arctan|abs|exp|frac|int|round|trunc|shl|shr|ifs|iff|ifd|ifi)|[0-9*+ ().,\-/:^])+$';
+  // 'x' sebagai tanda kali hanya di antara angka/kurung (bukan di dalam 'exp', 'max')
+  REGEX_TIMES = '([0-9)])\s*x\s*([0-9(])';
 
 { TCarikWebModule }
 
@@ -610,6 +461,7 @@ end;
 
 function TCarikWebModule.getIsObjectFocusExpired: boolean;
 begin
+  Result := False; // belum diimplementasikan
 
 end;
 
@@ -730,28 +582,6 @@ begin
   end;
 end;
 
-function TCarikWebModule.getIsTranslate: boolean;
-var
-  s: string;
-begin
-  Result := False;
-
-  if SimpleBOT.LastSeen > 3600 then
-  begin
-    SimpleBOT.UserData['language'] := '';
-    Exit;
-  end;
-
-  if ((SimpleBOT.UserData['language'] <> '') and
-    (SimpleBOT.UserData['language'] <> 'id')) then
-  begin
-    Result := True;
-    FIsTranslate := True;
-    FLanguage := SimpleBOT.UserData['language'];
-  end;
-
-end;
-
 function TCarikWebModule.getPrefixID: string;
 begin
   Result := ChannelId;
@@ -854,6 +684,7 @@ var
   s: string;
   dt: TDateTime;
 begin
+  Result := False;
   try
     Result := s2b(SimpleBOT.UserData[WAITING_INPUT]);
   except
@@ -900,6 +731,7 @@ end;
 function TCarikWebModule.onewordHandler(const IntentName: string;
   Params: TStrings): string;
 begin
+  Result := '';
   if not SimpleBOT.isFormula then
     Exit;
   Result := SimpleBOT.Formula(Text);
@@ -974,6 +806,7 @@ function TCarikWebModule.defineHandler(const IntentName: string;
 var
   keyName, keyValue: string;
 begin
+  Result := '';
 
   // global define
   keyName := Params.Values['Key'];
@@ -1006,6 +839,7 @@ var
 begin
   FIterationParams := Params.Values['keyword'];
 
+  FreeAndNil(FIterationParamsPast); // bisa dipanggil lebih dari sekali per request
   FIterationParamsPast := TStringList.Create;
   FIterationParamsPast.Text := SimpleBOT.UserData['CONTEXT_PARAM'];
   FIterationParamsPast.Text := FIterationParamsPast.Text.Replace('|', #10);
@@ -1081,7 +915,6 @@ begin
   if Carik.IsGroup then
     Exit;
 
-  SimpleBOT.Debug := True;
   SimpleBOT.UserData['id'] := Carik.UserID;
   SimpleBOT.UserData['type'] := copy(getUniqueID, 0, 2);
   SimpleBOT.UserData['datetime'] := FormatDateTime('yyyy-mm-dd HH:nn:ss', Now);
@@ -1325,6 +1158,7 @@ end;
 function TCarikWebModule.carikAdminTambahHandler(const IntentName: string;
   Params: TStrings): string;
 begin
+  Result := '';
   if not isTelegramGroup then
     Exit;
   if Carik.AdminAdd(Params.Values['username_value']) then
@@ -1338,6 +1172,7 @@ end;
 function TCarikWebModule.carikAdminHapusHandler(const IntentName: string;
   Params: TStrings): string;
 begin
+  Result := '';
   if not isTelegramGroup then
     Exit;
   if Carik.AdminDel(Params.Values['username_value']) then
@@ -1376,6 +1211,7 @@ end;
 function TCarikWebModule.carikMemberBaruHandler(const IntentName: string;
   Params: TStrings): string;
 begin
+  Result := '';
   if Carik.isCollectiveWelcomeGreeting then
   begin
     Exit;
@@ -1628,12 +1464,18 @@ function TCarikWebModule.customMathHandler(const IntentName: string;
 var
   mathParser: TFPExpressionParser;
   resultValue: double;
+  s: string;
+  fs: TFormatSettings;
 const
   AllowedOperator = ['+', '-', '/', '*', '^'];
 begin
   Result := Params.Values['Formula_value'];
   Result := StringReplace(Result, ':', '/', [rfReplaceAll]);
-  Result := StringReplace(Result, 'x', '*', [rfReplaceAll]);
+  // ulangi agar "2x3x4" (berbagi angka) terganti semua
+  repeat
+    s := Result;
+    Result := preg_replace(REGEX_TIMES, '$1*$2', Result);
+  until Result = s;
   Result := StringReplace(Result, 'dibagi', '/', [rfReplaceAll]);
   Result := StringReplace(Result, 'bagi', '/', [rfReplaceAll]);
   Result := StringReplace(Result, 'dikali', '*', [rfReplaceAll]);
@@ -1691,10 +1533,13 @@ begin
     mathParser.Expression := Result;
     resultValue := ArgToFloat(mathParser.Evaluate);
     SimpleBOT.UserData['math_result'] := f2s(resultValue);
-    ThousandSeparator:='.';
-    DecimalSeparator:=',';
-    Result := FloatToStr(resultValue);
-    Result := Format(FFormatNumber,[resultValue]);
+    // format Indonesia hanya untuk teks keluaran; jangan ubah setting global
+    // (dulu ThousandSeparator/DecimalSeparator global -> f2s menulis "1,5"
+    // ke math_result sehingga perhitungan lanjutan gagal)
+    fs := DefaultFormatSettings;
+    fs.ThousandSeparator := '.';
+    fs.DecimalSeparator := ',';
+    Result := Format(FFormatNumber, [resultValue], fs);
     Result := Result.Replace(',000','');
   except
     Result := ExternalNLP('berapa '+Params.Values['Formula_value']);
@@ -1780,93 +1625,6 @@ begin
   Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
 end;
 
-function TCarikWebModule.smartHomeGeneralHandler(const IntentName: string;
-  Params: TStrings): string;
-begin
-  Result := SimpleBOT.GetResponse(IntentName + 'NoAccount');
-  with TSmartHomeTestIntegration.Create do
-  begin
-    AccountID := UniqueID;
-    //Active:= True;
-    //AddDevice( 'Lampu Kamar');
-    //AddDevice('Lampu Depan');
-    if IsHaveDevice then
-    begin
-      Result := SimpleBOT.GetResponse(IntentName + 'Exist') + #10;
-      Result := Result + GetDeviceAsText;
-    end;
-    Free;
-  end;
-
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-end;
-
-function TCarikWebModule.smartHomeOnHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  deviceName: string;
-begin
-  deviceName := Params.Values['PerangkatListrik_value'] + ' ' +
-    Params.Values['apapun_value'];
-  deviceName := ucwords(deviceName);
-
-  Result := SimpleBOT.GetResponse('SmartHomeGeneralNoAccount');
-  with TSmartHomeTestIntegration.Create do
-  begin
-    AccountID := UniqueID;
-    AccountName := Carik.UserName;
-    if IsHaveDevice then
-    begin
-      Result := SimpleBOT.GetResponse('SmartHomeGeneralNoDevice');
-      if IsDeviceExist(deviceName) then
-      begin
-        SetDevice(deviceName, True);
-        Result := SimpleBOT.GetResponse('SmartHomeGeneralDeviceStatus');
-        Result := StringReplace(Result, '%device_name%', deviceName, [rfReplaceAll]);
-        Result := StringReplace(Result, '%status%', 'nyala', [rfReplaceAll]);
-        Result := StringReplace(Result, '%device_list%', GetDeviceAsText,
-          [rfReplaceAll]);
-      end;
-    end;
-    Free;
-  end;
-
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-end;
-
-function TCarikWebModule.smartHomeOffHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  deviceName: string;
-begin
-  deviceName := Params.Values['PerangkatListrik_value'] + ' ' +
-    Params.Values['apapun_value'];
-  deviceName := ucwords(deviceName);
-
-  Result := SimpleBOT.GetResponse('SmartHomeGeneralNoAccount');
-  with TSmartHomeTestIntegration.Create do
-  begin
-    AccountID := UniqueID;
-    AccountName := Carik.UserName;
-    if IsHaveDevice then
-    begin
-      Result := SimpleBOT.GetResponse('SmartHomeGeneralNoDevice');
-      if IsDeviceExist(deviceName) then
-      begin
-        SetDevice(deviceName, False);
-        Result := SimpleBOT.GetResponse('SmartHomeGeneralDeviceStatus');
-        Result := StringReplace(Result, '%device_name%', deviceName, [rfReplaceAll]);
-        Result := StringReplace(Result, '%status%', 'mati', [rfReplaceAll]);
-        Result := StringReplace(Result, '%device_list%', GetDeviceAsText,
-          [rfReplaceAll]);
-      end;
-    end;
-    Free;
-  end;
-
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-end;
-
 function TCarikWebModule.richContentHandler(const IntentName: string;
   Params: TStrings): string;
 begin
@@ -1919,8 +1677,11 @@ begin
 
   if Length(Result) > TEXT2SPEECH_MAX_CHAR then
   begin
-    Result := copy(Result, 0, TEXT2SPEECH_MAX_CHAR);
-    Result := copy(Result, 0, RPos('_', Result) - 1);
+    Result := copy(Result, 1, TEXT2SPEECH_MAX_CHAR);
+    // potong di batas kata. Dulu mencari '_' (spasi tidak lagi diganti '_')
+    // sehingga RPos = 0 dan teks > 250 karakter menjadi kosong.
+    if RPos(' ', Result) > 0 then
+      Result := copy(Result, 1, RPos(' ', Result) - 1);
   end;
 
   if Result = '_-' then
@@ -1969,13 +1730,14 @@ function TCarikWebModule.isTriggeredText(Message: string): boolean;
 var
   i, j: integer;
   s, stime, strigger_name, strigger, LMessage: string;
-  jData: TJSONData;
+  triggers: TJSONObject;
+  words: TJSONData;
   d: TDateTime;
   tmpFormatSettings: TFormatSettings;
+  inCooldown: boolean;
 begin
   Result := False;
   LMessage := ' ' + Message + ' ';
-  jData := nil;
 
   tmpFormatSettings := FormatSettings;
   tmpFormatSettings.DateSeparator := '-';
@@ -1988,85 +1750,50 @@ begin
   selain itu, check trigger global
   }
 
-  try
-    s := Config.GetObject(AI_CONFIG_TRIGGERWORD).AsJSON;
-    jData := GetJSON(s);
-    for i := 0 to jData.Count - 1 do
-    begin
-      strigger_name := Config.GetObject(AI_CONFIG_TRIGGERWORD).Names[i];
-      for j := 0 to jData.Items[i].Count - 1 do
-      begin
-        strigger := ' ' + jData.Items[i].Items[j].AsString + ' ';
-        if preg_match(strigger, LMessage) then
-        begin
-          s := SafeText(strigger_name);
-          s := ReplaceAll(s, ['(', ')'], '');
-          s := mysql_real_escape_string(s);
-          s := TRIGGER_SESSION_PREFIX + Carik.GroupName + Carik.GroupChatID + '-' + s + '_time';
-
-          stime := Carik.Data.ReadString(TRIGGER_SESSION_PREFIX, s,
-            FormatDateTime('yyyy-mm-dd HH:nn:ss', IncMinute(Now, TRIGGER_INTERVAL + 2)));
-          try
-            d := StrToDateTime(stime, tmpFormatSettings);
-            //j := MinutesBetween(Now, d);
-            if MinutesBetween(Now, d) <= TRIGGER_INTERVAL then // in minutes
-            begin
-              Break;
-            end;
-          except
-          end;
-
-          Carik.Data.WriteString(TRIGGER_SESSION_PREFIX, s, FormatDateTime('yyyy-mm-dd HH:nn:ss', Now));
-          FTriggeredText := Trim(strigger);
-          Result := True;
-          break;
-        end;
-      end;
-
-    end;
-  except
-  end;
-
-
-  if Assigned(jData) then
-    jData.Free;
-  exit;
+  // objek config dipinjam (jangan di-Free); nil bila trigger_word tidak ada
+  triggers := Config.GetObject(AI_CONFIG_TRIGGERWORD);
+  if not Assigned(triggers) then
+    Exit;
 
   try
-    s := Config[AI_CONFIG_TRIGGERWORD];
-    jData := GetJSON(s);
-    for i := 0 to jData.Count - 1 do
+    for i := 0 to triggers.Count - 1 do
     begin
-      strigger := trim(jData.Items[i].AsString);
-      if preg_match(strigger, LMessage) then
+      strigger_name := triggers.Names[i];
+      words := triggers.Items[i];
+      for j := 0 to words.Count - 1 do
       begin
-        s := SafeText(strigger);
+        strigger := ' ' + words.Items[j].AsString + ' ';
+        if not preg_match(strigger, LMessage) then
+          Continue;
+
+        s := SafeText(strigger_name);
         s := ReplaceAll(s, ['(', ')'], '');
         s := mysql_real_escape_string(s);
         s := TRIGGER_SESSION_PREFIX + Carik.GroupName + Carik.GroupChatID + '-' + s + '_time';
 
         stime := Carik.Data.ReadString(TRIGGER_SESSION_PREFIX, s,
           FormatDateTime('yyyy-mm-dd HH:nn:ss', IncMinute(Now, TRIGGER_INTERVAL + 2)));
+        inCooldown := False;
         try
           d := StrToDateTime(stime, tmpFormatSettings);
-          j := MinutesBetween(Now, d);
-          if MinutesBetween(Now, d) <= TRIGGER_INTERVAL then // in minutes
-          begin
-            Break;
-          end;
+          inCooldown := MinutesBetween(Now, d) <= TRIGGER_INTERVAL; // in minutes
         except
         end;
+        // trigger ini masih cooldown: lewati, cek trigger berikutnya
+        if inCooldown then
+          Break;
 
         Carik.Data.WriteString(TRIGGER_SESSION_PREFIX, s, FormatDateTime('yyyy-mm-dd HH:nn:ss', Now));
         FTriggeredText := Trim(strigger);
         Result := True;
-        break;
+        Break;
       end;
+      // dulu loop luar tetap berjalan sehingga trigger lain menimpa FTriggeredText
+      if Result then
+        Break;
     end;
-
   except
   end;
-
 end;
 
 function TCarikWebModule.IsUserSuspended(AChannelID, AUserID: string): boolean;
@@ -2118,48 +1845,57 @@ function TCarikWebModule.IsBlackListed(AUserName: string; AUserId: string
   ): boolean;
 var
   i: integer;
-  log_url: string;
+  s, log_url: string;
   spamList: TIniFile;
   http_response: IHTTPResponse;
   json: TJSONUtil;
+  http: THTTPLib;
 begin
   Result := False;
 
   // get info from blacklist repository
+  http := nil;
+  json := nil;
   try
-    log_url := Config[BLACKLISTCHECK_URL] + '?_=1&channel=telegram&id=' + AUserId;
-    with THTTPLib.Create do
-    begin
-      URL := log_url;
-      AddHeader('Cache-Control', 'no-cache');
-      AddHeader('X-Client-Type', 'beta'); //TODO: client type
-      http_response := Get;
+    try
+      log_url := Config[BLACKLISTCHECK_URL] + '?_=1&channel=telegram&id=' + UrlEncode(AUserId);
+      http := THTTPLib.Create;
+      http.URL := log_url;
+      http.AddHeader('Cache-Control', 'no-cache');
+      http.AddHeader('X-Client-Type', 'beta'); //TODO: client type
+      http_response := http.Get;
       if http_response.ResultCode = 200 then
       begin
         json := TJSONUtil.Create;
         json.LoadFromJsonString(http_response.ResultText, False);
-        i := json['code'];
-        if i = 0 then
-        begin
-          Free;
+        // code 0 = terdaftar. Key kosong/tidak valid bukan berarti terdaftar.
+        s := json['code'];
+        if TryStrToInt(Trim(s), i) and (i = 0) then
           Result := True;
-          Exit;
-        end;
       end;
-      Free;
+    except
     end;
-  except
+  finally
+    json.Free;
+    http.Free;
   end;
-
-  if not FileExists(BLACKLIST_FILENAME) then
+  if Result then
     Exit;
 
-  spamList := TIniFile.Create(BLACKLIST_FILENAME);
-  if spamList.ValueExists('blacklist', 'tl-' + AUserName) then
+  // blacklist lokal (opsional): cocokkan user id (ditulis ReportSpam) dan username.
+  // Dulu: file tidak ada -> Exit, sehingga pengecekan Combot/CAS di bawah terlewat.
+  if FileExists(BLACKLIST_FILENAME) then
   begin
-    spamList.Free;
-    Result := True;
-    Exit;
+    spamList := TIniFile.Create(BLACKLIST_FILENAME);
+    try
+      if (AUserId.IsNotEmpty and spamList.ValueExists('blacklist', 'tl-' + AUserId))
+        or (AUserName.IsNotEmpty and spamList.ValueExists('blacklist', 'tl-' + AUserName)) then
+        Result := True;
+    finally
+      spamList.Free;
+    end;
+    if Result then
+      Exit;
   end;
 
   // Check from combot
@@ -2167,12 +1903,11 @@ begin
   begin
     if IsSpammer(AUserId) then
     begin
-      ReportSpam('+'+AUserId);
+      // tercatat di blacklist lokal sehingga pesan berikutnya tidak lapor ulang
+      ReportSpam(AUserId);
       Result := True;
     end;
   end;
-
-  spamList.Free;
 end;
 
 function TCarikWebModule.IsSuspected(AUserId: string; AFullName: string
@@ -2316,9 +2051,11 @@ begin
       Result := Result + 71;
 
     //exception
-    if preg_match('stackoverflow.com', AText) then
+    // pola regex: titik harus di-escape. Dulu '.ini ' cocok dengan kata "ini "
+    // di kalimat apa pun sehingga skor spam berkurang 80 (spam lolos).
+    if preg_match('stackoverflow\.com', AText) then
       Result := Result - 80;
-    if preg_match('.ini ', AText) then
+    if preg_match('\w\.ini\b', AText) then // nama file seperti php.ini
       Result := Result - 80;
 
     if isNewMember(AUserID, Carik.GroupChatID, NEW_MEMBER_INTERVAL_POST_PERMITTED) then // last join N minutes ago
@@ -2446,26 +2183,41 @@ begin
       LogUtil.Add( AUserID.Replace('+','') + '/' + AUserName + ': ' + http_response.ResultText, 'SPAMREPORT');
 
       json:= TJSONUtil.Create;
-      json.LoadFromJsonString(http_response.ResultText, False);
-      Result:= json['text'];
+      try
+        json.LoadFromJsonString(http_response.ResultText, False);
+        Result:= json['text'];
+      except
+        Result := '';
+      end;
       json.Free;
 
-      Result := AUserID + ' reported as spammer';
+      // pakai pesan dari server bila ada (dulu selalu ditimpa -> selalu "sukses")
       if Result.IsEmpty then
-        Result := 'kegagalan dalam melaporkan spammer';
+      begin
+        if http_response.ResultCode = 200 then
+          Result := AUserID.Replace('+','') + ' reported as spammer'
+        else
+          Result := 'kegagalan dalam melaporkan spammer';
+      end;
 
       Free;
     end;
   except
   end;
 
-  if not FileExists(BLACKLIST_FILENAME) then
+  // catat di blacklist lokal dengan key yang sama seperti pengecekan di
+  // IsBlackListed ('tl-<id>', tanpa '+'); file dibuat bila foldernya ada
+  if not DirectoryExists(ExtractFilePath(ExpandFileName(BLACKLIST_FILENAME))) then
     Exit;
 
   try
     spamList := TIniFile.Create(BLACKLIST_FILENAME);
-    spamList.WriteString('blacklist', 'tl-'+AUserID, FormatDateTime('yyyy-mm-dd HH:nn:ss',Now));
-    spamList.Free;
+    try
+      spamList.WriteString('blacklist', 'tl-' + AUserID.Replace('+',''),
+        FormatDateTime('yyyy-mm-dd HH:nn:ss',Now));
+    finally
+      spamList.Free;
+    end;
   except
   end;
 
@@ -2755,23 +2507,6 @@ begin
 end;
 
 
-function TCarikWebModule.bcaTestHandler(const IntentName: string;
-  Params: TStrings): string;
-begin
-  Result := 'bca';
-
-  with TBCAIntegration.Create do
-  begin
-    SandBox := True;
-    ClientID := '';
-    ClientSecret := '';
-    Result := GetToken;
-    LogUtil.Add(Authorization, 'BCA');
-    LogUtil.Add(ResultText, 'BCA');
-    Free;
-  end;
-end;
-
 function TCarikWebModule.botEnableHandler(const IntentName: string;
   Params: TStrings): string;
 begin
@@ -2813,6 +2548,7 @@ function TCarikWebModule.mortgageCalculatorHandler(const IntentName: string;
   Params: TStrings): string;
 var
   _amount, _long, _interest, _cicilan: double;
+  fs: TFormatSettings;
 begin
   _amount := s2f(StringHumanToNominal(Params.Values['LoanAmount_value']));
   _long := s2f(Params.Values['LongInstallment_value']);
@@ -2825,14 +2561,17 @@ begin
 
   _cicilan := mortgageCalculator(_amount, _long, _interest);
 
-  DefaultFormatSettings.ThousandSeparator := '.';
+  // format ribuan Indonesia lokal saja (dulu mengubah DefaultFormatSettings global)
+  fs := DefaultFormatSettings;
+  fs.ThousandSeparator := '.';
+  fs.DecimalSeparator := ',';
   Result := SimpleBOT.GetResponse(IntentName + 'Response');
-  Result := StringReplace(Result, '$LoanAmount$', FormatFloat('###,##0', _amount),
+  Result := StringReplace(Result, '$LoanAmount$', FormatFloat('###,##0', _amount, fs),
     [rfReplaceAll]);
-  Result := StringReplace(Result, '$LongInstallment$', FormatFloat('###,##0', _long),
+  Result := StringReplace(Result, '$LongInstallment$', FormatFloat('###,##0', _long, fs),
     [rfReplaceAll]);
   Result := StringReplace(Result, '$Interest$', f2s(_interest), [rfReplaceAll]);
-  Result := StringReplace(Result, '$Cicilan$', FormatFloat('###,##0', _cicilan),
+  Result := StringReplace(Result, '$Cicilan$', FormatFloat('###,##0', _cicilan, fs),
     [rfReplaceAll]);
 end;
 
@@ -3360,11 +3099,11 @@ begin
     AGroupID := '';
 
   is_group := '0';
-  is_mentioned := '1';
+  is_mentioned := '0';
   if AIsGroup then
     is_group := '1';
   if AIsMentioned then
-    is_mentioned := '0';
+    is_mentioned := '1'; // dulu terbalik: AIsMentioned=True dikirim '0'
 
   requestJson := TJSONUtil.Create;
   responseJson := TJSONUtil.Create;
@@ -3420,13 +3159,17 @@ begin
     requestJson['message/from/name'] := AFullName;
     requestJson['message/from/username'] := AUserName;
     requestJson['message/chat/channel'] := AChannelID;
-    requestJson['message/chat/id'] := MessageID;
+    // id chat (grup bila ada, selain itu user), bukan id pesan
+    if AGroupID <> '' then
+      requestJson['message/chat/id'] := AGroupID
+    else
+      requestJson['message/chat/id'] := AUserID;
     requestJson['message/chat/is_mentioned'] := is_mentioned;
     requestJson['message/chat/is_group'] := is_group;
     requestJson['message/intents/name'] := SimpleBOT.SimpleAI.IntentName;
     requestJson['message/dashboard_device_id'] := DashboardDeviceID;
 
-    if AReplyFromMessageId > 0 then requestJson['message/chat/is_reply'] := 0;
+    if AReplyFromMessageId > 0 then requestJson['message/chat/is_reply'] := 1;
     if AIsGroup then
     begin
       requestJson['message/chat/group_name'] := AGroupName;
@@ -3676,7 +3419,6 @@ begin
   end;
   Carik := TCarikController.Create;
   FCustomActionFiles := nil;
-  FLanguage := 'en-id';
   FSendAudio := False;
   FSendPhoto := False;
   FSendVenue := False;
@@ -3687,8 +3429,6 @@ begin
   FCanSendTemplateCard := False;
   FCustomActionAsText := '';
   FCustomActionSuffix := '';
-  FIsTranslate := False;
-  FLanguage := '';
   FFileURL := '';
   FCaption := '';
   FButtonCaption := 'More';
@@ -3768,28 +3508,6 @@ begin
     Exit;
   if MinutesBetween(Now, StrToDateTime(s)) <= _OBJECT_DISCUSSION_MAXTIME then
     Result := SimpleBOT.UserData['CONTEXT'];
-end;
-
-function TCarikWebModule.LanguageSetHandler(const IntentName: string;
-  Params: TStrings): string;
-begin
-  SimpleBOT.UserData['language'] := Params.Values['Language'];
-  if ((SimpleBOT.UserData['language'] = '') or
-    (SimpleBOT.UserData['language'] = 'id')) then
-  begin
-    FIsTranslate := False;
-    Result := SimpleBOT.GetResponse('GreetingSemangat');
-  end
-  else
-  begin
-    FIsTranslate := True;
-    FLanguage := Params.Values['Language'];
-    SimpleBOT.UserData['language'] := FLanguage;
-    SimpleBOT.UserData['language_datetime'] := FormatDateTime('yyyy-mm-dd HH:nn:ss', Now);
-    Result := SimpleBOT.GetResponse(IntentName + 'Response');
-    Result := StringReplace(Result, '%Language_value%',
-      Params.Values['Language_value'], [rfReplaceAll]);
-  end;
 end;
 
 function TCarikWebModule.translateIndonesiaToSundaHandler(const IntentName: string;
@@ -3947,7 +3665,6 @@ begin
   SimpleBOT.Handler['bot_disable'] := @botDisableHandler;
   SimpleBOT.Handler['translate_indonesia_sunda'] := @translateIndonesiaToSundaHandler;
   SimpleBOT.Handler['translate_sunda_indonesia'] := @translateSundaToIndonesiaHandler;
-  SimpleBOT.Handler['language_set'] := @LanguageSetHandler;
 
   SimpleBOT.Handler['alquran_terjemahan'] := @alquranTerjemahanHandler;
 
@@ -3984,15 +3701,10 @@ begin
   SimpleBOT.Handler['speaking_mode_on'] := @speakingModeOnHandler;
   SimpleBOT.Handler['speaking_mode_off'] := @speakingModeOffHandler;
 
-  SimpleBOT.Handler['bca_test'] := @bcaTestHandler;
 
   // Property Search
   SimpleBOT.Handler['property_search'] := @propertySearchHandler;
 
-  // SmartHome - Test Only
-  SimpleBOT.Handler['smarthome_general'] := @smartHomeGeneralHandler;
-  SimpleBOT.Handler['smarthome_on'] := @smartHomeOnHandler;
-  SimpleBOT.Handler['smarthome_off'] := @smartHomeOffHandler;
 
   // LINE
   SimpleBOT.Handler['rich_content'] := @richContentHandler;
@@ -4173,7 +3885,8 @@ begin
 
   if AActionType='card' then
   begin
-    if ((FMessengerMode = mmFacebook)or(FMessengerMode = mmFacebook)) then
+    // Facebook & LINE menampilkan kartu secara native (dulu: mmFacebook ditulis dua kali)
+    if ((FMessengerMode = mmFacebook)or(FMessengerMode = mmLine)) then
       Exit;
     SaveActionToUserDataFromCard(AData);
     Exit;
@@ -4346,15 +4059,6 @@ function TCarikWebModule.FormInputHandler: boolean;
     postData.Free;
   end;
 
-  function submitForm:boolean;
-  var
-    formSession: string;
-  begin
-    formSession := SimpleBOT.UserData[FORM_SESSION];
-
-
-  end;
-
 var
   i, j, questionIndex, questionTotal: integer;
   valueMax, valueMin, lengthMax, lengthMin: integer;
@@ -4367,10 +4071,11 @@ begin
   answerText := '';
 
   // check reset form
-  if ((Text = FORM_INPUT_RESET_CODE)or
-     (Text = 'batal')or
-     (Text = 'cancel')or
-     (Text = '"'+FORM_INPUT_RESET_CODE+'"')) then
+  // kode reset (dari tombol form) selalu berlaku; kata "batal"/"cancel" hanya
+  // saat sedang mengisi form, agar tidak memicu POST pembatalan di luar form
+  if ((Text = FORM_INPUT_RESET_CODE) or
+     (Text = '"'+FORM_INPUT_RESET_CODE+'"') or
+     (((Text = 'batal') or (Text = 'cancel')) and WaitingInput)) then
   begin
     s := SimpleBOT.UserData[MESSAGE_ACTION_NAME];
     resetForm();
@@ -5081,6 +4786,13 @@ begin
       SimpleBOT.SimpleAI.ResponseText.Clear;
       s := ProcessText(s);
       Result := SimpleBOT.SimpleAI.ResponseText.Text;
+      // saran berhasil: jangan ditimpa hasil ExternalNLP di bawah
+      if Result.Trim <> '' then
+      begin
+        SimpleBOT.UserData[LABEL_NLP_ERROR_COUNT] := '0';
+        Exit;
+      end;
+      Result := defaultReplay;
     end;
   end;//IsSuggest
 

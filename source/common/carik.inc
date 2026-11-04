@@ -28,6 +28,7 @@ const
   BOTNAME_DEFAULT = 'Carik';
   CONFIG_BOTNAME = 'ai/default/name';
   CONFIG_CLIENT_ID = 'ai/default/client_id';
+  CONFIG_WHATSAPP_NUMBER = 'ai/default/whatsapp/number'; // nomor WhatsApp chatbot
   CONFIG_REPLY_DISABLE = 'ai/default/reply_disable';
   CONFIG_FIRST_SESSION_RESPONSE = 'ai/default/first_session_response';
 
