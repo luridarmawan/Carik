@@ -90,10 +90,6 @@ const
   IBACOR_TOKEN = 'ibacor/default/token';
   RAJAONGKIR_TOKEN = 'rajaongkir/default/key';
 
-  PORTALPULSA_USERID = 'PortalPulsa/default/userid';
-  PORTALPULSA_KEY = 'PortalPulsa/default/key';
-  PORTALPULSA_SECRET = 'PortalPulsa/default/secret';
-
 
 
   KLAUDLESS_APPID = 'klaudless/default/appid';

@@ -19,7 +19,7 @@ uses
   kamussunda_integration, bmkg_integration, openweathermap_integration,
   apixu_integration, bca_integration, witai_integration,
   line_integration,
-  facebookmessenger_integration, portalpulsa_integration,
+  facebookmessenger_integration,
   googledistancematrix_integration, cognitivecustomvision_integration,
   kloudlesscalendar_integration, rss_lib, http_lib, IniFiles,
   rajaongkir_integration, googleanalytics_integration,
@@ -155,9 +155,6 @@ type
     function botStartHandler(const IntentName: string; Params: TStrings): string;
     function resiHandler(const IntentName: string; Params: TStrings): string;
     procedure setisSpeakingMode(AValue: boolean);
-    function voucherConvensionalHandler(const IntentName: string;
-      Params: TStrings): string;
-    function voucherHandler(const IntentName: string; Params: TStrings): string;
     function movieInfoHandler(const IntentName: string; Params: TStrings): string;
     function moviePlayHandler(const IntentName: string; Params: TStrings): string;
     function distanceHandler(const IntentName: string; Params: TStrings): string;
@@ -1179,76 +1176,6 @@ begin
     Free;
   end;
   }
-end;
-
-function TCarikWebModule.voucherConvensionalHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  s, _nominal, _nomor, _pin: string;
-  lst: TStrings;
-begin
-  lst := Explode(Text, '.');
-  _nominal := lst[0];
-  _nomor := lst[1];
-  _pin := lst[2];
-
-  with TPortalPulsaIntegration.Create do
-  begin
-    UserID := 'P21765';
-    Key := 'dc40e6d1c4dcd48cd254cc5cc1248ea5';
-    Secret := 'd10fdea4e4085145e63bf5521fe1a2314a30bd67fd047f76891799cf4401ab83';
-    TransactionID := FormatDateTime('yyyymmddHHnnss', Now) + _nomor;
-
-    if IsiPulsa(_nomor, '5') then
-    begin
-
-    end;
-    LogUtil.Add(Message, 'PULSA');
-    Free;
-  end;
-  s := SimpleBOT.SimpleAI.GetResponse(IntentName + 'Response');
-  s := StringReplace(s, '%nomor%', _nomor, [rfReplaceAll]);
-  s := StringReplace(s, '%nominal%', _nominal, [rfReplaceAll]);
-  s := StringReplace(s, '%pin%', _pin, [rfReplaceAll]);
-  Result := s;
-end;
-
-function TCarikWebModule.voucherHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  s, _nominal, _nomor: string;
-  _nominalFloat: double;
-begin
-  _nomor := Params.Values['nomorponsel_value'];
-  _nominal := Params.Values['nominalpulsa_value'] + Params.Values['satuan'];
-  _nominal := StringHumanToNominal(_nominal);
-  _nominalFloat := StringHumanToFloat(_nominal);
-  DefaultFormatSettings.ThousandSeparator := '.';
-  _nominal := FormatFloat('###,##0', _nominalFloat);
-
-  //TODO: dihapus aja
-
-
-  with TPortalPulsaIntegration.Create do
-  begin
-    UserID := Config[PORTALPULSA_USERID];
-    Key := Config[PORTALPULSA_KEY];
-    Secret := Config[PORTALPULSA_SECRET];
-    TransactionID := FormatDateTime('yyyymmddHHnnss', Now) + _nomor;
-
-    if IsiPulsa(_nomor, '5') then
-    begin
-
-    end;
-    LogUtil.Add(Message, 'PULSA');
-    Free;
-  end;
-
-
-  s := SimpleBOT.SimpleAI.GetResponse(IntentName + 'Response');
-  s := StringReplace(s, '%nomor%', _nomor, [rfReplaceAll]);
-  s := StringReplace(s, '%nominal%', _nominal, [rfReplaceAll]);
-  Result := s;
 end;
 
 function TCarikWebModule.movieInfoHandler(const IntentName: string;
@@ -5044,8 +4971,6 @@ begin
 
   SimpleBOT.Handler['bot_start'] := @botStartHandler;
   SimpleBOT.Handler['resi_paket'] := @resiHandler;
-  SimpleBOT.Handler['voucher_konvensional'] := @voucherConvensionalHandler;
-  SimpleBOT.Handler['voucher'] := @voucherHandler;
   SimpleBOT.Handler['movie_play'] := @moviePlayHandler;
   SimpleBOT.Handler['movie_info'] := @movieInfoHandler;
   SimpleBOT.Handler['jarak'] := @distanceHandler;
