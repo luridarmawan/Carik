@@ -88,12 +88,10 @@ type
     FImageURL: string;
     FInvitedFullName: string;
     FInvitedUserName: string;
-    FIsTranslate: boolean;
     FITALIC_CODE: string;
     FIterationParams: string;
     FIterationParamsPast : TStringList;
     FKickUser: boolean;
-    FLanguage: string;
     FMessengerMode: TMessengerMode;
     FOnError: TOnMessageEvent;
     forceRespond: boolean;
@@ -132,7 +130,6 @@ type
     function getIsObjectFocusExpired: boolean;
     function getisSpeakingMode: boolean;
     function getIsSuggest: boolean;
-    function getIsTranslate: boolean;
     function getPrefixID: string;
     function getReplyType: string;
     function getRequestAsJson: TJSONUtil;
@@ -291,7 +288,6 @@ type
     property PrefixId: string read getPrefixID;
     property UniqueID: string read getUniqueID;
     property MessengerMode: TMessengerMode read FMessengerMode write FMessengerMode;
-    property Language: string read FLanguage write FLanguage;
     property SendAudio: boolean read FSendAudio write FSendAudio;
     property SendPhoto: boolean read FSendPhoto write FSendPhoto;
     property SendRichContent: boolean read FSendRichContent;
@@ -327,7 +323,6 @@ type
     function ContextFocus: string;
 
 
-    function LanguageSetHandler(const IntentName: string; Params: TStrings): string;
 
     // Kamus
     function translateIndonesiaToSundaHandler(const IntentName: string;
@@ -359,7 +354,6 @@ type
     property VenueLongitude: double read FVenueLongitude;
 
     property SpeakingMode: boolean read getisSpeakingMode write setisSpeakingMode;
-    property IsTranslate: boolean read getIsTranslate;
     property ErrorCount: integer read FErrorCount;
     property OnError : TOnMessageEvent Read FOnError Write FOnError;
 
@@ -586,28 +580,6 @@ begin
     Result := Config[SUGGESTION_ENABLE];
   except
   end;
-end;
-
-function TCarikWebModule.getIsTranslate: boolean;
-var
-  s: string;
-begin
-  Result := False;
-
-  if SimpleBOT.LastSeen > 3600 then
-  begin
-    SimpleBOT.UserData['language'] := '';
-    Exit;
-  end;
-
-  if ((SimpleBOT.UserData['language'] <> '') and
-    (SimpleBOT.UserData['language'] <> 'id')) then
-  begin
-    Result := True;
-    FIsTranslate := True;
-    FLanguage := SimpleBOT.UserData['language'];
-  end;
-
 end;
 
 function TCarikWebModule.getPrefixID: string;
@@ -3447,7 +3419,6 @@ begin
   end;
   Carik := TCarikController.Create;
   FCustomActionFiles := nil;
-  FLanguage := 'en-id';
   FSendAudio := False;
   FSendPhoto := False;
   FSendVenue := False;
@@ -3458,8 +3429,6 @@ begin
   FCanSendTemplateCard := False;
   FCustomActionAsText := '';
   FCustomActionSuffix := '';
-  FIsTranslate := False;
-  FLanguage := '';
   FFileURL := '';
   FCaption := '';
   FButtonCaption := 'More';
@@ -3539,28 +3508,6 @@ begin
     Exit;
   if MinutesBetween(Now, StrToDateTime(s)) <= _OBJECT_DISCUSSION_MAXTIME then
     Result := SimpleBOT.UserData['CONTEXT'];
-end;
-
-function TCarikWebModule.LanguageSetHandler(const IntentName: string;
-  Params: TStrings): string;
-begin
-  SimpleBOT.UserData['language'] := Params.Values['Language'];
-  if ((SimpleBOT.UserData['language'] = '') or
-    (SimpleBOT.UserData['language'] = 'id')) then
-  begin
-    FIsTranslate := False;
-    Result := SimpleBOT.GetResponse('GreetingSemangat');
-  end
-  else
-  begin
-    FIsTranslate := True;
-    FLanguage := Params.Values['Language'];
-    SimpleBOT.UserData['language'] := FLanguage;
-    SimpleBOT.UserData['language_datetime'] := FormatDateTime('yyyy-mm-dd HH:nn:ss', Now);
-    Result := SimpleBOT.GetResponse(IntentName + 'Response');
-    Result := StringReplace(Result, '%Language_value%',
-      Params.Values['Language_value'], [rfReplaceAll]);
-  end;
 end;
 
 function TCarikWebModule.translateIndonesiaToSundaHandler(const IntentName: string;
@@ -3718,7 +3665,6 @@ begin
   SimpleBOT.Handler['bot_disable'] := @botDisableHandler;
   SimpleBOT.Handler['translate_indonesia_sunda'] := @translateIndonesiaToSundaHandler;
   SimpleBOT.Handler['translate_sunda_indonesia'] := @translateSundaToIndonesiaHandler;
-  SimpleBOT.Handler['language_set'] := @LanguageSetHandler;
 
   SimpleBOT.Handler['alquran_terjemahan'] := @alquranTerjemahanHandler;
 
