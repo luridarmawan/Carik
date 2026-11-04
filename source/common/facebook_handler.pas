@@ -304,7 +304,7 @@ begin
     if Exec('./ffmpeg', ['-i', fbVoice, '-ac', '1', mp3File], s, swoNone) then
     begin
       with TWitAiIntegration.Create do
-      begin
+      try
         Token := Config[WITAI_TOKEN];
         //ContentType := Facebook.VoiceType; use default
         Text := trim(SpeechToText(mp3File));
@@ -312,6 +312,7 @@ begin
         begin
           LogUtil.Add(ResultText, 'FB-voice');
         end;
+      finally
         Free;
       end;
       Prefix := SimpleBOT.GetResponse('VoiceResult');

@@ -209,8 +209,7 @@ begin
 
   // CarikBOT isRecording
   Carik.UserPrefix := '';
-  Carik.UserID := chatID;
-  Carik.UserID := _userID; //!
+  Carik.UserID := _userID;
   Carik.UserName := userName;
   Carik.FullName := fullName;
 
@@ -383,30 +382,7 @@ begin
   end;
   Response.Content := SimpleBOT.SimpleAI.ResponseJson;
 
-  if not SimpleBOT.IsExternal then
-  begin
-    if SimpleBOT.SimpleAI.IntentName <> 'Waktu' then
-    begin
-      //ulil
-      s := 'http://global-tts.carik.id/speech/generate/' + UrlEncode(SimpleBOT.SimpleAI.ResponseText.Text);
-      //s := file_get_contents( s); //ulil
-    end;
-  end;
-
   //Exec Command
-  {
-  if Carik.IsCommand(SimpleBOT.SimpleAI.ResponseText.Text) then
-  begin
-    SimpleBOT.SimpleAI.ResponseText.Text :=
-      Carik.ExecCommand(SimpleBOT.SimpleAI.ResponseText.Text);
-    if SimpleBOT.SimpleAI.ResponseText.Text = '' then
-      SimpleBOT.SimpleAI.ResponseText.Text :=
-        SimpleBOT.GetResponse('DataTidakAdaResponse');
-    //TODO: generate user data and object
-    Response.Content := SimpleBOT.SimpleAI.ResponseJson;
-  end;
-  }
-
   if IsCommand(SimpleBOT.SimpleAI.ResponseText.Text) then
   begin
     SimpleBOT.SimpleAI.ResponseText.Text :=
@@ -418,13 +394,6 @@ begin
     Response.Content := SimpleBOT.SimpleAI.ResponseJson;
   end;
 
-  {
-  if not Prefix.IsEmpty then
-  begin
-    SimpleBOT.SimpleAI.ResponseText[0] := Prefix + SimpleBOT.SimpleAI.ResponseText[0];
-    Response.Content := SimpleBOT.SimpleAI.ResponseJson;
-  end;
-  }
   if Prefix.IsNotEmpty then
   begin
     if HideTextReply then
@@ -469,54 +438,32 @@ begin
   begin
     parameterAction := Explode(ActionCallback, '|');
     cmdAction := Explode(parameterAction[0], '.');
-
     json := TJSONUtil.Create;
-    json.LoadFromJsonString( Response.Content, False);
-    json['response/action/callback_string'] := ActionCallback;
-    json['response/action/callback_name'] := cmdAction[0];
-    if cmdAction.Count > 1 then
-      json['response/action/callback_method'] := cmdAction[1];
-    for i := 1 to parameterAction.count - 1 do
-    begin
-      fieldAction := Explode(parameterAction[i], '=');
-      json[UnicodeString('response/action/parameter_' + i2s(i))] := parameterAction[i];
-      try
-        json[UnicodeString('response/action/' + fieldAction[0])] := fieldAction[1];
-      except
+    try
+      json.LoadFromJsonString( Response.Content, False);
+      json['response/action/callback_string'] := ActionCallback;
+      json['response/action/callback_name'] := cmdAction[0];
+      if cmdAction.Count > 1 then
+        json['response/action/callback_method'] := cmdAction[1];
+      for i := 1 to parameterAction.count - 1 do
+      begin
+        fieldAction := Explode(parameterAction[i], '=');
+        json[UnicodeString('response/action/parameter_' + i2s(i))] := parameterAction[i];
+        try
+          json[UnicodeString('response/action/' + fieldAction[0])] := fieldAction[1];
+        except
+        end;
+        fieldAction.Free;
       end;
-      fieldAction.Free;
+      Response.Content := json.AsJSONFormated;
+    finally
+      json.Free;
+      cmdAction.Free;
+      parameterAction.Free;
     end;
-
-    //json['processing_time'] := ProcessingTime;
-    //if SimpleBOT.SimpleAI.ElapsedTime > 0 then
-    //begin
-    //  json['processing_time'] := SimpleBOT.SimpleAI.ElapsedTime.ToString;
-    //end;
-    Response.Content := json.AsJSONFormated;
   end;
-
-  if Assigned(ElementArray) then
-  begin
-    json := TJSONUtil.Create;
-    json.LoadFromJsonString( Response.Content, False);
-
-    //json.ValueArray['response/action/data'] := ElementArray;
-    Response.Content := json.AsJSONFormated;
-    json.Free;
-  end;
-
-  //---
 
   text_response := SimpleBOT.SimpleAI.ResponseText.Text;
-  json := TJSONUtil.Create;
-  json.LoadFromJsonString( SimpleBOT.SimpleAI.ResponseJson, False);
-  s := json['response/action/callback_string'];
-  if s <> '' then
-  begin
-    //text_response := '#internalAction';
-  end;
-  json.Free;
-
 
   if not IsDebug then
   begin
