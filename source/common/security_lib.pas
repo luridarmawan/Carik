@@ -5,7 +5,8 @@ unit security_lib;
   Config (config.json):
     "security": {
       "api_token": "<token panjang & acak>",
-      "allowed_hosts": "api.carik.id,carik.id"
+      "allowed_hosts": "api.carik.id,carik.id",
+      "allow_external_commands": false
     }
 
   - security/api_token     : wajib untuk endpoint admin (/command, /loader).
@@ -14,6 +15,9 @@ unit security_lib;
                              URL-nya berasal dari data dinamis (ExecCommand, submit form).
                              Subdomain ikut diizinkan. Bila kosong, semua host publik
                              http/https diizinkan; host lokal/privat SELALU diblokir.
+  - security/allow_external_commands : (default false) izinkan command post-rich:/json-rich:
+                             dari respons ExternalNLP/LLM. Hanya berlaku bila allowed_hosts
+                             diisi; host tujuan wajib ada di allowlist.
   - systems/debug          : parameter _DEBUG / _FORMDEBUG hanya berlaku bila true.
 }
 
@@ -27,6 +31,7 @@ uses
 const
   SECURITY_API_TOKEN = 'security/api_token';
   SECURITY_ALLOWED_HOSTS = 'security/allowed_hosts';
+  SECURITY_ALLOW_EXTERNAL_COMMANDS = 'security/allow_external_commands';
   SECURITY_DEBUG = 'systems/debug';
 
 // perbandingan string dengan waktu konstan (terhadap isi)
@@ -38,6 +43,11 @@ function IsValidApiToken(const AAuthorization, ATokenHeader, AQueryToken: string
 
 // True bila URL aman untuk di-request dari server (anti SSRF)
 function IsSafeOutboundURL(const AURL: string): boolean;
+
+// True bila command (post-rich:/json-rich:) dari respons ExternalNLP/LLM boleh dijalankan:
+// security/allow_external_commands = true DAN security/allowed_hosts tidak kosong
+// (host tujuan kemudian wajib ada di allowlist lewat IsSafeOutboundURL)
+function IsExternalCommandAllowed: boolean;
 
 // True bila parameter debug dari query string boleh berlaku
 function IsDebugAllowed: boolean;
@@ -221,6 +231,23 @@ begin
   end;
 
   Result := isHostAllowedByList(host);
+end;
+
+function IsExternalCommandAllowed: boolean;
+var
+  enabled: boolean;
+begin
+  Result := False;
+  enabled := False;
+  try
+    enabled := Config.GetValue(UnicodeString(SECURITY_ALLOW_EXTERNAL_COMMANDS), False);
+  except
+    enabled := False;
+  end;
+  if not enabled then
+    Exit;
+  // tanpa allowlist, command eksternal tetap ditolak
+  Result := configString(SECURITY_ALLOWED_HOSTS) <> '';
 end;
 
 function IsDebugAllowed: boolean;

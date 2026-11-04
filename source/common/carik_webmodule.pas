@@ -12,15 +12,14 @@ uses
   fpjson, strutils, md5, sha1,
   common, json_lib, fastplaz_handler, carik_controller, simplebot_controller,
   logutil_lib,
-  movie_controller, cognitiveocr_integration,
-  cognitivedomainspecific_integration, cognitiveanalyze_integration,
+  movie_controller,
   alquranindonesia_integration,
   telegram_integration, googleplacesearch_integration,
   kamussunda_integration, openweathermap_integration,
   bca_integration, witai_integration,
   line_integration,
   facebookmessenger_integration,
-  googledistancematrix_integration, cognitivecustomvision_integration,
+  googledistancematrix_integration,
   rss_lib, http_lib, IniFiles,
   rajaongkir_integration,
   kamuskemdikbud_integration, thesaurus_integration,
@@ -141,7 +140,6 @@ type
     function getWaitingInput: boolean;
     function isGroup: boolean;
     function isTelegramGroup: boolean;
-    function getTelegramImageID: string;
 
 
     // HANDLER
@@ -159,12 +157,6 @@ type
     function moviePlayHandler(const IntentName: string; Params: TStrings): string;
     function distanceHandler(const IntentName: string; Params: TStrings): string;
     function distanceFromToHandler(const IntentName: string; Params: TStrings): string;
-    function ocrCognitiveHandler(const IntentName: string; Params: TStrings): string;
-    function imageSpecificCognitiveHandler(const IntentName: string;
-      Params: TStrings): string;
-
-    function imageAnalyzeCognitiveHandler(const IntentName: string;
-      Params: TStrings): string;
     function lokasiHandler(const IntentName: string; Params: TStrings): string;
     function lokasiDenganKoordinatHandler(const IntentName: string;
       Params: TStrings): string;
@@ -905,30 +897,6 @@ begin
 end;
 
 
-function TCarikWebModule.getTelegramImageID: string;
-var
-  _json: TJSONData;
-begin
-  Result := '';
-  _json := GetJSON(Request.Content);
-  try
-    Result := _json.GetPath('message.photo[2].file_id').AsString;
-  except
-    try
-      Result := _json.GetPath('message.photo[1].file_id').AsString;
-    except
-      try
-        Result := _json.GetPath('message.photo[0].file_id').AsString;
-      except
-        on e: Exception do
-        begin
-        end;
-      end;
-    end;
-  end;
-  _json.Free;
-end;
-
 function TCarikWebModule.onewordHandler(const IntentName: string;
   Params: TStrings): string;
 begin
@@ -1201,170 +1169,6 @@ begin
   Params.Values['Origin_value'] := Params.Values['$1'] + ',' + Params.Values['$2'];
   Params.Values['Destination_value'] := Params.Values['$3'];
   Result := distanceHandler(IntentName, Params);
-end;
-
-function TCarikWebModule.ocrCognitiveHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  s, _url: string;
-begin
-  Result := '';
-  if Config[COGNITIVE_OCR_TOKEN] = '' then
-    Exit;
-  {
-  if not isTelegramGroup then
-  begin
-    Result := _TELEGRAM_ERR_GROUP_ONLY;
-    Exit;
-  end;
-  }
-  s := getTelegramImageID;
-  if s = '' then
-    Exit;
-
-  _url := '';
-  with TTelegramIntegration.Create do
-  begin
-    Token := Config[TELEGRAM_TOKEN];
-    s := GetFilePath(s);
-    if s <> '' then
-    begin
-      _url := format(TELEGRAM_FILEURL, [Token]) + s;
-    end;
-  end;
-
-  if _url = '' then
-    // TODO: !!! kalau text kosong "@CarikBot" bingung dia
-    Exit;
-
-  with TCognitiveOCR.Create do
-  begin
-    Token := Config[COGNITIVE_OCR_TOKEN];
-    Language := 'en';
-    Result := Scan(_url);
-    Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-    Free;
-  end;
-
-  if Result <> '' then
-  begin
-    //Result := RemoveUnicode(Result);
-    //Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-    //Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
-    Result := AnsiToUtf8(Result);
-    Result := Result.Replace('*', '');
-
-    s := SimpleBOT.GetResponse(IntentName + _RESPONSE);
-    Result := Format(s, [Result]);
-    LogUtil.Add(Result, 'OCR');
-  end
-  else
-    Result := SimpleBOT.GetResponse(IntentName + 'NoText');
-end;
-
-function TCarikWebModule.imageSpecificCognitiveHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  s, _url: string;
-begin
-  Result := '';
-  if Config[COGNITIVE_OCR_TOKEN] = '' then
-    Exit;
-  {
-  if not isTelegramGroup then
-  begin
-    Result := _TELEGRAM_ERR_GROUP_ONLY;
-    Exit;
-  end;
-  }
-  s := getTelegramImageID;
-  if s = '' then
-    Exit;
-
-  _url := '';
-  with TTelegramIntegration.Create do
-  begin
-    Token := Config[TELEGRAM_TOKEN];
-    s := GetFilePath(s);
-    if s <> '' then
-    begin
-      _url := format(TELEGRAM_FILEURL, [Token]) + s;
-    end;
-  end;
-
-  if _url = '' then
-    // TODO: !!! kalau text kosong "@CarikBot" bingung dia
-    Exit;
-
-  with TCognitiveDomainSpecific.Create do
-  begin
-    Token := Config[COGNITIVE_OCR_TOKEN];
-    Details := 'celebrities';
-    Result := Scan(_url);
-    LogUtil.Add(ResultText, 'ImageToFigure');
-    Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-    Free;
-  end;
-
-  if Result <> '' then
-  begin
-    s := SimpleBOT.GetResponse(IntentName + _RESPONSE);
-    Result := Format(s, [Result]);
-  end
-  else
-    Result := SimpleBOT.GetResponse(IntentName + 'NotFound');
-end;
-
-function TCarikWebModule.imageAnalyzeCognitiveHandler(const IntentName: string;
-  Params: TStrings): string;
-var
-  s, _url: string;
-begin
-  Result := '';
-  if Config[COGNITIVE_OCR_TOKEN] = '' then
-    Exit;
-  if not isTelegramGroup then
-  begin
-    Result := _TELEGRAM_ERR_GROUP_ONLY;
-    Exit;
-  end;
-  s := getTelegramImageID;
-  if s = '' then
-    Exit;
-
-  _url := '';
-  with TTelegramIntegration.Create do
-  begin
-    Token := Config[TELEGRAM_TOKEN];
-    s := GetFilePath(s);
-    if s <> '' then
-    begin
-      _url := format(TELEGRAM_FILEURL, [Token]) + s;
-    end;
-  end;
-
-  if _url = '' then
-    // TODO: !!! kalau text kosong "@CarikBot" bingung dia
-    Exit;
-
-  with TCognitiveAnalyze.Create do
-  begin
-    Token := Config[COGNITIVE_OCR_TOKEN];
-    Features := 'Description,Faces,Categories,Tags,Adult';
-    Details := 'celebrities';
-    Result := Analyze(_url);
-    Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-    Free;
-  end;
-
-  if Result <> '' then
-  begin
-    s := SimpleBOT.GetResponse(IntentName + _RESPONSE);
-    Result := Format(s, [Result]);
-  end
-  else
-    Result := SimpleBOT.GetResponse(IntentName + 'NotFound');
-
 end;
 
 function TCarikWebModule.lokasiHandler(const IntentName: string;
@@ -3069,14 +2873,18 @@ var
   lst: TStrings;
 begin
   Result := '';
-  // command hanya boleh berasal dari respons intent lokal (config NLP).
-  // Tolak bila respons datang dari ExternalNLP/LLM, atau bila pesan user sendiri
-  // memuat command (mis. dipantulkan oleh echo) -> cegah SSRF via prompt/echo.
-  if FUntrustedResponse
-    or ContainsText(OriginalText, CMD_POST_RICH + ':')
+  // Pesan user sendiri memuat command (mis. dipantulkan oleh echo): selalu tolak.
+  if ContainsText(OriginalText, CMD_POST_RICH + ':')
     or ContainsText(OriginalText, CMD_JSON_RICH + ':') then
   begin
-    LogUtil.Add('command ditolak (sumber tidak tepercaya): ' + Copy(AText, 1, 200), 'SECURITY');
+    LogUtil.Add('command ditolak (dari pesan user): ' + Copy(AText, 1, 200), 'SECURITY');
+    Exit;
+  end;
+  // Respons dari ExternalNLP/LLM: hanya bila security/allow_external_commands = true
+  // dan security/allowed_hosts diisi (host tujuan dicek lagi di execPost).
+  if FUntrustedResponse and not IsExternalCommandAllowed then
+  begin
+    LogUtil.Add('command ditolak (dari ExternalNLP): ' + Copy(AText, 1, 200), 'SECURITY');
     Exit;
   end;
 
@@ -4133,9 +3941,6 @@ begin
   SimpleBOT.Handler['movie_info'] := @movieInfoHandler;
   SimpleBOT.Handler['jarak'] := @distanceHandler;
   SimpleBOT.Handler['distance_fromto'] := @distanceFromToHandler;
-  SimpleBOT.Handler['image_to_text'] := @ocrCognitiveHandler;
-  SimpleBOT.Handler['image_to_figure'] := @imageSpecificCognitiveHandler;
-  SimpleBOT.Handler['image_analyze'] := @imageAnalyzeCognitiveHandler;
   SimpleBOT.Handler['lokasi'] := @lokasiHandler;
   SimpleBOT.Handler['lokasi_koordinat'] := @lokasiDenganKoordinatHandler;
   SimpleBOT.Handler['bot_enable'] := @botEnableHandler;

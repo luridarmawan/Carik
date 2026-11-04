@@ -60,8 +60,6 @@ const
   CARIKSEARCH_TOKEN = 'carik_search/token';
 
 
-  CUSTOMVISION_KEY = 'customvision/default/key';
-  CUSTOMVISION_URL = 'customvision/default/url';
 
   TELEGRAM_TOKEN = 'telegram/default/token';
   TELEGRAM_WHITELIST = 'telegram/default/whitelist';
@@ -77,7 +75,6 @@ const
 
   WITAI_TOKEN = 'witai/default/token';
   GOOGLE_KEY = 'google/default/key';
-  COGNITIVE_OCR_TOKEN = 'cognitive/ocr/key';
   OPENWEATHERMAP_KEY = 'openweathermap/default/key';
   IBACOR_TOKEN = 'ibacor/default/token';
   RAJAONGKIR_TOKEN = 'rajaongkir/default/key';
