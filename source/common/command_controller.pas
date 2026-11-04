@@ -20,7 +20,7 @@ type
     userIdAsArray: TStrings;
     FUserId: string;
     function validateMuteDate(ADateAsString: string): string;
-    procedure prepareData;
+    function prepareData: boolean;
     procedure commandUserset();
 
   public
@@ -46,20 +46,27 @@ begin
     Result := ADateAsString;
 end;
 
-procedure TCommandController.prepareData;
+// OutputJson/Die tidak menghentikan prosedur, jadi pemanggil harus Exit bila False
+function TCommandController.prepareData: boolean;
 begin
+  Result := False;
+  FreeAndNil(userIdAsArray);
   userIdAsArray := Explode(FUserId, '-');
-  if (userIdAsArray.Count = 1) then
+  if (userIdAsArray.Count < 2) then
   begin
-    userIdAsArray.Free;
     OutputJson(400, ERR_INVALID_PARAMETER);
+    Exit;
   end;
 
   if userIdAsArray[0] = '5' then userIdAsArray[0] := 'wa';
   if userIdAsArray[0] = 'tl' then ChannelId := 'telegram';
   if userIdAsArray[0] = 'fb' then ChannelId := 'facebook';
   if userIdAsArray[0] = 'wa' then ChannelId := 'whatsapp'; //whatsapp, public_nlp
-  if ChannelId.IsEmpty then OutputJson(400, ERR_INVALID_PARAMETER);
+  if ChannelId.IsEmpty then
+  begin
+    OutputJson(400, ERR_INVALID_PARAMETER);
+    Exit;
+  end;
   FUserId := userIdAsArray[1];
 
   if not ClientId.IsEmpty then
@@ -72,6 +79,7 @@ begin
   SessionController.StartSession;
 
   SimpleBOT.SessionUserID := userIdAsArray[0] + FUserId;
+  Result := True;
 end;
 
 procedure TCommandController.commandUserset();
@@ -81,10 +89,11 @@ procedure TCommandController.commandUserset();
   var
     muteDuration: string;
   begin
-    muteDuration := RequestAsJson[VAR_MUTE];
+    muteDuration := VarToStr(RequestAsJson[VAR_MUTE]);
     if muteDuration.IsNotEmpty then
     begin
-      muteDuration := Now.IncMinute(muteDuration.AsInteger).AsString;
+      // s2i: input non-numerik jadi 0, bukan EConvertError
+      muteDuration := Now.IncMinute(s2i(muteDuration)).AsString;
     end;
     SimpleBOT.UserData[SessionPrefix + 'mute'] := muteDuration;
   end;
@@ -100,7 +109,7 @@ end;
 
 destructor TCommandController.Destroy;
 begin
-  userIdAsArray.Free;
+  FreeAndNil(userIdAsArray);
   inherited Destroy;
 end;
 
@@ -113,8 +122,12 @@ begin
   Response.ContentType := 'application/json';
 
   FUserId := _GET['userId'];
-  if FUserId.IsEmpty then OutputJson(400, ERR_INVALID_PARAMETER);
-  prepareData;
+  if FUserId.IsEmpty then
+  begin
+    OutputJson(400, ERR_INVALID_PARAMETER);
+    Exit;
+  end;
+  if not prepareData then Exit;
 
   if Operation = OPERATION_USERSET then
   begin
@@ -150,14 +163,19 @@ begin
   if ClientId.IsEmpty then ClientId := VarToStr(RequestAsJson['clientid']);
   if FUserId.IsEmpty then FUserId := VarToStr(RequestAsJson['userId']);
   if ClientId.IsEmpty then ClientId := '0';
-  if FUserId.IsEmpty then OutputJson(400, ERR_INVALID_PARAMETER);
-  prepareData;
+  if FUserId.IsEmpty then
+  begin
+    OutputJson(400, ERR_INVALID_PARAMETER);
+    Exit;
+  end;
+  if not prepareData then Exit;
 
   if Operation.IsEmpty then Operation := VarToStr(RequestAsJson['op']);
   if Operation = OPERATION_USERSET then
   begin
     commandUserset();
     OutputJson(0, OK + ' ' + Now.AsString + '/' + SessionPrefix);
+    Exit;
   end;
 
   OutputJson(1, FAILED);

@@ -56,13 +56,13 @@ constructor TCarikHandler.CreateNew(AOwner: TComponent; CreateMode: integer);
 begin
   inherited CreateNew(AOwner, CreateMode);
   BeforeRequest := @BeforeRequestHandler;
-
-  Carik := TCarikController.Create;
+  jsonData := nil;
+  // Carik & SimpleBOT dibuat dan dibebaskan oleh TCarikWebModule
 end;
 
 destructor TCarikHandler.Destroy;
 begin
-  Carik.Free;
+  FreeAndNil(jsonData);
   inherited Destroy;
 end;
 
@@ -90,9 +90,11 @@ var
   json: TJSONUtil;
   cmdAction, parameterAction, fieldAction : TStrings;
   isHandled: Boolean;
-  replyText: TStringList;
+  replyText: string;
 begin
   Response.Content := '{}';
+  isHandled := False;
+  replyText := '';
   forceRespond := False;
   BOLD_CODE := '**';
   ITALIC_CODE := '*';
@@ -101,8 +103,19 @@ begin
 
   // telegram style
   //   {"message":{"message_id":0,"text":"Hi","chat":{"id":0}}}
+  FreeAndNil(jsonData);
   try
     jsonData := GetJSON(Request.Content);
+  except
+    jsonData := nil;
+  end;
+  if not Assigned(jsonData) then
+  begin
+    Response.Content := '{"status":"invalid json"}';
+    Exit;
+  end;
+
+  try
     try
       Text := jsonData.GetPath('message.text').AsString;
     except
@@ -302,8 +315,7 @@ begin
   if Assigned(FOnMessage) then
   begin
     isHandled := False;
-    replyText := TStringList.Create;
-    replyText.Text := FOnMessage(OriginalText, isHandled);
+    replyText := FOnMessage(OriginalText, isHandled);
     for j:=0 to SimpleBOT.AdditionalParameters.Count-1 do
     begin
       s := SimpleBOT.AdditionalParameters.Names[j];
@@ -359,8 +371,7 @@ begin
       SimpleBOT.SimpleAI.ResponseText.Text := s;
     end;
   end else begin
-    SimpleBOT.SimpleAI.ResponseText.Text := replyText.Text;
-    replyText.Free
+    SimpleBOT.SimpleAI.ResponseText.Text := replyText;
   end;
   Response.Content := SimpleBOT.SimpleAI.ResponseJson;
 
@@ -523,7 +534,7 @@ begin
     end;
   end;
 
-  SimpleBOT.Free;
+  // SimpleBOT dibebaskan di TCarikWebModule.Destroy
   Response.ContentType := 'application/json';
 end;
 

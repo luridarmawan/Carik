@@ -586,8 +586,12 @@ begin
     Result := 'Nyala, ';
 
   s := FUserData.ReadString(FAccountID + '-' + ADeviceName, 'time', '');
-  d := ScanDateTime('yyyy-mm-dd HH:nn:ss', s);
-  Result := Result + ' ' + FormatDateTime('dd/mm HH:nn', d);
+  if s.IsEmpty then Exit;
+  try
+    d := ScanDateTime('yyyy-mm-dd HH:nn:ss', s);
+    Result := Result + ' ' + FormatDateTime('dd/mm HH:nn', d);
+  except
+  end;
 end;
 
 procedure TSmartHomeTestIntegration.AddDevice(ADeviceName: string);
@@ -1091,6 +1095,7 @@ var
 begin
   if Carik.GroupChatID.IsEmpty then Exit;
   key := 'prune-' + KeyName;
+  FGroupData := nil; // cegah double free bila TIniFile.Create raise
   try
     FGroupData := TIniFile.Create(GROUP_DATA_FILENAME);
     FGroupData.WriteString( Carik.GroupChatID, key, AValue);
@@ -1100,7 +1105,7 @@ begin
       LogUtil.Add(E.Message, 'GROUPDATA');
     end;
   end;
-  FGroupData.Free;
+  FreeAndNil(FGroupData);
 end;
 
 function TCarikWebModule.getGroupData(const KeyName: string): string;
@@ -1110,6 +1115,7 @@ begin
   Result := '';
   if Carik.GroupChatID.IsEmpty then Exit;
   key := 'prune-' + KeyName;
+  FGroupData := nil; // cegah double free bila TIniFile.Create raise
   try
     FGroupData := TIniFile.Create(GROUP_DATA_FILENAME);
     Result := FGroupData.ReadString( Carik.GroupChatID, key, '');
@@ -1119,7 +1125,7 @@ begin
       LogUtil.Add(E.Message, 'GROUPDATA');
     end;
   end;
-  FGroupData.Free;
+  FreeAndNil(FGroupData);
 end;
 
 function TCarikWebModule.userProfileHandler(const IntentName: string;
@@ -2132,9 +2138,12 @@ begin
     jam := s2i(s);
     if jam = 0 then
     begin
-      jamTime := StrToTime(s);
-      jam := HourOf(jamTime);
-      menit := MinuteOf(jamTime);
+      // input user bisa bukan format jam (mis. "jam nol")
+      if TryStrToTime(s, jamTime) then
+      begin
+        jam := HourOf(jamTime);
+        menit := MinuteOf(jamTime);
+      end;
     end;
     if jam > 12 then
       jam := jam - 12;
@@ -2306,6 +2315,9 @@ var
   _keyword, _suffix: string;
   _img: string;
   json: TJSONUtil;
+  apixu: TApixuIntegration;
+  node: TJSONData;
+  isValid: boolean;
 
   function translateToID(ASource: string): string;
   begin
@@ -2329,25 +2341,43 @@ begin
   end;
   if Pos(',', _keyword) < 1 then
     _keyword := _keyword + ',indonesia';
-  with TApixuIntegration.Create do
+  apixu := TApixuIntegration.Create;
+  try
+  with apixu do
   begin
     Key := Config[WEATHERSTACK_KEY];
     Result := WeatherAsJson(_keyword);
     if Result <> '' then
     begin
+      // respons sukses weatherstack tidak punya key "success";
+      // anggap gagal bila node "current" tidak ada
+      _img := '';
+      isValid := False;
       json := TJSONUtil.Create;
-      json.LoadFromJsonString(Result, False);
-      if (not json['success']) then
-      begin
+      try
+        try
+          json.LoadFromJsonString(Result, False);
+          node := nil;
+          if Assigned(json.Data) then
+            node := json.Data.FindPath('current');
+          isValid := Assigned(node);
+          if isValid then
+          begin
+            node := json.Data.FindPath('current.weather_icons');
+            if Assigned(node) and (node.Count > 0) then
+              _img := node.Items[0].AsString;
+          end;
+        except
+          isValid := False;
+        end;
+      finally
         json.Free;
-        result := openweatherInfoHandler(IntentName, Params);
-        exit;
       end;
-
-      _img := json.Item['current'].Item['weather_icons'].AsJSON;
-      json.LoadFromJsonString(_img, False);
-      _img := json.Data.Items[0].AsString;
-      json.Free;
+      if not isValid then
+      begin
+        Result := openweatherInfoHandler(IntentName, Params);
+        Exit; // finally membebaskan apixu
+      end;
       //_img := 'http:' + Data['current.condition.weather_icons'];
 
       Result := 'Cuaca di ' + Data['location.name'] + ', ' + Data['location.region'];
@@ -2382,8 +2412,9 @@ begin
     FFileURL := _img;
     FCaption := Result;
     }
-
-    Free;
+  end;
+  finally
+    apixu.Free;
   end;
 end;
 
@@ -2504,11 +2535,16 @@ begin
     Exit;
   if Result[1] = ',' then
     Result := Copy(Result, 2);
-  if Result[1] = '.' then
+  if Result.IsNotEmpty and (Result[1] = '.') then
     Result := Copy(Result, 2);
   Result := Result.Trim;
   Result := StringHumanToNominal(Result);
   Result := Result.Replace(' ' , '');
+  if Result.IsEmpty then
+  begin
+    Result := '..... :( ';
+    Exit;
+  end;
   if (Result[1] in AllowedOperator) then
   begin
     if SimpleBOT.UserData['math_result'].IsEmpty then
@@ -3140,6 +3176,7 @@ var
   i, j, additionScore: integer;
   s, triggerName, triggerWord: string;
   jData: TJSONData;
+  spamWords: TJSONObject;
   lstURL: TStringList;
 begin
   Result := 0;
@@ -3168,40 +3205,46 @@ begin
 
   //TODO: add spam score detection
   if AText.IsExists('$') then Result := Result + 10;
-  s := Config.GetObject(SPAM_WORD).AsJSON;
-  jData := GetJSON(s);
-  for i := 0 to jData.Count - 1 do
+  // GetObject mengembalikan nil bila SPAM_WORD tidak ada di config (objek dipinjam, jangan di-Free)
+  spamWords := Config.GetObject(SPAM_WORD);
+  if Assigned(spamWords) then
   begin
-    additionScore := 30;
-    triggerName := Config.GetObject(SPAM_WORD).Names[i];
-    for j := 0 to jData.Items[i].Count - 1 do
+    for i := 0 to spamWords.Count - 1 do
     begin
-      triggerWord := jData.Items[i].Items[j].AsString;
-      if preg_match(triggerWord, AText) then
+      additionScore := 30;
+      triggerName := spamWords.Names[i];
+      jData := spamWords.Items[i];
+      for j := 0 to jData.Count - 1 do
       begin
-        LogUtil.Add(triggerName + '/' + triggerWord, 'SPAM-CHECK');
-        Result := Result + additionScore;
+        triggerWord := jData.Items[j].AsString;
+        if preg_match(triggerWord, AText) then
+        begin
+          LogUtil.Add(triggerName + '/' + triggerWord, 'SPAM-CHECK');
+          Result := Result + additionScore;
+        end;
       end;
     end;
   end;
-  jData.Free;
 
-  if Result < SPAM_SCORE_THRESHOLD then
+  if (Result < SPAM_SCORE_THRESHOLD) and FileExists(BLACKLIST_URL_FILENAME) then
   begin
     // check blacklisted URL
     lstURL := TStringList.Create;
-    lstURL.LoadFromFile(BLACKLIST_URL_FILENAME);
-    for i := 0 to lstURL.Count -1 do
-    begin
-      s := LowerCase(lstURL[i]).Trim;
-      if s.IsEmpty then Continue;
-      if s.IsExists('#') then Continue;
-      if Pos( s, AText) > 0 then
+    try
+      lstURL.LoadFromFile(BLACKLIST_URL_FILENAME);
+      for i := 0 to lstURL.Count -1 do
       begin
-        Result := Result + SPAM_SCORE_THRESHOLD;
+        s := LowerCase(lstURL[i]).Trim;
+        if s.IsEmpty then Continue;
+        if s.IsExists('#') then Continue;
+        if Pos( s, AText) > 0 then
+        begin
+          Result := Result + SPAM_SCORE_THRESHOLD;
+        end;
       end;
+    finally
+      lstURL.Free;
     end;
-    lstURL.Free
 
     //TODO: check from spam-score api;
 
@@ -3429,9 +3472,10 @@ var
   i, processing_time: integer;
   nlp_enable, use_gpt: boolean;
   s, nlp_url, nlpAction: string;
-  nlp_json: TJSONData;
+  nlp_json, actionNode, filesNode: TJSONData;
   requestData: TJSONUtil;
   http_response: IHTTPResponse;
+  http: THTTPLib;
 begin
   Result := '';
   FExternalNLPWeight := 0;
@@ -3456,8 +3500,10 @@ begin
   //nlp_url += '&text=' + UrlEncode(AText);
 
   requestData := TJSONUtil.Create;
+  nlp_json := nil;
+  http := THTTPLib.Create;
   try
-    with THTTPLib.Create do
+    with http do
     begin
       ConnectTimeout := EXTERNAL_NLP_TIMEOUT;
       if ((use_gpt = True) and (FGPTTimeout > 0)) then
@@ -3525,7 +3571,9 @@ begin
           // compatibility
           if FCustomActionSuffix.IsEmpty then FCustomActionSuffix := jsonGetData(nlp_json, 'suffix');;
           //ulil -----
-          SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(nlp_json.GetPath('action.data')));
+          actionNode := nlp_json.FindPath('action.data');
+          if Assigned(actionNode) then
+            SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(actionNode));
           if FCustomActionAsText.IsNotEmpty then
           begin
             //Result += '\n'+FCustomActionAsText.Replace(#10, '\n');
@@ -3536,6 +3584,8 @@ begin
       //compatibility with form input handler
       if http_response.ResultCode = 200 then
       begin
+        // ExternalNLP bisa dipanggil beberapa kali per request
+        FreeAndNil(FCustomReplyDataFromExternalNLP);
         FCustomReplyDataFromExternalNLP := TJSONUtil.Create;
         FCustomReplyDataFromExternalNLP.LoadFromJsonString(http_response.ResultText, False);
         //Suffix := FCustomReplyDataFromExternalNLP['text'];
@@ -3550,8 +3600,12 @@ begin
           FCustomActionSuffix := FCustomReplyDataFromExternalNLP['action/suffix'];
           // compatibility
           if FCustomActionSuffix.IsEmpty then FCustomActionSuffix := jsonGetData(nlp_json, 'suffix');;
-          SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data')));
-          FCustomReplyDataFromExternalNLP.LoadFromJsonString(FCustomReplyDataFromExternalNLP.Data.GetPath('action.data').AsJSON, False);
+          actionNode := FCustomReplyDataFromExternalNLP.Data.FindPath('action.data');
+          if Assigned(actionNode) then
+          begin
+            SaveActionToUserData(FCustomReplyActionTypeFromExternalNLP, TJSONObject(actionNode));
+            FCustomReplyDataFromExternalNLP.LoadFromJsonString(actionNode.AsJSON, False);
+          end;
           if FCustomActionAsText.IsNotEmpty then
           begin
             {
@@ -3562,20 +3616,19 @@ begin
             }
           end;
 
-          // files
-          FCustomActionFiles := Nil;
-          try
-            FCustomActionFiles := TJSONArray(FCustomReplyDataFromExternalNLP.Data.GetPath('files'));
-          except
-          end;
+          // files: simpan salinan; FCustomActionFiles dibebaskan di destructor
+          FreeAndNil(FCustomActionFiles);
+          filesNode := nil;
+          if Assigned(FCustomReplyDataFromExternalNLP.Data) then
+            filesNode := FCustomReplyDataFromExternalNLP.Data.FindPath('files');
+          if Assigned(filesNode) and (filesNode is TJSONArray) then
+            FCustomActionFiles := TJSONArray(filesNode.Clone);
 
         end;
 
       end;
 
       //TODO: ulil chek if 'files' exist
-
-      Free;
     end;
   except
     on E:Exception do
@@ -3584,6 +3637,8 @@ begin
     end;
   end;
 
+  http.Free;
+  nlp_json.Free;
   requestData.Free;
 end;
 
@@ -3907,6 +3962,7 @@ var
   customReplyDataAsArray, inputData: TJSONArray;
 begin
   jsonOutput := TJSONUtil.Create;
+  try
   jsonOutput.LoadFromJsonString(SimpleBOT.SimpleAI.ResponseJson, False);
   if FExternalNLPIntentName.IsNotEmpty then
   begin
@@ -3922,14 +3978,20 @@ begin
   if Assigned(FCustomReplyDataFromExternalNLP) then
   begin
     jsonOutput['action/action/type'] := CustomReplyType;
-    customReplyDataAsArray := TJSONArray(FCustomReplyDataFromExternalNLP.AsJSON);
-    customReplyDataAsArray := TJSONArray(GetJSON(FCustomReplyDataFromExternalNLP.AsJSON, False));
-    jsonOutput.ValueArray['action/action/data'] := customReplyDataAsArray;
+    customReplyDataAsArray := nil;
+    try
+      customReplyDataAsArray := TJSONArray(GetJSON(FCustomReplyDataFromExternalNLP.AsJSON, False));
+    except
+    end;
+    // ValueArray mengambil kepemilikan node: tiap path harus dapat salinan sendiri
+    if Assigned(customReplyDataAsArray) then
+      jsonOutput.ValueArray['action/action/data'] := TJSONArray(customReplyDataAsArray.Clone);
 
     //compatibility
     jsonOutput['action/type'] := CustomReplyType;
     jsonOutput['action/suffix'] := CustomActionSuffix;
-    jsonOutput.ValueArray['action/data'] := customReplyDataAsArray;
+    if Assigned(customReplyDataAsArray) then
+      jsonOutput.ValueArray['action/data'] := customReplyDataAsArray;
   end;
   if CustomActionSuffix.IsNotEmpty then
     jsonOutput['action/suffix'] := CustomActionSuffix;
@@ -3948,8 +4010,9 @@ begin
     jsonOutput['action/input/title'] := FInputOptionTitle;
     if Assigned(FInputOptions) then
     begin
+      // FInputOptions tetap milik module (dibebaskan di destructor)
       inputData := TJSONArray.Create;
-      inputData.Add(FInputOptions);
+      inputData.Add(FInputOptions.Clone);
       jsonOutput.ValueArray['action/input/data'] := inputData;
     end;
   end;
@@ -3965,15 +4028,19 @@ begin
     jsonOutput['processing_time'] := SimpleBOT.SimpleAI.ElapsedTime.ToString.ToInteger;
   end;
 
-  if FIsCustomActionFileExist then
+  if FIsCustomActionFileExist and Assigned(FCustomActionFiles) then
   begin
-    jsonOutput.ValueArray['action/files'] := FCustomActionFiles;
+    // FCustomActionFiles tetap milik module (dibebaskan di destructor)
+    jsonOutput.ValueArray['action/files'] := TJSONArray(FCustomActionFiles.Clone);
   end;
 
   if FIsDebug then
     Result := jsonOutput.AsJSONFormated
   else
     Result := jsonOutput.AsJSON;
+  finally
+    jsonOutput.Free;
+  end;
 end;
 
 function TCarikWebModule.SavePrune(AMessageID: string): boolean;
@@ -4370,6 +4437,7 @@ var
   is_group, is_mentioned: string;
   httpResponse: IHTTPResponse;
   requestJson, responseJson: TJSONUtil;
+  http: THTTPLib;
 begin
   if AText = '' then
     Exit;
@@ -4382,7 +4450,11 @@ begin
     Exit;
 
   urlExplode := log_url.Explode('?');
-  log_url := urlExplode[0] + '?clientId=' + FClientId;
+  try
+    log_url := urlExplode[0] + '?clientId=' + FClientId;
+  finally
+    urlExplode.Free;
+  end;
 
   if AGroupID = AUserID then
     AGroupID := '';
@@ -4396,7 +4468,9 @@ begin
 
   requestJson := TJSONUtil.Create;
   responseJson := TJSONUtil.Create;
-  with THTTPLib.Create(log_url) do
+  http := THTTPLib.Create(log_url);
+  try
+  with http do
   begin
     AllowRedirect := True;
     //AddHeader('_source', 'carik');
@@ -4465,33 +4539,37 @@ begin
       requestJson['message/chat/topic_id'] := TopicID;
     end;
 
-    if MessageType.IsEqualTo('image') then
+    // FileList milik jsonData request; kirim salinannya agar tidak double free
+    if MessageType.IsEqualTo('image') and Assigned(FileList) then
     begin
-      requestJson.ValueArray['data/files'] := FileList;
+      requestJson.ValueArray['data/files'] := TJSONArray(FileList.Clone);
     end;
 
-    responseJson.LoadFromJsonString(LogChatPayload.Text, False);
-    requestJson.Data.Add('response', responseJson.Data);
-    requestJson.Data.Add('nlp_response', responseJson.Data);
+    try
+      responseJson.LoadFromJsonString(LogChatPayload.Text, False);
+    except
+    end;
+    // setiap parent harus memiliki node sendiri
+    if Assigned(responseJson.Data) then
+    begin
+      requestJson.Data.Add('response', responseJson.Data.Clone);
+      requestJson.Data.Add('nlp_response', responseJson.Data.Clone);
+    end;
 
     ContentType := 'application/json';
     RequestBody := TStringStream.Create(requestJson.AsJSON);
-    httpResponse := Post;
-    if _GET['_DEBUG'] <> '1' then
-    begin
+    try
+      httpResponse := Post;
+    except
     end;
     //LogUtil.Add(responseJson.AsJSON, 'logchat');
     //LogUtil.Add(log_url, 'logchat');
     //LogUtil.Add(httpResponse.ResultText, 'logchat');
-    Free;
   end;
-  try
+  finally
+    http.Free;
     responseJson.Free;
-    //requestJson.Free;
-  except
-    on e : Exception do
-    begin
-    end;
+    requestJson.Free;
   end;
 end;
 
@@ -4754,17 +4832,14 @@ end;
 
 destructor TCarikWebModule.Destroy;
 begin
-  LogChatPayload.Free;
-  if Assigned(FCustomActionFiles) then FCustomActionFiles.Free;
-  if Assigned(FInputOptions) then FInputOptions.Free;
-  if Assigned(ElementArray) then
-    ElementArray.Free;
-  if Assigned(FIterationParamsPast) then
-    FIterationParamsPast.Free;
-  if Assigned(FCustomReplyDataFromExternalNLP) then
-    FCustomReplyDataFromExternalNLP.Free;
-  Carik.Free;
-  SimpleBOT.Free;
+  FreeAndNil(LogChatPayload);
+  FreeAndNil(FCustomActionFiles);
+  FreeAndNil(FInputOptions);
+  FreeAndNil(ElementArray);
+  FreeAndNil(FIterationParamsPast);
+  FreeAndNil(FCustomReplyDataFromExternalNLP);
+  FreeAndNil(Carik);
+  FreeAndNil(SimpleBOT);
   inherited Destroy;
 end;
 
@@ -4941,7 +5016,7 @@ begin
     FCaption := FImageCaption;
   end;
 
-  if getIsTranslate then
+  if getIsTranslate and (SimpleBOT.SimpleAI.ResponseText.Count > 0) then
   begin
     s := SimpleBOT.SimpleAI.ResponseText[0];
     SimpleBOT.SimpleAI.ResponseText[0] := translate(s, 'id', FLanguage, True);
@@ -5349,6 +5424,7 @@ function TCarikWebModule.FormInputHandler: boolean;
         httpResponse := Post();
         if httpResponse.ResultCode = 200 then
         begin
+          FreeAndNil(FCustomReplyDataFromExternalNLP);
           FCustomReplyDataFromExternalNLP := TJSONUtil.Create;
           FCustomReplyDataFromExternalNLP.LoadFromJsonString(httpResponse.ResultText, False);
           Suffix := FCustomReplyDataFromExternalNLP['text'];
@@ -5568,7 +5644,7 @@ begin
       Exit;
     end;
     i := s2i(SimpleBOT.UserData[FORM_INPUT_OPTION_COUNT]);
-    if ((Text.ToInteger=0)or(Text.ToInteger > i)) then
+    if ((Text.AsInteger=0)or(Text.AsInteger > i)) then
     begin
       Suffix := FORM_ERR_FORMAT_OPTION_INVALID + ' ' + FORM_INPUT_HASHTAG_CANCEL2.Replace('%botname%', SimpleBOT.BotName);
       Result := True;
@@ -5625,10 +5701,13 @@ begin
       s := SimpleBOT.UserData[FORM_DATA+i.ToString];
       answerText := SimpleBOT.UserData[FORM_DATA+'t'+i.ToString];
       lst := Explode(s, '|');
-      if answerText.IsNotEmpty then
-        postData['data/'+lst[0]+'_t'] := answerText;
-      //postData['data/'+lst[0]+'t'] := answerText; //TODO: remove for  compatibility
-      postData['data/'+lst[0]] := lst[1];
+      if lst.Count >= 2 then
+      begin
+        if answerText.IsNotEmpty then
+          postData['data/'+lst[0]+'_t'] := answerText;
+        //postData['data/'+lst[0]+'t'] := answerText; //TODO: remove for  compatibility
+        postData['data/'+lst[0]] := lst[1];
+      end;
       lst.Free;
     end;
     postData['data/submit'] := OK;
@@ -5663,6 +5742,7 @@ begin
         end
         else
         begin
+          FreeAndNil(FCustomReplyDataFromExternalNLP);
           FCustomReplyDataFromExternalNLP := TJSONUtil.Create;
           FCustomReplyDataFromExternalNLP.LoadFromJsonString(httpResponse.ResultText, False);
           Suffix := FCustomReplyDataFromExternalNLP['text'];
@@ -5672,6 +5752,7 @@ begin
             if not (FCustomReplyDataFromExternalNLP.Data.FindPath('action.files') = nil) then
             begin
               FIsCustomActionFileExist := True;
+              FreeAndNil(FCustomActionFiles);
               FCustomActionFiles := TJSONArray(GetJSON(FCustomReplyDataFromExternalNLP.Data.GetPath('action.files').AsJSON));
             end;
           except
@@ -5715,7 +5796,11 @@ begin
         on e: Exception do
         begin
           Suffix := FORM_ERR_SUBMIT_EXCEPTION;
-          LogUtil.Add(e.Message + '//' + httpResponse.ResultText, 'FORM-ERROR');
+          // httpResponse nil bila Post() sendiri yang raise
+          if Assigned(httpResponse) then
+            LogUtil.Add(e.Message + '//' + httpResponse.ResultText, 'FORM-ERROR')
+          else
+            LogUtil.Add(e.Message, 'FORM-ERROR');
           if (_GET['_DEBUG'] = '1') then
             Suffix += '\n' + e.Message;
         end;
@@ -5723,6 +5808,7 @@ begin
 
       Free;
     end;//THTTPLib
+    postData.Free;
 
     resetForm();
     Result := True;
@@ -5754,11 +5840,19 @@ begin
   fileName := SimpleBOT.UserData[FORM_INPUT_FILENAME];
   fileName := AppData.tempDir + FORM_PATH + fileName;
   if not FileExists(fileName) then Exit;
+  formAsArray := nil;
   lst := TStringList.Create;
-  lst.LoadFromFile(fileName);
+  try
+    lst.LoadFromFile(fileName);
+    formAsArray := GetJSON(lst.Text,False) as TJSONArray;
+  except
+    on E:Exception do
+      LogUtil.Add('invalid form file ' + fileName + ': ' + E.Message, 'FORM');
+  end;
+  lst.Free;
+  if not Assigned(formAsArray) then Exit;
 
-  formAsArray := GetJSON(lst.Text,False) as TJSONArray;
-
+  try
   topic := 0;
   subCount := 0;
   index := 0;
@@ -5779,7 +5873,9 @@ begin
   except
     on E:Exception do
     begin
-      die('err: ' + topic.ToString + '/' + index.ToString + #10 + formAsArray.AsJSON);
+      // jangan die() dengan isi form ke user; die() juga tidak menghentikan prosedur
+      LogUtil.Add('err: ' + topic.ToString + '/' + index.ToString + ' ' + E.Message, 'FORM');
+      Exit;
     end;
   end;
   inputName := formAsArray.Items[topic].Items[index].GetPath('name').AsString;
@@ -5816,6 +5912,7 @@ begin
   if inputType = 'option' then
   begin
     optionList := '';
+    FreeAndNil(FInputOptions);
     FInputOptions := TJSONArray.Create;
     for i:=1 to formAsArray.Items[topic].Items[index].GetPath('options').Count do
     begin
@@ -5834,6 +5931,7 @@ begin
   if inputType = 'list' then
   begin
     optionList := '';
+    FreeAndNil(FInputOptions);
     FInputOptions := TJSONArray.Create;
     for i:=1 to formAsArray.Items[topic].Items[index].GetPath('options').Count do
     begin
@@ -5849,8 +5947,10 @@ begin
     inputTitle += FORM_INPUT_OPTION_FORMAT;
     SimpleBOT.UserData[FORM_INPUT_OPTION_COUNT] := formAsArray.Items[topic].Items[index].GetPath('options').Count.ToString;
   end;
-  formAsArray.Free;
   Result := inputTitle + ':';
+  finally
+    formAsArray.Free;
+  end;
 end;
 
 function TCarikWebModule.GetFormAnswerValue(AQuestionIndex: integer;
@@ -5994,10 +6094,19 @@ begin
     Result := ACTION_ERR_NLP_TOOBIG;
     Exit;
   end;
+  // "00" dsb. -> index -1; perlakukan sebagai teks biasa
+  if AText.AsInteger < 1 then
+    Exit;
 
   s := MESSAGE_ACTION_DATA_ + i2s(AText.AsInteger-1);
   s := SimpleBOT.UserData[s];
   actionText := Explode(s,'|'); //#0: title #1:content formatted
+  if actionText.Count < 2 then
+  begin
+    // data aksi kosong/rusak
+    actionText.Free;
+    Exit;
+  end;
   s := actionText[1];
   actionText.Free;
   actionText := Explode(s,'&');
@@ -6103,9 +6212,10 @@ begin
     if ((retries > 0)and(nec>=retries)) then
     begin
       muteDuration := Config[UNKNOWNCHAT_MUTE_DURATION];
-      if (muteDuration.ToInteger>0) then
+      // s2i: config kosong/non-numerik -> 0, bukan EConvertError
+      if (s2i(muteDuration)>0) then
       begin
-        muteDuration := Now.IncMinute(muteDuration.ToInteger).AsString;
+        muteDuration := Now.IncMinute(s2i(muteDuration)).AsString;
         SimpleBOT.UserData[ClientId + '-mute'] := muteDuration;
       end;
       callbackIntent := Config[UNKNOWNCHAT_CALLBACK];
