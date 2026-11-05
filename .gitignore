@@ -47,3 +47,5 @@ backup.sh
 
 public_html/carik/config/config.json
 public_html/carik/files/carik/carik-userdata.dat
+
+public_html/carik/files/nlp/*/
